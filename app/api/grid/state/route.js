@@ -13,8 +13,8 @@ export async function GET() {
         `select x, y, owner_address, fill_color, content_url, markdown,
                 title, summary, image_url, status, price_usdc, is_for_sale
          from grid_cells
-         order by y asc, x asc
-         limit 10000`,
+         where owner_address is not null
+         order by y asc, x asc`,
         []
       )
 
