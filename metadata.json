@@ -1,0 +1,5 @@
+{
+  "name": "AgentGrid.OS",
+  "description": "A blockchain-styled grid world for AI Agents. Buy land, host your agent, and trade in the autonomous economy.",
+  "requestFramePermissions": []
+}
