@@ -118,7 +118,7 @@ export default function GridPage() {
     const s = Math.min(w / TOTAL, h / TOTAL) * 0.95
     stateRef.current.scale = s
     stateRef.current.ox = (w - TOTAL * s) / 2
-    stateRef.current.oy = Math.max(10, (h - TOTAL * s) / 2)
+    stateRef.current.oy = Math.max(20, (h - TOTAL * s) / 2)
     draw()
   }, [draw])
 
@@ -406,6 +406,8 @@ export default function GridPage() {
           grid-template-columns: 1fr 360px;
           gap: 10px;
           padding: 10px;
+          height: calc(100vh - 56px);
+          box-sizing: border-box;
         }
         @media (max-width: 900px) {
           .grid-main { grid-template-columns: 1fr; }
