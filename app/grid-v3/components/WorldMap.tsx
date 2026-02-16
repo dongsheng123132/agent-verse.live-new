@@ -68,47 +68,74 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const startRow = Math.floor((-pan.y) / (CELL_SIZE * zoom));
     const endRow = startRow + Math.ceil(height / (CELL_SIZE * zoom)) + 1;
 
+    const renderStartCol = Math.max(0, startCol - 8); // Buffer for 8x8 blocks
+    const renderEndCol = Math.min(COLS, endCol);
+    const renderStartRow = Math.max(0, startRow - 8);
+    const renderEndRow = Math.min(Math.floor(grid.length / COLS), endRow);
+
     const selectedIds = new Set(selectedCells.map(c => c.id));
 
-    // 只遍历有数据的格子（已购买的）
-    for (const cell of grid) {
-        // 检查格子是否在可视范围内
-        const screenX = Math.floor(cell.x * CELL_SIZE * zoom + pan.x);
-        const screenY = Math.floor(cell.y * CELL_SIZE * zoom + pan.y);
-        const screenSize = Math.ceil(CELL_SIZE * zoom);
+    for (let r = renderStartRow; r < renderEndRow; r++) {
+        for (let c = renderStartCol; c < renderEndCol; c++) {
+            const idx = r * COLS + c;
+            const cell = grid[idx];
+            if (!cell) continue;
 
-        // 如果在屏幕外，跳过
-        if (screenX + screenSize < 0 || screenX > width ||
-            screenY + screenSize < 0 || screenY > height) {
-            continue;
-        }
+            // MEGA NODE LOGIC:
+            if (cell.isMegaNodeMember && !cell.isMegaNodeStart) {
+                continue;
+            }
 
-        // Draw Cell Content
-        if (cell.image) {
-            const img = imageCache.current[cell.image];
-            if (img && img.complete && img.naturalWidth > 0) {
-                 ctx.drawImage(img, screenX, screenY, screenSize, screenSize);
-            } else {
-                if (!img) {
-                    const newImg = new Image();
-                    newImg.src = cell.image;
-                    newImg.onload = () => setFrameCount(f => f + 1);
-                    newImg.onerror = () => { };
-                    imageCache.current[cell.image] = newImg;
+            const screenX = Math.floor(cell.x * CELL_SIZE * zoom + pan.x);
+            const screenY = Math.floor(cell.y * CELL_SIZE * zoom + pan.y);
+            
+            // Calculate size: if Mega Node, it spans multiple cells
+            const span = cell.isMegaNodeStart ? (cell.megaBlockSize || 1) : 1;
+            const screenSize = Math.ceil(CELL_SIZE * zoom * span);
+
+            // Draw Cell Content
+            if (cell.image) {
+                const img = imageCache.current[cell.image];
+                // CRITICAL FIX: Check naturalWidth to ensure image is not broken
+                if (img && img.complete && img.naturalWidth > 0) {
+                     ctx.drawImage(img, screenX, screenY, screenSize, screenSize);
+                } else {
+                    if (!img) {
+                        const newImg = new Image();
+                        newImg.src = cell.image;
+                        newImg.onload = () => setFrameCount(f => f + 1);
+                        newImg.onerror = () => { /* Prevent crash loops */ };
+                        imageCache.current[cell.image] = newImg;
+                    }
+                    ctx.fillStyle = '#222';
+                    ctx.fillRect(screenX, screenY, screenSize, screenSize);
                 }
-                ctx.fillStyle = cell.color || '#222';
+            } else if (cell.color) {
+                ctx.fillStyle = cell.color;
+                ctx.fillRect(screenX, screenY, screenSize, screenSize);
+            } else {
+                ctx.fillStyle = '#111';
                 ctx.fillRect(screenX, screenY, screenSize, screenSize);
             }
-        } else {
-            ctx.fillStyle = cell.color || '#10b981';
-            ctx.fillRect(screenX, screenY, screenSize, screenSize);
-        }
 
-        // Selection Outline
-        if (selectedIds.has(cell.id)) {
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(screenX, screenY, screenSize, screenSize);
+            // Draw Locked/Reserved Texture Overlay
+            if (cell.status === 'LOCKED') {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(screenX, screenY, screenSize, screenSize);
+                // Simple crosshatch for locked
+                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(screenX + screenSize, screenY + screenSize);
+                ctx.stroke();
+            }
+
+            // Selection Outline (Individual)
+            if (selectedIds.has(cell.id)) {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(screenX, screenY, screenSize, screenSize);
+            }
         }
     }
 
@@ -190,13 +217,16 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         lastMousePos.current = { x: e.clientX, y: e.clientY };
     }
 
-    // Hover Calculation - 从 grid 数组中查找
-    if (!isSelecting) {
+    // Hover Calculation
+    if (!isSelecting) { 
         const coords = getGridCoord(mouseX, mouseY);
-        // 在已购买的格子中查找
-        const cell = grid.find(c => c.x === coords.x && c.y === coords.y);
-        setHoveredCell(cell || null);
-        setHoverPos({ x: e.clientX, y: e.clientY });
+        if (coords.x >= 0 && coords.x < COLS && coords.y >= 0 && coords.y < COLS) {
+             const idx = coords.y * COLS + coords.x;
+             setHoveredCell(grid[idx] || null);
+             setHoverPos({ x: e.clientX, y: e.clientY });
+        } else {
+            setHoveredCell(null);
+        }
     }
   };
 
@@ -217,15 +247,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         const minY = Math.max(0, Math.min(start.y, end.y));
         const maxY = Math.min(COLS - 1, Math.max(start.y, end.y));
 
-        // 从已购买的格子中筛选在选择区域内的
-        const newSelection = grid.filter(c =>
-            c.x >= minX && c.x <= maxX && c.y >= minY && c.y <= maxY
-        );
+        const newSelection: GridCell[] = [];
+        for(let y = minY; y <= maxY; y++) {
+            for(let x = minX; x <= maxX; x++) {
+                const idx = y * COLS + x;
+                if(grid[idx]) newSelection.push(grid[idx]);
+            }
+        }
         if (newSelection.length > 0) onSelectCells(newSelection);
     } else if (moveDist < 5 && !isSelecting) {
         // It's a CLICK
         if (hoveredCell) {
-            onSelectCells([hoveredCell]);
+             if (hoveredCell.isMegaNodeMember && !hoveredCell.isMegaNodeStart) {
+                 const startNode = grid.find(c => c.isMegaNodeStart && c.owner === hoveredCell.owner);
+                 if (startNode) {
+                     onSelectCells([startNode]);
+                 } else {
+                     onSelectCells([hoveredCell]);
+                 }
+             } else {
+                onSelectCells([hoveredCell]);
+             }
         } else {
             onSelectCells([]);
         }
