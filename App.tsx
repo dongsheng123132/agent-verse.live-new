@@ -18,22 +18,79 @@ const CELL_SIZE = 30;
 const App: React.FC = () => {
   const [grid, setGrid] = useState<GridCell[]>(INITIAL_GRID);
   const [logs, setLogs] = useState<ActivityLog[]>(INITIAL_LOGS);
-  
+  const [dbLoaded, setDbLoaded] = useState(false);
+
   const [selectedCells, setSelectedCells] = useState<GridCell[]>([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  
+
   // Navigation State
   const [viewMode, setViewMode] = useState<ViewMode>('GRID');
   const [lang, setLang] = useState<Language>('CN'); // Default to CN based on user prompt
 
   const t = LANG[lang]; // Translation helper
-  
-  const [zoom, setZoom] = useState(0.8); 
-  const [pan, setPan] = useState({ x: 0, y: 0 }); 
-  
+
+  const [zoom, setZoom] = useState(0.8);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
   const viewportRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  // Fetch real grid state from backend API
+  useEffect(() => {
+    fetch('/api/grid/state')
+      .then(res => res.ok ? res.json() : Promise.reject('API unavailable'))
+      .then(data => {
+        if (data.cells && data.cells.length > 0) {
+          setGrid(prev => {
+            const updated = [...prev];
+            for (const cell of data.cells) {
+              const idx = cell.y * 100 + cell.x;
+              if (idx >= 0 && idx < updated.length) {
+                updated[idx] = {
+                  ...updated[idx],
+                  owner: cell.owner_agent_id || cell.owner_address || updated[idx].owner,
+                  color: cell.fill_color || updated[idx].color,
+                  status: cell.status || updated[idx].status,
+                  agentData: updated[idx].agentData ? {
+                    ...updated[idx].agentData!,
+                    readme: cell.note_md || cell.markdown || updated[idx].agentData!.readme,
+                    apiEndpoint: cell.target_url || cell.content_url || updated[idx].agentData!.apiEndpoint,
+                    name: cell.title || updated[idx].agentData!.name,
+                    description: cell.summary || updated[idx].agentData!.description,
+                  } : cell.note_md || cell.markdown ? {
+                    name: cell.title || `N_${cell.x}_${cell.y}`,
+                    description: cell.summary || '',
+                    readme: cell.note_md || cell.markdown || '',
+                    apiEndpoint: cell.target_url || cell.content_url || '',
+                    avatarUrl: cell.image_url || '',
+                    capabilities: [],
+                    requests: [],
+                    protocol: 'HTTP' as const,
+                    uptime: 100,
+                    creditScore: 0,
+                  } : null,
+                };
+              }
+            }
+            return updated;
+          });
+          setDbLoaded(true);
+          setLogs(prev => [{
+            id: 'db-sync',
+            message: `DB_SYNC: ${data.cells.length} cells loaded from server`,
+            timestamp: Date.now(),
+            type: 'EVENT',
+            author: 'SYSTEM_CORE',
+            cost: 0,
+          }, ...prev]);
+        }
+      })
+      .catch(() => {
+        // Silently fall back to INITIAL_GRID
+        console.log('[AgentOS] API unavailable, using local grid data');
+      });
+  }, []);
 
   useEffect(() => {
     const updateSize = () => {
@@ -113,7 +170,7 @@ const App: React.FC = () => {
       </header>
 
       {/* 2. Main Workspace */}
-      <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0"> 
+      <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0 md:pl-12"> 
         {/* pb-12 for Mobile Bottom Nav space */}
           
           {/* Desktop Sidebar (Hidden on Mobile) */}
