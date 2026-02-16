@@ -158,10 +158,16 @@ export default function GridPage() {
   }, [draw])
 
   useEffect(() => {
-    resize()
+    // Delay resize to ensure container is properly sized
+    const timer = setTimeout(() => {
+      resize()
+    }, 100)
     const onResize = () => resize()
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', onResize)
+    }
   }, [resize])
 
   function screenToGrid(clientX, clientY) {
@@ -451,18 +457,20 @@ export default function GridPage() {
           background: #12141a;
           border: 1px solid #1f2937;
           border-radius: 10px;
+          overflow: hidden;
         }
         .grid-map {
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          min-height: 400px;
           position: relative;
+          overflow: hidden;
+          min-height: 500px;
+          height: 100%;
         }
         .grid-canvas {
+          position: absolute;
+          top: 0;
+          left: 0;
           width: 100%;
-          flex: 1;
-          min-height: 350px;
+          height: calc(100% - 40px);
           display: block;
           cursor: crosshair;
         }
