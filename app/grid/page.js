@@ -107,7 +107,9 @@ export default function GridPage() {
     const dpr = window.devicePixelRatio || 1
     const rect = canvas.parentElement.getBoundingClientRect()
     const w = rect.width
-    const h = Math.max(200, rect.height)
+    // Use window height minus header (56px) minus padding (20px) minus legend (40px)
+    const availableHeight = window.innerHeight - 56 - 20 - 40
+    const h = Math.max(300, availableHeight)
     canvas.width = w * dpr
     canvas.height = h * dpr
     canvas.style.width = w + 'px'
