@@ -418,15 +418,16 @@ export default function GridPage() {
           border-radius: 10px;
         }
         .grid-map {
-          display: grid;
-          grid-template-rows: 1fr auto;
+          display: flex;
+          flex-direction: column;
           overflow: hidden;
           min-height: 400px;
+          position: relative;
         }
         .grid-canvas {
           width: 100%;
-          height: 100%;
-          min-height: 300px;
+          flex: 1;
+          min-height: 350px;
           display: block;
           cursor: crosshair;
         }
