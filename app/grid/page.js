@@ -67,9 +67,18 @@ export default function GridPage() {
     ctx.translate(ox, oy)
     ctx.scale(scale, scale)
 
-    ctx.fillStyle = '#111827'
-    ctx.fillRect(0, 0, TOTAL, TOTAL)
-    ctx.strokeStyle = '#1f2937'
+    // Draw empty cell backgrounds with subtle grid
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        // Checkerboard pattern for better visibility
+        const isEven = (x + y) % 2 === 0
+        ctx.fillStyle = isEven ? '#161b22' : '#1a1f28'
+        ctx.fillRect(x * CELL, y * CELL, CELL, CELL)
+      }
+    }
+
+    // Draw grid lines (brighter for visibility)
+    ctx.strokeStyle = '#374151'
     ctx.lineWidth = 0.5
     ctx.beginPath()
     for (let i = 0; i <= GRID; i++) {
@@ -80,9 +89,24 @@ export default function GridPage() {
     }
     ctx.stroke()
 
+    // Draw owned cells with border effect
     cellMap.current.forEach((c, key) => {
+      const x = c.x * CELL
+      const y = c.y * CELL
+
+      // Cell background
       ctx.fillStyle = c.fill_color || '#10b981'
-      ctx.fillRect(c.x * CELL + 0.5, c.y * CELL + 0.5, CELL - 1, CELL - 1)
+      ctx.fillRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1)
+
+      // Top/left highlight (3D effect)
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'
+      ctx.fillRect(x + 0.5, y + 0.5, CELL - 1, 1)
+      ctx.fillRect(x + 0.5, y + 0.5, 1, CELL - 1)
+
+      // Bottom/right shadow (3D effect)
+      ctx.fillStyle = 'rgba(0,0,0,0.4)'
+      ctx.fillRect(x + 0.5, y + CELL - 1.5, CELL - 1, 1)
+      ctx.fillRect(x + CELL - 1.5, y + 0.5, 1, CELL - 1)
     })
 
     if (hover) {
