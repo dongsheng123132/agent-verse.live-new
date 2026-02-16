@@ -67,18 +67,19 @@ export default function GridPage() {
     ctx.translate(ox, oy)
     ctx.scale(scale, scale)
 
-    // Draw empty cell backgrounds with subtle grid
+    // Draw ALL 10,000 cells with default terrain colors
+    const terrainColors = ['#0a0a0a', '#0c0c0c', '#0e0e0e', '#101010', '#111111']
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
-        // Checkerboard pattern for better visibility
-        const isEven = (x + y) % 2 === 0
-        ctx.fillStyle = isEven ? '#161b22' : '#1a1f28'
+        // Use coordinate-based pseudo-random for consistent colors
+        const colorIndex = (x * 7 + y * 13) % terrainColors.length
+        ctx.fillStyle = terrainColors[colorIndex]
         ctx.fillRect(x * CELL, y * CELL, CELL, CELL)
       }
     }
 
-    // Draw grid lines (brighter for visibility)
-    ctx.strokeStyle = '#374151'
+    // Draw grid lines (clearly visible)
+    ctx.strokeStyle = '#2a2a2a'
     ctx.lineWidth = 0.5
     ctx.beginPath()
     for (let i = 0; i <= GRID; i++) {
@@ -88,6 +89,11 @@ export default function GridPage() {
       ctx.lineTo(TOTAL, i * CELL)
     }
     ctx.stroke()
+
+    // Draw thicker border around reserved areas (top 16 and left 16)
+    ctx.strokeStyle = '#333'
+    ctx.lineWidth = 1
+    ctx.strokeRect(16 * CELL, 16 * CELL, (GRID - 16) * CELL, (GRID - 16) * CELL)
 
     // Draw owned cells with border effect
     cellMap.current.forEach((c, key) => {
