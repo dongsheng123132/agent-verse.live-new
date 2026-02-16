@@ -32,3 +32,4 @@ agentgrid.os (1)/
 coverage/
 *.zip
 *.tar
+.vercel
