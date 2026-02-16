@@ -147,7 +147,10 @@ export default function GridPage() {
     const ctx = canvas.getContext('2d')
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    const s = Math.min(w / TOTAL, h / TOTAL) * 0.95
+    // Calculate scale to fit grid with some padding, but not too small
+    const minScale = Math.min(w / TOTAL, h / TOTAL) * 0.9
+    // Ensure minimum scale so cells are visible (at least 4px per cell)
+    const s = Math.max(minScale, 4 / CELL)
     stateRef.current.scale = s
     stateRef.current.ox = (w - TOTAL * s) / 2
     stateRef.current.oy = Math.max(20, (h - TOTAL * s) / 2)
