@@ -107,7 +107,7 @@ export default function GridPage() {
     const dpr = window.devicePixelRatio || 1
     const rect = canvas.parentElement.getBoundingClientRect()
     const w = rect.width
-    const h = Math.max(200, rect.height - 40)
+    const h = Math.max(200, rect.height)
     canvas.width = w * dpr
     canvas.height = h * dpr
     canvas.style.width = w + 'px'
@@ -118,7 +118,7 @@ export default function GridPage() {
     const s = Math.min(w / TOTAL, h / TOTAL) * 0.95
     stateRef.current.scale = s
     stateRef.current.ox = (w - TOTAL * s) / 2
-    stateRef.current.oy = (h - TOTAL * s) / 2
+    stateRef.current.oy = Math.max(10, (h - TOTAL * s) / 2)
     draw()
   }, [draw])
 
