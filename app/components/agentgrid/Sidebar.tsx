@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityLog, GridCell } from '../types';
+import { ActivityLog, GridCell } from './types';
 import { Activity, Terminal, Clock } from 'lucide-react';
 
 interface SidebarProps {

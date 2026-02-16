@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { GridCell } from '../types';
-import { COLS } from '../constants';
+import { GridCell } from './types';
+import { COLS } from './constants';
 
 interface WorldMapProps {
   grid: GridCell[];

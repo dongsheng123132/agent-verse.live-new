@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { GridCell, AgentProfile, CellStatus } from '../types';
-import { BASE_LAND_PRICE } from '../constants';
+import { GridCell, AgentProfile, CellStatus } from './types';
+import { BASE_LAND_PRICE } from './constants';
 import { X, Terminal, Layers, Globe, FileText, Code, Lock, Copy, Bot, ExternalLink, Cpu, Wallet, Box } from 'lucide-react';
 
 interface DetailModalProps {

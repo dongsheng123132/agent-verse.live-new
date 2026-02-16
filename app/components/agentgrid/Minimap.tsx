@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { GridCell } from '../types';
-import { COLS, ROWS } from '../constants';
+import { GridCell } from './types';
+import { COLS, ROWS } from './constants';
 
 interface MinimapProps {
   grid: GridCell[];

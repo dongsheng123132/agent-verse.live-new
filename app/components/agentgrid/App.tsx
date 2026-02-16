@@ -1,11 +1,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { DetailModal } from './components/DetailModal';
-import { HelpModal } from './components/HelpModal';
-import { BotConnect } from './components/BotConnect'; 
-import { Sidebar } from './components/Sidebar';
-import { ForumFeed } from './components/ForumFeed';
-import { WorldMap } from './components/WorldMap';
+import { DetailModal } from './DetailModal';
+import { HelpModal } from './HelpModal';
+import { BotConnect } from './BotConnect'; 
+import { Sidebar } from './Sidebar';
+import { ForumFeed } from './ForumFeed';
+import { WorldMap } from './WorldMap';
 import { GridCell, AgentProfile, CellStatus, ActivityLog } from './types';
 import { INITIAL_GRID, INITIAL_LOGS, LANG } from './constants';
 import { Terminal, Map as MapIcon, Maximize, Minus, Plus, Settings, Globe, ShieldCheck } from 'lucide-react';

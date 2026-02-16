@@ -1,23 +1,25 @@
 {
-  "name": "agentgrid.os",
+  "name": "agent-verse-live",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev -p 3005",
+    "build": "next build",
+    "start": "next start -p 3005",
+    "db:init": "node scripts/init-db.js"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "lucide-react": "0.469.0",
-    "@google/genai": "^1.41.0",
-    "react-dom": "18.3.1",
-    "react": "18.3.1"
+    "next": "14.2.15",
+    "pg": "^8.12.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "viem": "2.9.4"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/node": "25.2.3",
+    "@types/react": "19.2.14"
   }
 }

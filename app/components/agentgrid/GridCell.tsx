@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { GridCell as GridCellType } from '../types';
+import { GridCell as GridCellType } from './types';
 
 interface GridCellProps {
   cell: GridCellType;

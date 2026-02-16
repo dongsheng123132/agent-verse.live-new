@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GridCell, ActivityLog } from '../types';
+import { GridCell, ActivityLog } from './types';
 import { Search, Terminal, Activity, Server, Clock, Wifi } from 'lucide-react';
 
 interface ForumFeedProps {
