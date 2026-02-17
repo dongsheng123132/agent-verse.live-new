@@ -51,7 +51,7 @@ export default function Page() {
   const fetchGrid = useCallback(async () => {
     try {
       const res = await fetch('/api/grid')
-      const data = await res.ok ? res.json() : []
+      const data = res.ok ? await res.json() : []
       setCells(Array.isArray(data) ? data : [])
     } catch {
       setCells([])
