@@ -4,6 +4,8 @@ import { x402ResourceServer } from '@x402/core/server'
 import { HTTPFacilitatorClient } from '@x402/core/server'
 import { registerExactEvmScheme } from '@x402/evm/exact/server'
 import { dbQuery } from '../../../../lib/db.js'
+import { generateApiKey } from '../../../../lib/api-key.js'
+import { logEvent } from '../../../../lib/events.js'
 
 const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
 const facilitatorUrl = process.env.X402_FACILITATOR_URL || 'https://api.cdp.coinbase.com/platform/v2/x402'
@@ -38,12 +40,14 @@ async function purchaseHandler(req: NextRequest) {
   const cellId = y * 100 + x
   const owner = req.headers.get('x-payment-from') || '0xx402'
   const receiptId = `x402_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const blockId = `blk_${x}_${y}_1x1`
 
   await dbQuery(
-    `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, last_updated)
-     VALUES ($1,$2,$3,$4,'HOLDING',false,NOW())
-     ON CONFLICT (x, y) DO UPDATE SET owner_address = EXCLUDED.owner_address, status = EXCLUDED.status, is_for_sale = false, last_updated = NOW()`,
-    [cellId, x, y, owner]
+    `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, block_id, block_w, block_h, block_origin_x, block_origin_y, last_updated)
+     VALUES ($1,$2,$3,$4,'HOLDING',false,$5,1,1,$2,$3,NOW())
+     ON CONFLICT (x, y) DO UPDATE SET owner_address = EXCLUDED.owner_address, status = EXCLUDED.status, is_for_sale = false,
+       block_id = EXCLUDED.block_id, block_w = 1, block_h = 1, block_origin_x = $2, block_origin_y = $3, last_updated = NOW()`,
+    [cellId, x, y, owner, blockId]
   )
   try {
     await dbQuery(
@@ -53,7 +57,17 @@ async function purchaseHandler(req: NextRequest) {
   } catch (e) {
     console.error('[cells/purchase] grid_orders insert failed:', (e as Error)?.message)
   }
-  return NextResponse.json({ ok: true, cell: { x, y }, owner, receipt_id: receiptId })
+
+  let apiKey: string | null = null
+  try {
+    apiKey = await generateApiKey(x, y)
+  } catch (e) {
+    console.error('[cells/purchase] api key generation failed:', (e as Error)?.message)
+  }
+
+  await logEvent('purchase', { x, y, blockSize: '1×1', owner, message: `1×1 cell purchased at (${x},${y})` })
+
+  return NextResponse.json({ ok: true, cell: { x, y }, owner, receipt_id: receiptId, api_key: apiKey })
 }
 
 export const POST = withX402(purchaseHandler, routeConfig, server, undefined, undefined, false)

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
+import { generateApiKey } from '../../../../lib/api-key.js'
+import { logEvent } from '../../../../lib/events.js'
+import { getBlockLabel } from '../../../../lib/pricing.js'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,12 +43,18 @@ export async function GET(req) {
     let cellY = orderRow ? Number(orderRow.y) : Number(charge?.metadata?.y)
     if (!Number.isFinite(cellX) || !Number.isFinite(cellY)) cellX = cellY = null
 
-    if (completed && process.env.DATABASE_URL) {
+    const blockW = Number(charge?.metadata?.block_w) || 1
+    const blockH = Number(charge?.metadata?.block_h) || 1
+
+    let apiKey = null
+
+    if (completed && process.env.DATABASE_URL && cellX != null && cellY != null) {
       const firstPayment = charge?.payments?.[0]
       const owner = firstPayment?.payer_addresses?.[0] || firstPayment?.value?.address || '0xCommerce'
+
       if (orderRow) {
         await dbQuery('UPDATE grid_orders SET status = $1 WHERE receipt_id = $2', ['paid', orderRow.receipt_id])
-      } else if (chargeId && cellX != null && cellY != null) {
+      } else if (chargeId) {
         const rid = charge?.metadata?.receipt_id || `c_${chargeId}_repaired`
         await dbQuery(
           `INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, commerce_charge_id)
@@ -54,17 +63,42 @@ export async function GET(req) {
           [rid, cellX, cellY, 0, chargeId]
         )
       }
-      if (cellX != null && cellY != null) {
-        const cellId = cellY * 100 + cellX
-        await dbQuery(
-          `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, last_updated)
-           VALUES ($1,$2,$3,$4,'HOLDING',false,NOW())
-           ON CONFLICT (x,y) DO UPDATE SET owner_address = EXCLUDED.owner_address, status = EXCLUDED.status, is_for_sale = false, last_updated = NOW()`,
-          [cellId, cellX, cellY, owner]
-        )
+
+      // Write block cells
+      const blockId = `blk_${cellX}_${cellY}_${blockW}x${blockH}`
+      for (let dy = 0; dy < blockH; dy++) {
+        for (let dx = 0; dx < blockW; dx++) {
+          const cx = cellX + dx
+          const cy = cellY + dy
+          const cellId = cy * 100 + cx
+          await dbQuery(
+            `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, block_id, block_w, block_h, block_origin_x, block_origin_y, last_updated)
+             VALUES ($1,$2,$3,$4,'HOLDING',false,$5,$6,$7,$8,$9,NOW())
+             ON CONFLICT (x,y) DO UPDATE SET owner_address = EXCLUDED.owner_address, status = EXCLUDED.status, is_for_sale = false,
+               block_id = EXCLUDED.block_id, block_w = EXCLUDED.block_w, block_h = EXCLUDED.block_h,
+               block_origin_x = EXCLUDED.block_origin_x, block_origin_y = EXCLUDED.block_origin_y, last_updated = NOW()`,
+            [cellId, cx, cy, owner, blockId, blockW, blockH, cellX, cellY]
+          )
+        }
       }
+
+      // Generate API key for origin cell
+      try {
+        apiKey = await generateApiKey(cellX, cellY)
+      } catch (e) {
+        console.error('[commerce/verify] api key generation failed:', e?.message)
+      }
+
+      // Log event
+      const label = getBlockLabel(blockW, blockH)
+      await logEvent('purchase', {
+        x: cellX, y: cellY,
+        blockSize: label,
+        owner,
+        message: `${label} block purchased at (${cellX},${cellY})`
+      })
     }
-    return NextResponse.json({ ok: true, paid: completed, status, charge })
+    return NextResponse.json({ ok: true, paid: completed, status, charge, api_key: apiKey })
   } catch (e) {
     console.error('[commerce/verify]', e)
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 })
