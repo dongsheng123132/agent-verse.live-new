@@ -4,6 +4,8 @@ import { GridCell, AgentProfile, CellStatus } from '../types';
 import { BASE_LAND_PRICE } from '../constants';
 import { X, Terminal, Layers, Globe, FileText, Code, Lock, Copy, Bot, ExternalLink, Cpu, Wallet, Box, Loader2 } from 'lucide-react';
 
+const PRICE_USD = 0.02;
+
 function CoinbaseBuyButton({ x, y }: { x: number; y: number }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,16 +16,16 @@ function CoinbaseBuyButton({ x, y }: { x: number; y: number }) {
       const res = await fetch('/api/commerce/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x, y }),
+        body: JSON.stringify({ x, y, amount_usd: PRICE_USD, return_path: 'grid-v3' }),
       });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error || data.detail || 'Create payment failed');
+      if (!data.ok) throw new Error(data.message || data.error || data.detail || 'Create payment failed');
       const url = data.hosted_url || data.url;
       if (url) {
         window.location.href = url;
         return;
       }
-      throw new Error('No payment URL returned');
+      throw new Error(data.message || 'No payment URL returned');
     } catch (e: any) {
       setError(e?.message || 'Failed');
       setLoading(false);
@@ -37,7 +39,7 @@ function CoinbaseBuyButton({ x, y }: { x: number; y: number }) {
         className="flex items-center justify-center gap-2 px-4 py-3 bg-agent-green/20 border border-agent-green text-agent-green rounded font-mono text-sm font-bold hover:bg-agent-green/30 disabled:opacity-50"
       >
         {loading ? <Loader2 size={16} className="animate-spin" /> : <Wallet size={16} />}
-        {loading ? '跳转中...' : '用 Coinbase 付款 (2 USDC)'}
+        {loading ? '跳转中...' : `用 Coinbase 付款 (${PRICE_USD} USDC)`}
       </button>
       {error && <p className="text-[10px] text-red-400 font-mono">{error}</p>}
     </div>
@@ -197,10 +199,31 @@ Verification Code: .${decimalPart}
                 {/* --- TAB: PAYMENT --- */}
                 {tab === 'PAYMENT' && !isLocked && (
                     <div className="space-y-6">
-                        {/* Coinbase 人类付款：跳转 Payment Link */}
                         <div className="flex flex-col gap-2">
                             <h4 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">人类买格子 (Coinbase)</h4>
                             <CoinbaseBuyButton x={firstCell.x} y={firstCell.y} />
+                        </div>
+
+                        <div className="border-t border-[#222] pt-4">
+                            <h4 className="text-agent-green text-[10px] font-bold uppercase tracking-widest mb-2">让 AI 帮你付款 (x402 · 自动验款)</h4>
+                            <p className="text-gray-500 text-[10px] mb-2">用 Awal：付 {PRICE_USD} USDC 后格子自动归你。复制下面整段给 AI 执行。</p>
+                            {(() => {
+                                const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                                const apiUrl = `${baseUrl.replace(/\/$/, '')}/api/cells/purchase`;
+                                const cmd = `npx awal@latest x402 pay ${apiUrl} -X POST -d '{"x":${firstCell.x},"y":${firstCell.y}}'`;
+                                const skill = `我想买格子 (${firstCell.x}, ${firstCell.y})，价格 ${PRICE_USD} USDC。请用 Coinbase Awal 帮我付款。\n\n【付款】执行：${cmd}`;
+                                return (
+                                    <>
+                                        <pre className="bg-[#0a0a0a] p-3 rounded text-[10px] text-gray-300 overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                                            {skill}
+                                        </pre>
+                                        <div className="mt-2 flex gap-2">
+                                            <button type="button" className="text-[10px] text-agent-green hover:text-green-400 font-mono" onClick={() => navigator.clipboard.writeText(cmd)}>[仅复制命令]</button>
+                                            <button type="button" className="text-[10px] text-gray-500 hover:text-gray-400 font-mono" onClick={() => navigator.clipboard.writeText(skill)}>[复制整段给 AI]</button>
+                                        </div>
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         <div className="bg-gradient-to-r from-blue-900/10 to-purple-900/10 border border-blue-800/30 rounded p-4 relative overflow-hidden">

@@ -1,9 +1,12 @@
+/**
+ * @deprecated 推荐改用 Coinbase x402 + Facilitator 验款，不再自建链上校验。见 docs/COINBASE_GRID_PAYMENT.md
+ */
 import { NextResponse } from 'next/server'
 import { createPublicClient, http, decodeEventLog, formatUnits } from 'viem'
 import { base } from 'viem/chains'
 import { dbQuery } from '../../../../lib/db.js'
 
-const USDC = (process.env.USDC_ADDRESS || '0x833589fCD1AFCB8EdfbFfe1dE8108f0bCfD7b8aF')
+const USDC = (process.env.USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913')
 const TREASURY = (process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000')
 const RPC = process.env.RPC_URL || undefined
 const client = createPublicClient({ chain: base, transport: http(RPC) })

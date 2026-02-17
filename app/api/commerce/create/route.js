@@ -4,7 +4,12 @@ import { dbQuery } from '../../../../lib/db.js'
 export async function POST(req) {
   try {
     if (!process.env.COMMERCE_API_KEY) {
-      return NextResponse.json({ ok:false, error:'env_missing', missing:['COMMERCE_API_KEY'] }, { status:500 })
+      return NextResponse.json({
+        ok: false,
+        error: 'env_missing',
+        missing: ['COMMERCE_API_KEY'],
+        message: 'Coinbase Commerce 未配置。请使用「让 AI 帮你付款」或「手动转账」方式，或在 Vercel 环境变量中配置 COMMERCE_API_KEY。'
+      }, { status: 500 })
     }
     const body = await req.json()
     const x = Number(body?.x)

@@ -25,6 +25,9 @@ export async function POST(req) {
     }
 
     const cellId = y * 100 + x
+    const amountUsd = process.env.PURCHASE_PRICE_USD || '0.02'
+    const receiptId = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
     await dbQuery(
       `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, last_updated)
        VALUES ($1,$2,$3,$4,'HOLDING',false,NOW())
@@ -36,7 +39,17 @@ export async function POST(req) {
       [cellId, x, y, owner]
     )
 
-    return NextResponse.json({ ok: true, x, y, owner })
+    try {
+      await dbQuery(
+        `INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, treasury_address)
+         VALUES ($1,$2,$3,$4,$4,'manual',$5,$6)`,
+        [receiptId, x, y, amountUsd, 'paid', process.env.TREASURY_ADDRESS || '']
+      )
+    } catch (e) {
+      console.error('[confirm-cell] grid_orders insert failed:', e?.message)
+    }
+
+    return NextResponse.json({ ok: true, x, y, owner, receipt_id: receiptId })
   } catch (e) {
     console.error('[confirm-cell]', e)
     return NextResponse.json({ ok: false, error: 'server_error', message: e.message }, { status: 500 })

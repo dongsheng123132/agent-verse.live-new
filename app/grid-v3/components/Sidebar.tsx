@@ -31,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ logs }) => {
                         {new Date(log.timestamp).toLocaleTimeString()}
                         <span className="text-blue-900 font-bold uppercase shrink-0">[{log.type}]</span>
                     </div>
-                    <div className={`text-[11px] w-full ${log.type === 'ANNOUNCEMENT' ? 'text-yellow-500' : 'text-gray-400'}`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <div className={`text-[11px] w-full ${log.type === 'ANNOUNCEMENT' ? 'text-yellow-500' : log.type === 'TRANSACTION' ? 'text-agent-green' : 'text-gray-400'}`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                         <span className="text-gray-500 mr-1">{'>'}</span>
                         {log.message}
                     </div>

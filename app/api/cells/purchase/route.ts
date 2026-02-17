@@ -48,6 +48,7 @@ async function purchaseHandler(req: NextRequest) {
 
   const cellId = y * 100 + x
   const owner = req.headers.get('x-payment-from') || '0xx402'
+  const receiptId = `x402_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
   await dbQuery(
     `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, last_updated)
@@ -60,7 +61,17 @@ async function purchaseHandler(req: NextRequest) {
     [cellId, x, y, owner]
   )
 
-  return NextResponse.json({ ok: true, cell: { x, y }, owner })
+  try {
+    await dbQuery(
+      `INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, treasury_address)
+       VALUES ($1,$2,$3,$4,$5,'x402','paid',$6)`,
+      [receiptId, x, y, priceUsd, priceUsd, payTo]
+    )
+  } catch (e) {
+    console.error('[cells/purchase] grid_orders insert failed:', (e as Error)?.message)
+  }
+
+  return NextResponse.json({ ok: true, cell: { x, y }, owner, receipt_id: receiptId })
 }
 
 export const POST = withX402(purchaseHandler, routeConfig, server, undefined, undefined, false)

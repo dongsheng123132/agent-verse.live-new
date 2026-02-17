@@ -18,6 +18,12 @@ export async function GET(req) {
       }
       orderRow = res.rows[0]
       chargeId = orderRow.commerce_charge_id || chargeId
+    } else if (process.env.DATABASE_URL && chargeIdFromQuery) {
+      const res = await dbQuery('select * from grid_orders where commerce_charge_id = $1 limit 1', [chargeIdFromQuery])
+      if (res.rowCount) {
+        orderRow = res.rows[0]
+        chargeId = orderRow.commerce_charge_id
+      }
     }
     if (!chargeId) {
       return NextResponse.json({ ok:false, error:'missing_charge_id' }, { status:400 })
@@ -36,17 +42,34 @@ export async function GET(req) {
     const data = await res.json()
     const charge = data?.data
     const status = charge?.timeline?.[charge.timeline.length - 1]?.status || charge?.status
-    const completed = status && ['COMPLETED','CONFIRMED','RESOLVED'].includes(status.toUpperCase())
-    if (completed && process.env.DATABASE_URL && orderRow) {
-      await dbQuery(
-        'update grid_orders set status = $1 where receipt_id = $2',
-        ['paid', orderRow.receipt_id]
-      )
-      const cellX = Number(orderRow.x)
-      const cellY = Number(orderRow.y)
-      if (Number.isFinite(cellX) && Number.isFinite(cellY)) {
+    const hasTimelineCompleted = status && ['COMPLETED','CONFIRMED','RESOLVED'].includes(status.toUpperCase())
+    const hasPaymentDetected = Array.isArray(charge?.payments) && charge.payments.length > 0 && charge.payments.some(p => p?.transaction_id)
+    const completed = hasTimelineCompleted || hasPaymentDetected
+    let cellX = orderRow ? Number(orderRow.x) : Number(charge?.metadata?.x)
+    let cellY = orderRow ? Number(orderRow.y) : Number(charge?.metadata?.y)
+    if (!Number.isFinite(cellX) || !Number.isFinite(cellY)) {
+      cellX = null
+      cellY = null
+    }
+    if (completed && process.env.DATABASE_URL) {
+      const firstPayment = charge?.payments?.[0]
+      const owner = firstPayment?.payer_addresses?.[0] || firstPayment?.value?.address || '0xCommerce'
+      if (orderRow) {
+        await dbQuery(
+          'update grid_orders set status = $1 where receipt_id = $2',
+          ['paid', orderRow.receipt_id]
+        )
+      } else if (chargeId && cellX != null && cellY != null) {
+        const receiptId = charge?.metadata?.receipt_id || `c_${chargeId}_repaired`
+        await dbQuery(
+          `INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, commerce_charge_id)
+           VALUES ($1,$2,$3,$4,$5,'commerce','paid',$6)
+           ON CONFLICT (receipt_id) DO UPDATE SET status = 'paid', commerce_charge_id = EXCLUDED.commerce_charge_id`,
+          [receiptId, cellX, cellY, 0, 0, chargeId]
+        )
+      }
+      if (cellX != null && cellY != null) {
         const cellId = cellY * 100 + cellX
-        const owner = charge?.payments?.[0]?.value?.address || '0xCommerce'
         await dbQuery(
           `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, last_updated)
            VALUES ($1,$2,$3,$4,'HOLDING',false,NOW())

@@ -1,0 +1,13 @@
+{
+  "name": "格子售卖 · Grid Shop",
+  "short_name": "Grid Shop",
+  "description": "AgentGrid.OS 格子售卖 · 人类 Coinbase 付款或 Agent 打款",
+  "start_url": "/grid-shop",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00ff41",
+  "orientation": "any",
+  "lang": "zh-CN",
+  "icons": [],
+  "categories": ["finance", "shopping"]
+}

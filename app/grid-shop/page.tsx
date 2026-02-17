@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const COLS = 100;
 const ROWS = 100;
-const PRICE_USD = 0.02; // 测试用小额，正式可改为 2
+const PRICE_USD = 0.02;
 const PAYMENT_ADDRESS = '0xe6EA7c31A85A1f42DFAc6C49155bE90722246890';
 
 type Cell = { id: number; x: number; y: number; owner: string | null; color?: string };
+type ActivityItem = { id: string; timestamp: number; type: string; message: string };
 
 export default function GridShopPage() {
   const [cells, setCells] = useState<Cell[]>([]);
@@ -15,8 +16,9 @@ export default function GridShopPage() {
   const [selected, setSelected] = useState<{ x: number; y: number } | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
 
-  const fetchGrid = async () => {
+  const fetchGrid = useCallback(async () => {
     try {
       const res = await fetch('/api/grid-v3');
       const data = await res.ok ? res.json() : [];
@@ -26,21 +28,37 @@ export default function GridShopPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const fetchActivity = useCallback(async () => {
+    try {
+      const res = await fetch('/api/grid-v3/activity');
+      const data = await res.json();
+      setActivity(Array.isArray(data?.activity) ? data.activity : []);
+    } catch {
+      setActivity([]);
+    }
+  }, []);
 
   useEffect(() => {
     fetchGrid();
-  }, []);
+  }, [fetchGrid]);
+
+  useEffect(() => {
+    fetchActivity();
+    const t = setInterval(fetchActivity, 20000);
+    return () => clearInterval(t);
+  }, [fetchActivity]);
 
   useEffect(() => {
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     if (params.get('paid') === '1' && params.get('receipt_id')) {
       fetch(`/api/commerce/verify?receipt_id=${encodeURIComponent(params.get('receipt_id')!)}`)
         .then(r => r.json())
-        .then(d => { if (d?.ok && d?.paid) fetchGrid(); });
+        .then(d => { if (d?.ok && d?.paid) { fetchGrid(); fetchActivity(); } });
       window.history.replaceState({}, '', '/grid-shop');
     }
-  }, []);
+  }, [fetchGrid, fetchActivity]);
 
   const cellMap = new Map<string, Cell>();
   cells.forEach(c => cellMap.set(`${c.x},${c.y}`, c));
@@ -60,7 +78,8 @@ export default function GridShopPage() {
         window.location.href = data.hosted_url;
         return;
       }
-      setPayError(data?.message || data?.detail || data?.error || '创建支付失败');
+      const msg = data?.message || data?.detail || (data?.error === 'env_missing' ? 'Coinbase 支付暂未配置，请用下方「让 AI 帮你付款」或「手动转账」。' : data?.error) || '创建支付失败';
+      setPayError(msg);
     } catch (e: any) {
       setPayError(e?.message || '请求失败');
     } finally {
@@ -82,14 +101,36 @@ export default function GridShopPage() {
     );
   }
 
+  const soldCount = cells.length;
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-4">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 pb-24 md:pb-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <h1 className="text-lg font-bold text-green-500 font-mono">格子售卖 · Grid Shop</h1>
-          <a href="/grid-v3" className="text-gray-500 hover:text-white text-sm font-mono">→ 完整版 Grid</a>
+          <div className="flex items-center gap-3 text-[10px] font-mono">
+            <span className="text-gray-500">已售 <span className="text-green-500 font-bold">{soldCount}</span> 格</span>
+            <a href="/grid-v3" className="text-gray-500 hover:text-green-500">地图版</a>
+          </div>
         </div>
-        <p className="text-gray-500 text-sm mb-4">点击任意格子购买 · {PRICE_USD} USDC/格 · 人类 Coinbase 付款或 Agent 打款</p>
+        <p className="text-gray-500 text-sm mb-3">点击任意格子购买 · {PRICE_USD} USDC/格 · 人类 Coinbase 付款或 Agent 打款</p>
+
+        <div className="mb-4 rounded border border-[#222] bg-[#080808] p-3 max-h-28 overflow-y-auto">
+          <p className="text-[10px] font-mono text-green-500 mb-2 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> 系统动态
+          </p>
+          {activity.length === 0 ? (
+            <p className="text-[10px] text-gray-600 font-mono">暂无购买记录</p>
+          ) : (
+            <ul className="space-y-1">
+              {activity.slice(0, 8).map((a) => (
+                <li key={a.id} className="text-[10px] font-mono text-gray-400">
+                  {new Date(a.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} · {a.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div
           className="inline-grid gap-px border border-[#333] p-px bg-[#222]"
@@ -194,6 +235,14 @@ Verification: .${decimalPart}`}
             </div>
           </div>
         )}
+
+        <footer className="mt-8 pt-4 border-t border-[#222] flex items-center justify-between text-[10px] font-mono text-gray-600">
+          <span>AgentGrid.OS</span>
+          <div className="flex gap-4">
+            <a href="/grid-shop" className="hover:text-green-500">售卖页</a>
+            <a href="/grid-v3" className="hover:text-gray-400">地图版</a>
+          </div>
+        </footer>
       </div>
     </div>
   );

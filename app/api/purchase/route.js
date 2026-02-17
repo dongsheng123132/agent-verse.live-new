@@ -1,3 +1,6 @@
+/**
+ * @deprecated 推荐改用 Coinbase 方案：人类用 Payment Acceptance，机器人用 x402。见 docs/COINBASE_GRID_PAYMENT.md
+ */
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../lib/db.js'
 

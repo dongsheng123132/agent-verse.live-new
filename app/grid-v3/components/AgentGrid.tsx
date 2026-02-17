@@ -17,6 +17,7 @@ type ViewMode = 'GRID' | 'FORUM' | 'ACCESS';
 type Language = 'EN' | 'CN';
 
 const CELL_SIZE = 30;
+const SIMPLIFIED = true;
 
 const AgentGridApp: React.FC = () => {
   const searchParams = useSearchParams();
@@ -58,10 +59,34 @@ const AgentGridApp: React.FC = () => {
     }
   }, []);
 
+  const fetchActivity = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/grid-v3/activity');
+      const data = await res.json();
+      const activity = Array.isArray(data?.activity) ? data.activity : [];
+      if (activity.length === 0) return;
+      setLogs((prev) => {
+        const byId = new Map<string, ActivityLog>();
+        activity.forEach((l: ActivityLog) => byId.set(l.id, l));
+        prev.forEach((l) => byId.set(l.id, l));
+        return [...byId.values()].sort((a, b) => b.timestamp - a.timestamp);
+      });
+    } catch (e) {
+      console.error('fetchActivity', e);
+    }
+  }, []);
+
   // FETCH DATA
   useEffect(() => {
     fetchGrid();
   }, [fetchGrid]);
+
+  // 购买成功记录 → SYSTEM_LOGS LIVE 播报
+  useEffect(() => {
+    fetchActivity();
+    const t = setInterval(fetchActivity, 20000);
+    return () => clearInterval(t);
+  }, [fetchActivity]);
 
   // Commerce 支付回跳：验单并刷新地图
   useEffect(() => {
@@ -74,13 +99,14 @@ const AgentGridApp: React.FC = () => {
         const data = await res.json();
         if (data.ok && data.paid) {
           await fetchGrid();
+          fetchActivity();
           window.history.replaceState({}, '', '/grid-v3');
         }
       } catch (e) {
         console.error('Commerce verify', e);
       }
     })();
-  }, [searchParams, fetchGrid]);
+  }, [searchParams, fetchGrid, fetchActivity]);
 
   // 用 ResizeObserver 确保 main 有尺寸后再渲染地图，避免黑屏
   useEffect(() => {
@@ -176,30 +202,27 @@ const AgentGridApp: React.FC = () => {
   return (
     <div className="w-screen h-[100dvh] bg-[#050505] text-white overflow-hidden flex flex-col font-sans selection:bg-green-900 selection:text-white">
       
-      {/* 1. Header (Minimalist) */}
       <header className="h-12 border-b border-[#222] bg-[#0a0a0a] flex items-center justify-between px-4 shrink-0 z-40">
         <div className="flex items-center gap-3">
             <h1 className="font-bold text-sm tracking-widest font-mono flex items-center gap-2">
                 <span className="text-agent-green w-2 h-2 bg-agent-green rounded-full animate-pulse"></span> 
                 {t.HEADER_TITLE}
             </h1>
+            <a href="/" className="text-[10px] font-mono text-gray-500 hover:text-agent-green">→ 售卖页</a>
         </div>
-
         <div className="flex items-center gap-3">
-            <button 
-                onClick={toggleLang}
-                className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors"
-            >
+            <button onClick={toggleLang} className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
                 <Globe size={10}/> {lang}
             </button>
         </div>
       </header>
 
-      {/* 2. Main Workspace（左侧固定竖条 w-12，侧栏固定 20rem；min-h-0 让 flex 子项能正确获得高度） */}
-      <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0 min-w-0 min-h-0 pl-0 md:pl-12">
+      <div className={`flex-1 flex overflow-hidden relative min-w-0 min-h-0 ${SIMPLIFIED ? 'pb-0' : 'pb-12 md:pb-0 pl-0 md:pl-12'}`}>
+          {!SIMPLIFIED && (
           <div className="hidden md:flex h-full shrink-0 grow-0 basis-80" style={{ width: '20rem', minWidth: '20rem' }}>
             <Sidebar logs={logs} grid={grid} />
           </div>
+          )}
 
           <main className="flex-1 min-w-0 min-h-0 relative bg-[#050505] flex flex-col overflow-hidden" ref={viewportRef}>
               
@@ -224,27 +247,19 @@ const AgentGridApp: React.FC = () => {
                     </div>
               </div>
 
-              {viewMode === 'FORUM' && (
+              {!SIMPLIFIED && viewMode === 'FORUM' && (
                   <div className="absolute inset-0 z-10 bg-[#050505] flex flex-col">
-                      <ForumFeed 
-                        grid={grid} 
-                        logs={logs} 
-                        currentUser={null} 
-                        onNavigateToCell={handleNavigateToCell} 
-                        t={t}
-                      />
+                      <ForumFeed grid={grid} logs={logs} currentUser={null} onNavigateToCell={handleNavigateToCell} t={t} />
                   </div>
               )}
 
-               {viewMode === 'ACCESS' && (
+              {!SIMPLIFIED && viewMode === 'ACCESS' && (
                   <div className="absolute inset-0 z-10 bg-[#050505] flex flex-col items-center justify-center p-6">
                       <div className="w-full max-w-md">
                         <BotConnect t={t} mode="EMBED" />
                         <div className="mt-8 pt-8 border-t border-[#222] text-center">
                             <p className="text-xs text-gray-600 font-mono mb-4">{t.MODE_READ_ONLY}</p>
-                            <button onClick={() => setShowHelp(true)} className="text-gray-500 text-xs underline">
-                                [README.md]
-                            </button>
+                            <button onClick={() => setShowHelp(true)} className="text-gray-500 text-xs underline">[README.md]</button>
                         </div>
                       </div>
                   </div>
@@ -253,43 +268,27 @@ const AgentGridApp: React.FC = () => {
           </main>
       </div>
 
+      {!SIMPLIFIED && (
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-[#0a0a0a] border-t border-[#222] flex items-center justify-around z-50 pb-safe">
-        <button 
-            onClick={() => setViewMode('GRID')}
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 ${viewMode === 'GRID' ? 'text-agent-green' : 'text-gray-600'}`}
-        >
-            <MapIcon size={18} />
-            <span className="text-[10px] font-mono font-bold">{t.NAV_MAP}</span>
+        <button onClick={() => setViewMode('GRID')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${viewMode === 'GRID' ? 'text-agent-green' : 'text-gray-600'}`}>
+            <MapIcon size={18} /><span className="text-[10px] font-mono font-bold">{t.NAV_MAP}</span>
         </button>
-
-        <button 
-            onClick={() => setViewMode('FORUM')}
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 ${viewMode === 'FORUM' ? 'text-blue-500' : 'text-gray-600'}`}
-        >
-            <Terminal size={18} />
-            <span className="text-[10px] font-mono font-bold">{t.NAV_FEED}</span>
+        <button onClick={() => setViewMode('FORUM')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${viewMode === 'FORUM' ? 'text-blue-500' : 'text-gray-600'}`}>
+            <Terminal size={18} /><span className="text-[10px] font-mono font-bold">{t.NAV_FEED}</span>
         </button>
-
-        <button 
-            onClick={() => setViewMode('ACCESS')}
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 ${viewMode === 'ACCESS' ? 'text-purple-500' : 'text-gray-600'}`}
-        >
-            <ShieldCheck size={18} />
-            <span className="text-[10px] font-mono font-bold">{t.NAV_ME}</span>
+        <button onClick={() => setViewMode('ACCESS')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${viewMode === 'ACCESS' ? 'text-purple-500' : 'text-gray-600'}`}>
+            <ShieldCheck size={18} /><span className="text-[10px] font-mono font-bold">{t.NAV_ME}</span>
         </button>
       </nav>
+      )}
 
+      {!SIMPLIFIED && (
       <div className="hidden md:flex fixed top-14 left-0 bottom-0 w-12 bg-[#0a0a0a] border-r border-[#222] flex-col items-center py-4 gap-6 z-30">
-           <button onClick={() => setViewMode('GRID')} className={`p-2 rounded ${viewMode === 'GRID' ? 'text-agent-green bg-[#111]' : 'text-gray-600 hover:text-gray-400'}`}>
-               <MapIcon size={20}/>
-           </button>
-           <button onClick={() => setViewMode('FORUM')} className={`p-2 rounded ${viewMode === 'FORUM' ? 'text-blue-500 bg-[#111]' : 'text-gray-600 hover:text-gray-400'}`}>
-               <Terminal size={20}/>
-           </button>
-           <button onClick={() => setShowHelp(true)} className="mt-auto p-2 text-gray-600 hover:text-white">
-               <Settings size={20}/>
-           </button>
+           <button onClick={() => setViewMode('GRID')} className={`p-2 rounded ${viewMode === 'GRID' ? 'text-agent-green bg-[#111]' : 'text-gray-600 hover:text-gray-400'}`}><MapIcon size={20}/></button>
+           <button onClick={() => setViewMode('FORUM')} className={`p-2 rounded ${viewMode === 'FORUM' ? 'text-blue-500 bg-[#111]' : 'text-gray-600 hover:text-gray-400'}`}><Terminal size={20}/></button>
+           <button onClick={() => setShowHelp(true)} className="mt-auto p-2 text-gray-600 hover:text-white"><Settings size={20}/></button>
       </div>
+      )}
 
       {showDetailModal && (
         <DetailModal 
