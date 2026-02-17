@@ -114,7 +114,7 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
   const { t } = useLang();
   const [regenX, setRegenX] = useState('')
   const [regenY, setRegenY] = useState('')
-  const [regenReceipt, setRegenReceipt] = useState('')
+  const [regenOwner, setRegenOwner] = useState('')
   const [regenResult, setRegenResult] = useState<string | null>(null)
   const [regenError, setRegenError] = useState<string | null>(null)
   const [regenLoading, setRegenLoading] = useState(false)
@@ -125,7 +125,7 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
       const res = await fetch('/api/cells/regen-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x: Number(regenX), y: Number(regenY), receipt_id: regenReceipt })
+        body: JSON.stringify({ x: Number(regenX), y: Number(regenY), owner_address: regenOwner })
       })
       const d = await res.json()
       if (d?.ok && d?.api_key) setRegenResult(d.api_key)
@@ -167,9 +167,9 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
             <input type="number" placeholder="Y" value={regenY} onChange={e => setRegenY(e.target.value)}
               className="flex-1 bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none" />
           </div>
-          <input type="text" placeholder="Receipt ID (c_xxxxx_xxx)" value={regenReceipt} onChange={e => setRegenReceipt(e.target.value)}
+          <input type="text" placeholder={t('owner_placeholder')} value={regenOwner} onChange={e => setRegenOwner(e.target.value)}
             className="w-full bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none" />
-          <button onClick={handleRegen} disabled={regenLoading || !regenX || !regenY || !regenReceipt}
+          <button onClick={handleRegen} disabled={regenLoading || !regenX || !regenY || !regenOwner}
             className="w-full py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-[#222] disabled:text-gray-600 text-white text-xs rounded font-bold flex items-center justify-center gap-2">
             <RefreshCw size={12} className={regenLoading ? 'animate-spin' : ''} />
             {regenLoading ? t('regenerating') : t('regenerate')}
