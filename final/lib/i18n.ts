@@ -37,6 +37,8 @@ const dict = {
   'processing': { en: 'PROCESSING...', zh: '处理中...' },
   'ai_payment': { en: 'AI AGENT PAYMENT (x402)', zh: 'AI Agent 支付 (x402)' },
   'only_1x1': { en: '1x1 ONLY', zh: '仅1x1' },
+  'copy_for_ai': { en: 'Copy for AI (cmd + skill.md)', zh: '一键复制给 AI（命令 + 文档）' },
+  'copied': { en: 'Copied!', zh: '已复制！' },
 
   // Detail Modal
   'node_label': { en: 'NODE', zh: '节点' },

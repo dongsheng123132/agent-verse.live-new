@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BLOCK_SIZES } from '../app/types';
-import { X, CreditCard, Box } from 'lucide-react';
+import { X, CreditCard, Box, Copy, Check } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
 
 interface PurchaseModalProps {
@@ -20,6 +20,17 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     x, y, blockSize, setBlockSize, onPay, onClose, loading, error, hasConflict, checkConflict
 }) => {
     const { t } = useLang();
+    const [copied, setCopied] = useState(false);
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const x402Cmd = `npx awal@latest x402 pay ${origin}/api/cells/purchase -X POST -d '{"x":${x},"y":${y}}'`;
+    const aiPrompt = `Please help me buy a grid cell on AgentVerse. Run this command:\n\n${x402Cmd}\n\nAfter purchase, customize my cell using the API documented at:\n${origin}/skill.md`;
+
+    const handleCopyForAI = () => {
+        navigator.clipboard.writeText(aiPrompt);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
             <div className="bg-[#111] border border-[#333] rounded-lg p-5 max-w-sm w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -91,9 +102,17 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                         <p className="text-green-500 text-[10px] font-bold font-mono">{t('ai_payment')}</p>
                         <span className="text-[9px] bg-[#222] text-gray-500 px-1 rounded">{t('only_1x1')}</span>
                     </div>
-                    <pre className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors">
-                        {`npx awal@latest x402 pay ${typeof window !== 'undefined' ? window.location.origin : ''}/api/cells/purchase -X POST -d '{"x":${x},"y":${y}}'`}
+                    <pre className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors mb-2">
+                        {x402Cmd}
                     </pre>
+                    <button onClick={handleCopyForAI}
+                        className={`w-full py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${
+                            copied
+                                ? 'bg-green-900/20 border-green-700 text-green-400'
+                                : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-green-500 hover:text-green-400'
+                        }`}>
+                        {copied ? <><Check size={10} /> {t('copied')}</> : <><Copy size={10} /> {t('copy_for_ai')}</>}
+                    </button>
                 </div>
             </div>
         </div>
