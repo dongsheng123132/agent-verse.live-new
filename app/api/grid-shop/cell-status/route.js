@@ -3,6 +3,8 @@
  * 查某格子是否已在数据库里标记为已购买（grid_cells 有 owner）
  */
 import { NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
 import { dbQuery } from '../../../../lib/db.js'
 
 export async function GET(req) {

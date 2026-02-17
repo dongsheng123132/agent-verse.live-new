@@ -4,6 +4,8 @@
  * 收到链上打款后，手动把格子标记为已购买（写 grid_cells）
  */
 import { NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
 import { dbQuery } from '../../../../lib/db.js'
 
 export async function POST(req) {
