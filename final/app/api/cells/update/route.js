@@ -17,7 +17,12 @@ export async function PUT(req) {
     }
 
     const body = await req.json()
-    const allowedFields = ['fill_color', 'title', 'summary', 'image_url', 'content_url', 'markdown']
+    const allowedFields = ['fill_color', 'title', 'summary', 'image_url', 'content_url', 'markdown', 'iframe_url']
+
+    // iframe_url must use HTTPS
+    if (body.iframe_url && !body.iframe_url.startsWith('https://')) {
+      return NextResponse.json({ ok: false, error: 'invalid_iframe_url', message: 'iframe_url must use https://' }, { status: 400 })
+    }
     const updates = []
     const values = []
     let paramIdx = 1

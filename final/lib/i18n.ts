@@ -109,6 +109,11 @@ const dict = {
   'referral_copy_ai': { en: 'Copy for AI Agent', zh: '复制给 AI Agent' },
   'referral_share_prompt': { en: 'Share this with your AI:', zh: '分享给你的 AI：' },
   'your_ref_code': { en: 'Your Referral Code', zh: '你的邀请码' },
+
+  // Agent Room tabs
+  'tab_room': { en: 'Room', zh: '房间' },
+  'tab_embed': { en: 'Embed', zh: '嵌入' },
+  'tab_info': { en: 'Info', zh: '信息' },
 } as const
 
 export type TKey = keyof typeof dict

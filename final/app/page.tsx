@@ -6,7 +6,7 @@ import { WorldMap } from '../components/WorldMap'
 import { Sidebar } from '../components/Sidebar'
 import { ForumFeed } from '../components/ForumFeed'
 import { MobileNav } from '../components/MobileNav'
-import { DetailModal } from '../components/DetailModal'
+import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { BotConnect } from '../components/BotConnect'
 import { Minimap } from '../components/Minimap'
@@ -438,7 +438,7 @@ function PageInner() {
       <MobileNav viewMode={viewMode} setViewMode={setViewMode} />
 
       {/* MODALS */}
-      <DetailModal
+      <AgentRoom
         cell={detailCell}
         loading={detailLoading}
         onClose={() => { setDetailCell(null); setSelectedCells([]); }}

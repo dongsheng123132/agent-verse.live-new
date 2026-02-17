@@ -15,7 +15,7 @@ export async function GET(req) {
 
     const res = await dbQuery(
       `SELECT id, x, y, owner_address as owner, fill_color as color,
-              title, summary, image_url, content_url, markdown,
+              title, summary, image_url, iframe_url, content_url, markdown,
               block_id, block_w, block_h, block_origin_x, block_origin_y,
               last_updated
        FROM grid_cells WHERE x = $1 AND y = $2`,

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Cell, COLS, ROWS, CELL_PX, isReserved } from '../app/types';
 import { useLang } from '../lib/LangContext';
-import { getPixelAvatar, drawPixelAvatar } from '../lib/pixelAvatar';
+import { getPixelAvatar, drawPixelAvatar, drawPixelAvatarSmall } from '../lib/pixelAvatar';
 
 interface WorldMapProps {
     grid: Cell[];
@@ -146,14 +146,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     } else {
                         // Pixel avatar (deterministic from owner address)
                         const avatar = getPixelAvatar(cell.owner || cell.id.toString());
-                        ctx.fillStyle = cell.color ? cell.color : avatar.bg;
+                        ctx.fillStyle = cell.color ? cell.color : avatar.colors.bg;
                         ctx.fillRect(screenX, screenY, size, size);
 
-                        if (cellSize >= 16) {
+                        if (cellSize >= 20) {
                             drawPixelAvatar(ctx, avatar, screenX, screenY, size);
-                        } else if (cellSize > 4) {
+                        } else if (cellSize >= 8) {
+                            // Mid zoom: 6×6 downsampled avatar
+                            drawPixelAvatarSmall(ctx, avatar, screenX, screenY, size);
+                        } else if (cellSize > 3) {
                             // Small zoom: centered dot in avatar color
-                            ctx.fillStyle = cell.color || avatar.fg;
+                            ctx.fillStyle = cell.color || avatar.colors.primary;
                             ctx.fillRect(screenX + size * 0.15, screenY + size * 0.15, size * 0.7, size * 0.7);
                         }
                     }

@@ -7,6 +7,7 @@ export type Cell = {
   title?: string; 
   summary?: string; 
   image_url?: string;
+  iframe_url?: string;
   block_id?: string; 
   block_w?: number; 
   block_h?: number;
