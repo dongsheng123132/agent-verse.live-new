@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Cell, COLS, ROWS, CELL_PX, isReserved } from '../app/types';
 import { useLang } from '../lib/LangContext';
+import { getPixelAvatar, drawPixelAvatar } from '../lib/pixelAvatar';
 
 interface WorldMapProps {
     grid: Cell[];
@@ -143,37 +144,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                             }
                         }
                     } else {
-                        // PROCEDURAL AVATAR / COOL STUFF
-                        ctx.fillStyle = cell.color || '#10b981';
+                        // Pixel avatar (deterministic from owner address)
+                        const avatar = getPixelAvatar(cell.owner || cell.id.toString());
+                        ctx.fillStyle = cell.color ? cell.color : avatar.bg;
                         ctx.fillRect(screenX, screenY, size, size);
 
-                        if (cellSize > 10) {
-                            // Draw "Avatar" based on owner address
-                            const seed = (cell.owner || '??').charCodeAt(0) + (cell.owner || '??').charCodeAt(cell.owner?.length - 1 || 0);
-                            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                            ctx.beginPath();
-                            // Simple geometric pattern
-                            if (seed % 3 === 0) {
-                                ctx.fillRect(screenX + size * 0.2, screenY + size * 0.2, size * 0.6, size * 0.6);
-                            } else if (seed % 3 === 1) {
-                                ctx.arc(screenX + size / 2, screenY + size / 2, size * 0.3, 0, Math.PI * 2);
-                                ctx.fill();
-                            } else {
-                                ctx.moveTo(screenX + size / 2, screenY + size * 0.2);
-                                ctx.lineTo(screenX + size * 0.8, screenY + size * 0.8);
-                                ctx.lineTo(screenX + size * 0.2, screenY + size * 0.8);
-                                ctx.fill();
-                            }
-
-                            // Text (Initials)
-                            if (cellSize > 20) {
-                                ctx.fillStyle = '#fff';
-                                ctx.font = `bold ${cellSize * 0.4}px monospace`;
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
-                                const initial = (cell.title || cell.owner || '?').substring(0, 1).toUpperCase();
-                                ctx.fillText(initial, screenX + size / 2, screenY + size / 2);
-                            }
+                        if (cellSize >= 16) {
+                            drawPixelAvatar(ctx, avatar, screenX, screenY, size);
+                        } else if (cellSize > 4) {
+                            // Small zoom: centered dot in avatar color
+                            ctx.fillStyle = cell.color || avatar.fg;
+                            ctx.fillRect(screenX + size * 0.15, screenY + size * 0.15, size * 0.7, size * 0.7);
                         }
                     }
                 } else if (isReservedCell) {

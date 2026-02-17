@@ -105,6 +105,10 @@ async function purchaseHandler(req: NextRequest) {
 }
 
 export async function GET() {
+  // Pre-warm x402 on GET (fire-and-forget, non-blocking)
+  if (!x402Handler && !x402InitError) {
+    initX402().catch(e => console.error('[x402] pre-warm failed:', e))
+  }
   return NextResponse.json({
     endpoint: '/api/cells/purchase',
     method: 'POST',

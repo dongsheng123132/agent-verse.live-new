@@ -82,6 +82,7 @@ function PageInner() {
   }, [])
 
   useEffect(() => {
+    fetch('/api/cells/purchase').catch(() => {}) // Pre-warm x402
     fetch('/api/events?limit=20').then(r => r.json()).then(d => {
       if (d?.events) setEvents(d.events)
     }).catch(() => { })

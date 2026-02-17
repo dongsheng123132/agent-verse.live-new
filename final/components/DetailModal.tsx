@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Cell, truncAddr } from '../app/types';
 import { X } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
+import { getPixelAvatar, drawPixelAvatar } from '../lib/pixelAvatar';
 
 interface DetailModalProps {
     cell: Cell | null;
     loading: boolean;
     onClose: () => void;
 }
+
+const AvatarCanvas: React.FC<{ owner: string }> = ({ owner }) => {
+    const ref = useRef<HTMLCanvasElement>(null);
+    useEffect(() => {
+        const canvas = ref.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const avatar = getPixelAvatar(owner);
+        ctx.fillStyle = avatar.bg;
+        ctx.fillRect(0, 0, 80, 80);
+        drawPixelAvatar(ctx, avatar, 0, 0, 80);
+    }, [owner]);
+    return <canvas ref={ref} width={80} height={80} className="rounded" style={{ imageRendering: 'pixelated' }} />;
+};
 
 export const DetailModal: React.FC<DetailModalProps> = ({ cell, loading, onClose }) => {
     const { t } = useLang();
@@ -45,9 +61,19 @@ export const DetailModal: React.FC<DetailModalProps> = ({ cell, loading, onClose
                             )}
                         </div>
 
-                        {cell.image_url && (
+                        {cell.image_url ? (
                             <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
                                 <img src={cell.image_url} alt={cell.title || ''} className="w-full max-h-64 object-cover" />
+                            </div>
+                        ) : cell.owner && (
+                            <div className="mb-4 flex justify-center">
+                                <div className="border border-[#333] rounded bg-[#0a0a0a] p-3 flex flex-col items-center gap-2"
+                                    style={{ background: `linear-gradient(135deg, #0a0a0a 0%, ${getPixelAvatar(cell.owner).bg} 100%)` }}>
+                                    <div className="w-full h-0.5 rounded" style={{ backgroundColor: getPixelAvatar(cell.owner).accent }}></div>
+                                    <AvatarCanvas owner={cell.owner} />
+                                    <div className="w-full h-0.5 rounded opacity-40" style={{ backgroundColor: getPixelAvatar(cell.owner).accent }}></div>
+                                    <div className="text-[8px] font-mono text-gray-600 tracking-widest">AGENT_HOME</div>
+                                </div>
                             </div>
                         )}
 
