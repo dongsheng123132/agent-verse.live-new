@@ -14,7 +14,8 @@ let x402InitError: string | null = null
 
 async function initX402() {
   if (x402Handler) return
-  if (x402InitError) return
+  // Reset error on retry
+  x402InitError = null
   try {
     const { withX402 } = await import('@x402/next')
     const { x402ResourceServer, HTTPFacilitatorClient } = await import('@x402/core/server')
@@ -24,12 +25,16 @@ async function initX402() {
     const server = new x402ResourceServer(facilitatorClient)
     registerExactEvmScheme(server, { networks: ['eip155:8453'] })
 
+    // Must initialize to fetch supported schemes from facilitator
+    await server.initialize()
+
     const routeConfig = {
       accepts: [{ scheme: 'exact', price: priceStr, network: 'eip155:8453', payTo }],
       description: `Purchase one grid cell (${priceStr} USDC on Base)`,
       mimeType: 'application/json',
     }
 
+    // syncFacilitatorOnStart=false since we already called initialize()
     x402Handler = withX402(purchaseHandler, routeConfig, server, undefined, undefined, false)
   } catch (e: any) {
     x402InitError = e?.message || 'x402 init failed'
@@ -107,5 +112,13 @@ export async function POST(req: NextRequest) {
       hint: 'Use Coinbase Commerce via the website instead'
     }, { status: 503 })
   }
-  return x402Handler(req)
+  try {
+    return await x402Handler(req)
+  } catch (e: any) {
+    console.error('[x402] handler error:', e)
+    return NextResponse.json({
+      error: 'x402_error',
+      message: e?.message || 'x402 processing failed',
+    }, { status: 500 })
+  }
 }
