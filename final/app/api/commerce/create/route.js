@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { getBlockPrice, getBlockLabel } from '../../../../lib/pricing.js'
 
+const RESERVED_DIAGONALS = new Set([
+  '20,20','25,25','30,30','33,33','35,35','40,40','44,44','45,45',
+  '50,50','55,55','60,60','66,66','70,70','75,75','77,77','80,80',
+  '85,85','88,88','90,90','95,95','99,99'
+])
+
+function isReserved(x, y) {
+  if (x < 16 && y < 16) return true
+  return RESERVED_DIAGONALS.has(`${x},${y}`)
+}
+
 export async function POST(req) {
   try {
     if (!process.env.COMMERCE_API_KEY) {
@@ -25,6 +36,15 @@ export async function POST(req) {
     // Check block fits in grid
     if (x + blockW > 100 || y + blockH > 100) {
       return NextResponse.json({ ok: false, error: 'out_of_bounds', message: '块超出网格范围' }, { status: 400 })
+    }
+
+    // Check reserved zones
+    for (let dy = 0; dy < blockH; dy++) {
+      for (let dx = 0; dx < blockW; dx++) {
+        if (isReserved(x + dx, y + dy)) {
+          return NextResponse.json({ ok: false, error: 'reserved', message: '该区域包含保留格子，不可购买' }, { status: 403 })
+        }
+      }
     }
 
     // Check all cells in block are available

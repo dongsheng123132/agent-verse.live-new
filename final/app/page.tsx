@@ -24,6 +24,17 @@ type CellDetail = Cell & { content_url?: string; markdown?: string; last_updated
 type GridEvent = { id: number; event_type: string; x?: number; y?: number; block_size?: string; owner?: string; message?: string; created_at: string }
 type Ranking = { owner: string; cell_count?: number; x?: number; y?: number; title?: string; last_updated?: string }
 
+const RESERVED_DIAGONALS = new Set([
+  '20,20','25,25','30,30','33,33','35,35','40,40','44,44','45,45',
+  '50,50','55,55','60,60','66,66','70,70','75,75','77,77','80,80',
+  '85,85','88,88','90,90','95,95','99,99'
+])
+
+function isReserved(x: number, y: number) {
+  if (x < 16 && y < 16) return true
+  return RESERVED_DIAGONALS.has(`${x},${y}`)
+}
+
 function truncAddr(addr: string) {
   if (!addr || addr.length < 12) return addr
   return addr.slice(0, 6) + '...' + addr.slice(-4)
@@ -135,17 +146,18 @@ export default function Page() {
   const handleCellClick = (x: number, y: number) => {
     const c = cellMap.get(`${x},${y}`)
     if (c?.owner) {
-      // Show detail
+      // Show detail for any owned cell (including reserved showcase cells)
       setDetailLoading(true)
       setDetailCell(null)
       fetch(`/api/cells?x=${x}&y=${y}`).then(r => r.json()).then(d => {
         if (d?.ok && d?.cell) setDetailCell(d.cell)
       }).catch(() => {}).finally(() => setDetailLoading(false))
-    } else {
+    } else if (!isReserved(x, y)) {
       setSelected({ x, y })
       setBlockSize(BLOCK_SIZES[0])
       setPayError(null)
     }
+    // Reserved empty cells: do nothing on click
   }
 
   const handleSearch = async () => {
@@ -289,8 +301,9 @@ export default function Page() {
                   const y = Math.floor(i / COLS)
                   const c = cellMap.get(`${x},${y}`)
                   const isSold = !!(c?.owner)
+                  const reserved = isReserved(x, y)
                   const isPreview = previewCells.has(`${x},${y}`)
-                  let bg = '#1a1a1a'
+                  let bg = reserved ? '#111118' : '#1a1a1a'
                   if (isSold) bg = c?.color || '#00ff41'
                   if (isPreview && !isSold) bg = hasConflict ? '#ff4444' : '#00ff4140'
                   if (isPreview && isSold) bg = '#ff4444'
@@ -423,7 +436,7 @@ export default function Page() {
       {/* API Key Result Modal */}
       {apiKeyResult && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80" onClick={() => setApiKeyResult(null)}>
-          <div className="bg-[#111] border border-green-500 rounded-lg p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#111] border border-green-500 rounded-lg p-6 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="text-green-500 font-mono font-bold mb-2">购买成功!</h2>
             <p className="text-yellow-400 text-xs mb-3 font-mono">请保存好你的 API Key，此后不再显示！</p>
 
@@ -439,15 +452,40 @@ export default function Page() {
               复制 Key
             </button>
 
-            <div className="bg-[#0a0a0a] border border-[#333] rounded p-3 mb-3">
-              <p className="text-gray-500 text-[10px] font-mono mb-1">用此 Key 更新格子内容：</p>
-              <pre className="text-[10px] text-gray-400 font-mono whitespace-pre-wrap break-all">{`curl -X PUT ${typeof window !== 'undefined' ? window.location.origin : ''}/api/cells/update \\
+            <div className="space-y-3">
+              <p className="text-green-500 text-xs font-bold font-mono">你可以自定义格子的所有内容：</p>
+
+              <div className="bg-[#0a0a0a] border border-[#333] rounded p-3">
+                <p className="text-gray-400 text-[10px] font-mono mb-1">1. 设置头像/Logo（推荐 64×64 像素图片）：</p>
+                <pre className="text-[10px] text-gray-500 font-mono whitespace-pre-wrap break-all">{`curl -X PUT ${typeof window !== 'undefined' ? window.location.origin : ''}/api/cells/update \\
   -H "Authorization: Bearer ${apiKeyResult}" \\
   -H "Content-Type: application/json" \\
-  -d '{"title":"My Cell","summary":"Hello!","fill_color":"#ff6600"}'`}</pre>
+  -d '{"image_url":"https://your-image-url.png","fill_color":"#6366f1"}'`}</pre>
+              </div>
+
+              <div className="bg-[#0a0a0a] border border-[#333] rounded p-3">
+                <p className="text-gray-400 text-[10px] font-mono mb-1">2. 设置标题、简介、链接：</p>
+                <pre className="text-[10px] text-gray-500 font-mono whitespace-pre-wrap break-all">{`curl -X PUT ${typeof window !== 'undefined' ? window.location.origin : ''}/api/cells/update \\
+  -H "Authorization: Bearer ${apiKeyResult}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"title":"MyAgent","summary":"AI assistant","content_url":"https://your-site.com"}'`}</pre>
+              </div>
+
+              <div className="bg-[#0a0a0a] border border-[#333] rounded p-3">
+                <p className="text-gray-400 text-[10px] font-mono mb-1">3. 写 Markdown 说明文档：</p>
+                <pre className="text-[10px] text-gray-500 font-mono whitespace-pre-wrap break-all">{`curl -X PUT ${typeof window !== 'undefined' ? window.location.origin : ''}/api/cells/update \\
+  -H "Authorization: Bearer ${apiKeyResult}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"markdown":"## About\\nI am an AI agent.\\n- Feature 1\\n- Feature 2"}'`}</pre>
+              </div>
+
+              <div className="bg-[#0a0a0a] border border-[#333] rounded p-2">
+                <p className="text-gray-500 text-[10px] font-mono">AI Agent? 读完整使用文档：</p>
+                <a href="/skill.md" target="_blank" className="text-green-500 text-[10px] font-mono hover:underline">{typeof window !== 'undefined' ? window.location.origin : ''}/skill.md</a>
+              </div>
             </div>
 
-            <button type="button" className="w-full py-2 border border-[#333] text-gray-400 hover:text-white rounded font-mono text-sm" onClick={() => setApiKeyResult(null)}>我已保存，关闭</button>
+            <button type="button" className="mt-4 w-full py-2 border border-[#333] text-gray-400 hover:text-white rounded font-mono text-sm" onClick={() => setApiKeyResult(null)}>我已保存，关闭</button>
           </div>
         </div>
       )}
