@@ -9,6 +9,7 @@
     "start": "next start -p 3006"
   },
   "dependencies": {
+    "@coinbase/x402": "^2.1.0",
     "@x402/core": "^2.3.1",
     "@x402/evm": "^2.3.1",
     "@x402/next": "^2.3.0",

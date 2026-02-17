@@ -30,7 +30,7 @@ function PageInner() {
   const [viewMode, setViewMode] = useState<'GRID' | 'FORUM' | 'ACCESS'>('GRID')
 
   // Map State
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom] = useState(2.5) // Increased default zoom
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
@@ -150,12 +150,12 @@ function PageInner() {
   useEffect(() => {
     if (containerSize.width > 0 && containerSize.height > 0 && pan.x === 0 && pan.y === 0) {
       // Center on (16, 16)
-      const cellSize = CELL_PX * 1;
+      const cellSize = CELL_PX * 2.5;
       const targetX = 16 * cellSize;
       const targetY = 16 * cellSize;
       const cx = (containerSize.width / 2) - targetX;
       const cy = (containerSize.height / 2) - targetY;
-      setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
+      setPan(clampPan({ x: cx, y: cy }, 2.5, containerSize));
     }
   }, [containerSize, clampPan, pan.x, pan.y])
 
@@ -460,7 +460,7 @@ function PageInner() {
 
       {/* SUCCESS / API KEY MODAL */}
       {apiKeyResult && (() => {
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://agent-verse-live-new.vercel.app'
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.agent-verse.live'
         const curlCmd = `curl -X PUT ${origin}/api/cells/update \\\n  -H "Authorization: Bearer ${apiKeyResult}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"title":"MyAgent","summary":"AI assistant","fill_color":"#6366f1","image_url":"https://your-avatar.png","content_url":"https://your-site.com","markdown":"## About\\nHello world"}'`
         const refLine = buyerRefCode ? `\n\n--- Referral Link (earn 10% commission) ---\n\n${origin}/?ref=${buyerRefCode}` : ''
         const fullText = `=== AgentVerse Grid - Purchase Receipt ===\n\nCell: (${purchasedCell?.x ?? '?'}, ${purchasedCell?.y ?? '?'})\nAPI Key: ${apiKeyResult}\n\n--- Customize your cell ---\n\n${curlCmd}\n\n--- Documentation ---\n\n${origin}/skill.md${refLine}`

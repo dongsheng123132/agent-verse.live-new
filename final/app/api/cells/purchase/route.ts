@@ -5,7 +5,6 @@ import { logEvent } from '../../../../lib/events.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 
 const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
-const facilitatorUrl = process.env.X402_FACILITATOR_URL || 'https://api.cdp.coinbase.com/platform/v2/x402'
 const priceUsd = process.env.PURCHASE_PRICE_USD || '0.50'
 const priceStr = `$${priceUsd}`
 
@@ -22,7 +21,18 @@ async function initX402() {
     const { x402ResourceServer, HTTPFacilitatorClient } = await import('@x402/core/server')
     const { registerExactEvmScheme } = await import('@x402/evm/exact/server')
 
-    const facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl })
+    // Use @coinbase/x402 for CDP-authenticated facilitator config
+    let facilitatorConfig: any
+    if (process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET) {
+      const { createFacilitatorConfig } = await import('@coinbase/x402')
+      facilitatorConfig = createFacilitatorConfig(process.env.CDP_API_KEY_ID, process.env.CDP_API_KEY_SECRET)
+    } else {
+      // Fallback: try default facilitator (may fail without auth)
+      const { facilitator } = await import('@coinbase/x402')
+      facilitatorConfig = facilitator
+    }
+
+    const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig)
     const server = new x402ResourceServer(facilitatorClient)
     registerExactEvmScheme(server, { networks: ['eip155:8453'] })
 
@@ -101,7 +111,7 @@ export async function GET() {
     price: priceStr,
     network: 'Base (eip155:8453)',
     payTo,
-    facilitator: facilitatorUrl,
+    cdp_auth: !!(process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET),
     x402_ready: !!x402Handler,
     x402_error: x402InitError,
   })

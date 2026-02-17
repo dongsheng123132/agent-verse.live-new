@@ -74,15 +74,13 @@ const ReferralSection: React.FC = () => {
 
           <div className="flex gap-2">
             <button onClick={() => handleCopy(refLink, setCopied)}
-              className={`flex-1 py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${
-                copied ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-purple-500'
-              }`}>
+              className={`flex-1 py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${copied ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-purple-500'
+                }`}>
               {copied ? <><Check size={10} /> {t('copied')}</> : <><Copy size={10} /> {t('referral_copy_link')}</>}
             </button>
             <button onClick={() => handleCopy(aiPrompt, setCopiedAI)}
-              className={`flex-1 py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${
-                copiedAI ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-purple-500'
-              }`}>
+              className={`flex-1 py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${copiedAI ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-purple-500'
+                }`}>
               {copiedAI ? <><Check size={10} /> {t('copied')}</> : <><Users size={10} /> {t('referral_copy_ai')}</>}
             </button>
           </div>
