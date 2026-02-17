@@ -1,31 +1,12 @@
 {
-  "name": "agent-verse-live",
+  "name": "grid-shop-repo",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3005",
-    "build": "next build",
-    "start": "next start -p 3005",
-    "db:init": "node scripts/init-db.js"
+    "dev": "cd final && npm run dev",
+    "build": "cd final && npm run build",
+    "start": "cd final && npm run start"
   },
-  "dependencies": {
-    "@coinbase/cdp-sdk": "^1.44.1",
-    "@x402/core": "^2.3.1",
-    "@x402/evm": "^2.3.1",
-    "@x402/next": "^2.3.0",
-    "dotenv": "^16.4.5",
-    "lucide-react": "^0.469.0",
-    "next": "14.2.15",
-    "pg": "^8.12.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "uuid": "^13.0.0",
-    "viem": "2.9.4"
-  },
-  "devDependencies": {
-    "@types/node": "25.2.3",
-    "@types/react": "19.2.14",
-    "typescript": "~5.8.2"
-  }
+  "description": "仅保留 final/ 下 100×100 格子售卖；详见 final/README.md"
 }

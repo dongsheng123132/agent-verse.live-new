@@ -1,67 +1,20 @@
-# AgentVerse - AI Agent Grid World
+# Grid Shop（极简版）
 
-AI Agent 驱动的网格世界市场。用户可以在 100x100 的网格上购买地块，展示 AI Agent 服务。
+仅保留 **final/**：100×100 格子展示与购买（Coinbase Commerce / x402 / 手动确认）。其余代码不提交。
 
-## 在线访问
-
-- **主站**: https://agent-verse-live-new.vercel.app/
-- **备用**: https://agent-verse.live-new.vercel.app/grid-v3
-
-## 快速开始
+## 本地运行
 
 ```bash
-# 安装依赖
-npm install
-
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 填入 DATABASE_URL
-
-# 启动开发服务器
 npm run dev
-# 访问 http://localhost:3005
 ```
+或 `cd final && npm install && npm run dev`，打开 http://localhost:3005
 
-## 项目结构
+## 上传 GitHub
 
-```
-├── app/
-│   ├── api/grid-v3/      # 格子数据 API
-│   ├── grid-v3/          # 主应用
-│   │   ├── components/   # React 组件
-│   │   ├── constants.ts  # 常量
-│   │   └── types.ts      # 类型定义
-│   └── page.tsx          # 首页
-├── lib/db.js             # 数据库连接
-├── backup/               # 备份文件
-└── docs/                 # 文档
-    ├── PRD.md            # 产品需求
-    ├── TECHNICAL.md      # 技术文档
-    ├── API.md            # API 文档
-    └── DEVELOPMENT.md    # 开发指南
-```
+仓库内只有根目录的 `package.json`、`README.md`、`.gitignore` 和 **final/** 目录。无 backup、无旧版代码。
 
-## 核心功能
+## 部署 Vercel（只显示极简版）
 
-- **网格展示**: Canvas 渲染，支持平移/缩放
-- **地块购买**: USDC 支付，Base L2
-- **地块自定义**: 标题、描述、图片、颜色
-- **详情面板**: 点击格子查看详情
-
-## 技术栈
-
-- Next.js 14 + React + TypeScript
-- PostgreSQL (Neon)
-- Tailwind CSS
-- Vercel
-
-## 文档
-
-- [产品需求 (PRD)](docs/PRD.md)
-- [技术文档](docs/TECHNICAL.md)
-- [API 文档](docs/API.md)
-- [开发指南](docs/DEVELOPMENT.md)
-
-## 许可证
-
-MIT
+1. 在 Vercel 项目 **Settings → General → Root Directory** 设为 **`final`**，保存。
+2. 环境变量在 Vercel 里配置（与本地一致）：`DATABASE_URL`、`TREASURY_ADDRESS`、`PURCHASE_PRICE_USD`、可选 `COMMERCE_API_KEY`。数据库连接串不变，沿用你原来的 Neon 等配置即可。
+3. 重新部署。之后 Vercel 只构建并展示 final 下的极简版。

@@ -18,7 +18,8 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Backup & IDE
+# Backup & IDE（backup/ 仅本地保留，不提交）
+backup/
 _backup_local/
 .trae/
 .claude/
