@@ -1,0 +1,20 @@
+{
+    "name": "GridShop",
+    "short_name": "GridShop",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#050505",
+    "theme_color": "#050505",
+    "icons": [
+        {
+            "src": "https://agent-verse-live-new.vercel.app/icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://agent-verse-live-new.vercel.app/icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

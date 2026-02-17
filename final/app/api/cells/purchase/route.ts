@@ -1,25 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withX402 } from '@x402/next'
-import { x402ResourceServer } from '@x402/core/server'
-import { HTTPFacilitatorClient } from '@x402/core/server'
-import { registerExactEvmScheme } from '@x402/evm/exact/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
 
 const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
 const facilitatorUrl = process.env.X402_FACILITATOR_URL || 'https://api.cdp.coinbase.com/platform/v2/x402'
-const priceUsd = process.env.PURCHASE_PRICE_USD || '2'
+const priceUsd = process.env.PURCHASE_PRICE_USD || '0.50'
 const priceStr = `$${priceUsd}`
 
-const facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl })
-const server = new x402ResourceServer(facilitatorClient)
-registerExactEvmScheme(server, { networks: ['eip155:8453'] })
+// Lazy-init x402 to avoid module-level crashes on Vercel
+let x402Handler: ((req: NextRequest) => Promise<Response>) | null = null
+let x402InitError: string | null = null
 
-const routeConfig = {
-  accepts: [{ scheme: 'exact', price: priceStr, network: 'eip155:8453', payTo }],
-  description: `Purchase one grid cell (${priceStr} USDC on Base)`,
-  mimeType: 'application/json',
+async function initX402() {
+  if (x402Handler) return
+  if (x402InitError) return
+  try {
+    const { withX402 } = await import('@x402/next')
+    const { x402ResourceServer, HTTPFacilitatorClient } = await import('@x402/core/server')
+    const { registerExactEvmScheme } = await import('@x402/evm/exact/server')
+
+    const facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl })
+    const server = new x402ResourceServer(facilitatorClient)
+    registerExactEvmScheme(server, { networks: ['eip155:8453'] })
+
+    const routeConfig = {
+      accepts: [{ scheme: 'exact', price: priceStr, network: 'eip155:8453', payTo }],
+      description: `Purchase one grid cell (${priceStr} USDC on Base)`,
+      mimeType: 'application/json',
+    }
+
+    x402Handler = withX402(purchaseHandler, routeConfig, server, undefined, undefined, false)
+  } catch (e: any) {
+    x402InitError = e?.message || 'x402 init failed'
+    console.error('[x402] init error:', e)
+  }
 }
 
 async function purchaseHandler(req: NextRequest) {
@@ -70,4 +85,27 @@ async function purchaseHandler(req: NextRequest) {
   return NextResponse.json({ ok: true, cell: { x, y }, owner, receipt_id: receiptId, api_key: apiKey })
 }
 
-export const POST = withX402(purchaseHandler, routeConfig, server, undefined, undefined, false)
+export async function GET() {
+  return NextResponse.json({
+    endpoint: '/api/cells/purchase',
+    method: 'POST',
+    price: priceStr,
+    network: 'Base (eip155:8453)',
+    payTo,
+    facilitator: facilitatorUrl,
+    x402_ready: !!x402Handler,
+    x402_error: x402InitError,
+  })
+}
+
+export async function POST(req: NextRequest) {
+  await initX402()
+  if (x402InitError || !x402Handler) {
+    return NextResponse.json({
+      error: 'x402_unavailable',
+      message: x402InitError || 'x402 handler not initialized',
+      hint: 'Use Coinbase Commerce via the website instead'
+    }, { status: 503 })
+  }
+  return x402Handler(req)
+}
