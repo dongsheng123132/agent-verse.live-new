@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DetailModal } from './DetailModal';
 import { HelpModal } from './HelpModal';
 import { BotConnect } from './BotConnect'; 
@@ -18,6 +19,7 @@ type Language = 'EN' | 'CN';
 const CELL_SIZE = 30;
 
 const AgentGridApp: React.FC = () => {
+  const searchParams = useSearchParams();
   const [grid, setGrid] = useState<GridCell[]>([]);
   const [loading, setLoading] = useState(true); // Loading state
   const [logs, setLogs] = useState<ActivityLog[]>(INITIAL_LOGS);
@@ -34,37 +36,81 @@ const AgentGridApp: React.FC = () => {
   const [pan, setPan] = useState({ x: 0, y: 0 }); 
   
   const viewportRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [containerSize, setContainerSize] = useState(() => {
+    if (typeof window === 'undefined') return { width: 800, height: 600 };
+    return { width: Math.max(400, window.innerWidth - 400), height: Math.max(300, window.innerHeight - 120) };
+  });
+
+  const fetchGrid = React.useCallback(async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch('/api/grid-v3', { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error('Failed to load grid');
+      const data = await res.json();
+      setGrid(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setGrid([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // FETCH DATA
   useEffect(() => {
-    const initGrid = async () => {
-        try {
-            const res = await fetch('/api/grid-v3');
-            if(!res.ok) throw new Error("Failed to load grid");
-            const data = await res.json();
-            setGrid(data);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-    initGrid();
-  }, []);
+    fetchGrid();
+  }, [fetchGrid]);
 
+  // Commerce 支付回跳：验单并刷新地图
   useEffect(() => {
-    const updateSize = () => {
-        if(viewportRef.current) {
-            setContainerSize({
-                width: viewportRef.current.clientWidth,
-                height: viewportRef.current.clientHeight
-            });
+    const paid = searchParams.get('paid');
+    const receiptId = searchParams.get('receipt_id');
+    if (paid !== '1' || !receiptId) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/commerce/verify?receipt_id=${encodeURIComponent(receiptId)}`);
+        const data = await res.json();
+        if (data.ok && data.paid) {
+          await fetchGrid();
+          window.history.replaceState({}, '', '/grid-v3');
         }
+      } catch (e) {
+        console.error('Commerce verify', e);
+      }
+    })();
+  }, [searchParams, fetchGrid]);
+
+  // 用 ResizeObserver 确保 main 有尺寸后再渲染地图，避免黑屏
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const updateSize = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) {
+        setContainerSize({ width: w, height: h });
+        return;
+      }
+      // 主区尺寸为 0 时用窗口估算，避免一直黑屏（例如 flex 未算完）
+      setContainerSize(prev => {
+        if (prev.width > 0 && prev.height > 0) return prev;
+        const fallbackW = Math.max(400, typeof window !== 'undefined' ? window.innerWidth - 400 : 800);
+        const fallbackH = Math.max(300, typeof window !== 'undefined' ? window.innerHeight - 120 : 600);
+        return { width: fallbackW, height: fallbackH };
+      });
     };
     updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
     window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    const t = setTimeout(updateSize, 150);
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
   }, [viewMode, loading]); 
 
   const handleUpdate = async (cellIds: number[], data: AgentProfile, status: CellStatus, isForSale: boolean, price: number) => {
@@ -149,14 +195,13 @@ const AgentGridApp: React.FC = () => {
         </div>
       </header>
 
-      {/* 2. Main Workspace */}
-      <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0"> 
-          
-          <div className="hidden md:flex h-full">
+      {/* 2. Main Workspace（左侧固定竖条 w-12，侧栏固定 20rem；min-h-0 让 flex 子项能正确获得高度） */}
+      <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0 min-w-0 min-h-0 pl-0 md:pl-12">
+          <div className="hidden md:flex h-full shrink-0 grow-0 basis-80" style={{ width: '20rem', minWidth: '20rem' }}>
             <Sidebar logs={logs} grid={grid} />
           </div>
 
-          <main className="flex-1 relative bg-[#050505] flex flex-col" ref={viewportRef}>
+          <main className="flex-1 min-w-0 min-h-0 relative bg-[#050505] flex flex-col overflow-hidden" ref={viewportRef}>
               
               <div className={`absolute inset-0 ${viewMode === 'GRID' ? 'z-10 visible' : 'z-0 invisible'}`}>
                   {containerSize.width > 0 && (

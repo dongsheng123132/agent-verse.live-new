@@ -15,6 +15,7 @@ export async function POST(req) {
     }
     const receiptId = `c_${Date.now()}_${Math.random().toString(36).slice(2,8)}`
     const origin = req.nextUrl?.origin || 'http://localhost:3005'
+    const returnPath = (body?.return_path === 'grid-shop') ? 'grid-shop' : 'grid-v3'
     const payload = {
       name: `Grid (${x},${y})`,
       description: `Purchase grid (${x},${y})`,
@@ -23,8 +24,8 @@ export async function POST(req) {
         amount: amountUsd.toFixed(2),
         currency: 'USD'
       },
-      redirect_url: `${origin}/grid-shop?payment=success`,
-      cancel_url: `${origin}/grid-shop?payment=cancel`,
+      redirect_url: `${origin}/${returnPath}?paid=1&x=${x}&y=${y}&receipt_id=${receiptId}`,
+      cancel_url: `${origin}/${returnPath}?paid=0`,
       metadata: {
         receipt_id: receiptId,
         x,
@@ -39,11 +40,16 @@ export async function POST(req) {
       },
       body: JSON.stringify(payload)
     })
+    const txt = await res.text()
     if (!res.ok) {
-      const txt = await res.text()
       return NextResponse.json({ ok:false, error:'commerce_error', detail:txt }, { status:502 })
     }
-    const data = await res.json()
+    let data
+    try {
+      data = JSON.parse(txt)
+    } catch {
+      return NextResponse.json({ ok:false, error:'invalid_commerce_response', detail:txt?.slice(0, 200) }, { status:502 })
+    }
     const charge = data?.data
     const chargeId = charge?.id
     const hostedUrl = charge?.hosted_url
@@ -51,14 +57,22 @@ export async function POST(req) {
       return NextResponse.json({ ok:false, error:'invalid_commerce_response' }, { status:502 })
     }
     if (process.env.DATABASE_URL) {
-      await dbQuery(
-        'insert into grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, commerce_charge_id) values ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [receiptId, x, y, 0, 0, 'commerce', 'pending', chargeId]
-      )
+      try {
+        await dbQuery(
+          'insert into grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, commerce_charge_id) values ($1,$2,$3,$4,$5,$6,$7,$8)',
+          [receiptId, x, y, 0, 0, 'commerce', 'pending', chargeId]
+        )
+      } catch (dbErr) {
+        console.error('[commerce/create] DB insert failed:', dbErr.message)
+      }
     }
     return NextResponse.json({ ok:true, receiptId, charge_id: chargeId, hosted_url: hostedUrl })
-  } catch {
-    return NextResponse.json({ ok:false, error:'server_error' }, { status:500 })
+  } catch (e) {
+    console.error('[commerce/create]', e)
+    return NextResponse.json(
+      { ok: false, error: 'server_error', message: e?.message || String(e) },
+      { status: 500 }
+    )
   }
 }
 

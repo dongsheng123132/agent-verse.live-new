@@ -1,5 +1,7 @@
 # AgentVerse - 技术文档
 
+**收款方案（推荐）**：仅用 Coinbase，不维护自定义链上校验。详见 [格子收款方案（Coinbase）](COINBASE_GRID_PAYMENT.md)：人类用 **Payment Acceptance API**，机器人用 **x402**。
+
 ## 1. 项目结构
 
 ```
@@ -133,9 +135,13 @@ DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
 
 # 区块链
 RPC_URL=https://base-mainnet.g.alchemy.com/v2/xxx
-USDC_ADDRESS=0x833589fCD1AFCB8EdfbFfe1dE8108f0bCfD7b8aF
+USDC_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 TREASURY_ADDRESS=0x5C5869bceB4C4eb3fA1DCDEeBd84e9890DbC01aF
 ```
+
+**Base 链 USDC 参考链接：**
+- Token（原生 USDC）: https://basescan.org/token/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
+- 示例交易: https://basescan.org/tx/0xc52b70127bc2a793d169e0884bb5dc1333164ce864c3c7236d5b81b2faca1e93
 
 ## 7. 部署
 

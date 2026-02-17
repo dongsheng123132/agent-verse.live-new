@@ -15,7 +15,7 @@
 |--------|-----|------|
 | `DATABASE_URL` | `postgresql://neondb_owner:npg_hKu5gcbLGw9D@ep-divine-recipe-ai1vlkfi-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require` | Neon 数据库连接 |
 | `TREASURY_ADDRESS` | `0x5C5869bceB4C4eb3fA1DCDEeBd84e9890DbC01aF` | 收款钱包地址 |
-| `USDC_ADDRESS` | `0x833589fCD1AFCB8EdfbFfe1dE8108f0bCfD7b8aF` | USDC 合约地址 |
+| `USDC_ADDRESS` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | Base 原生 USDC 合约 |
 | `RPC_URL` | `https://base-mainnet.g.alchemy.com/v2/MxpwDy2YceOholUugADzo` | Base 链 RPC |
 
 点击 Save，Vercel 会自动重新部署。

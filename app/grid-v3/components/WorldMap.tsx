@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { GridCell } from '../types';
-import { COLS } from '../constants';
+import { COLS, ROWS } from '../constants';
+
+const CELL_GAP = 1; // 格子之间的像素间距
 
 interface WorldMapProps {
   grid: GridCell[];
@@ -41,7 +43,19 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const imageCache = useRef<{ [key: string]: HTMLImageElement }>({});
   const [frameCount, setFrameCount] = useState(0); 
 
-  const CELL_SIZE = 30; 
+  const CELL_SIZE = 30;
+
+  // 空格子虚拟 cell，用于点击/悬停时打开购买
+  const emptyCell = (x: number, y: number): GridCell => ({
+    id: y * COLS + x,
+    x,
+    y,
+    owner: null,
+    price: 0,
+    isForSale: false,
+    status: 'EMPTY',
+    agentData: null,
+  });
 
   // Helper: Screen to Grid
   const getGridCoord = (screenX: number, screenY: number) => {
@@ -65,24 +79,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     
     const selectedIds = new Set(selectedCells.map(c => c.id));
 
-    // 只遍历有数据的格子（已购买的）
+    const screenSize = Math.ceil(CELL_SIZE * zoom);
+    const drawSize = Math.max(1, screenSize - 2 * CELL_GAP);
+
+    // 只遍历有数据的格子（已购买的），画时间距 CELL_GAP
     for (const cell of grid) {
-        // 计算屏幕坐标
         const screenX = Math.floor(cell.x * CELL_SIZE * zoom + pan.x);
         const screenY = Math.floor(cell.y * CELL_SIZE * zoom + pan.y);
-        const screenSize = Math.ceil(CELL_SIZE * zoom);
+        const dx = screenX + CELL_GAP;
+        const dy = screenY + CELL_GAP;
 
-        // 如果在屏幕外，跳过
-        if (screenX + screenSize < 0 || screenX > width ||
-            screenY + screenSize < 0 || screenY > height) {
-            continue;
-        }
+        if (dx + drawSize < 0 || dx > width || dy + drawSize < 0 || dy > height) continue;
 
-        // Draw Cell Content
         if (cell.image) {
             const img = imageCache.current[cell.image];
             if (img && img.complete && img.naturalWidth > 0) {
-                 ctx.drawImage(img, screenX, screenY, screenSize, screenSize);
+                 ctx.drawImage(img, dx, dy, drawSize, drawSize);
             } else {
                 if (!img) {
                     const newImg = new Image();
@@ -92,32 +104,29 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     imageCache.current[cell.image] = newImg;
                 }
                 ctx.fillStyle = cell.color || '#222';
-                ctx.fillRect(screenX, screenY, screenSize, screenSize);
+                ctx.fillRect(dx, dy, drawSize, drawSize);
             }
         } else {
             ctx.fillStyle = cell.color || '#10b981';
-            ctx.fillRect(screenX, screenY, screenSize, screenSize);
+            ctx.fillRect(dx, dy, drawSize, drawSize);
         }
 
-        // Selection Outline
         if (selectedIds.has(cell.id)) {
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
-            ctx.strokeRect(screenX, screenY, screenSize, screenSize);
+            ctx.strokeRect(dx, dy, drawSize, drawSize);
         }
     }
 
-    // 3. Draw Hover Highlight
+    // 3. Draw Hover Highlight（带间距）
     if (hoveredCell && !isSelecting) {
-        const hX = Math.floor(hoveredCell.x * CELL_SIZE * zoom + pan.x);
-        const hY = Math.floor(hoveredCell.y * CELL_SIZE * zoom + pan.y);
-        const hSize = Math.ceil(CELL_SIZE * zoom);
-
+        const hX = Math.floor(hoveredCell.x * CELL_SIZE * zoom + pan.x) + CELL_GAP;
+        const hY = Math.floor(hoveredCell.y * CELL_SIZE * zoom + pan.y) + CELL_GAP;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.fillRect(hX, hY, hSize, hSize);
-        ctx.strokeStyle = 'rgba(0, 255, 65, 0.8)'; // Agent Green
+        ctx.fillRect(hX, hY, drawSize, drawSize);
+        ctx.strokeStyle = 'rgba(0, 255, 65, 0.8)';
         ctx.lineWidth = 2;
-        ctx.strokeRect(hX, hY, hSize, hSize);
+        ctx.strokeRect(hX, hY, drawSize, drawSize);
     }
 
     // 4. Draw Drag Selection Rect
@@ -172,12 +181,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         lastMousePos.current = { x: e.clientX, y: e.clientY };
     }
 
-    // Hover Calculation - 从已购买的格子中查找
+    // Hover：已购买格子或空格子（0..99 范围内）都可悬停/点击
     if (!isSelecting) {
         const coords = getGridCoord(mouseX, mouseY);
-        // 在已购买的格子中查找匹配的坐标
-        const cell = grid.find(c => c.x === coords.x && c.y === coords.y);
-        setHoveredCell(cell || null);
+        const inRange = coords.x >= 0 && coords.x < COLS && coords.y >= 0 && coords.y < ROWS;
+        const cell = inRange
+            ? (grid.find(c => c.x === coords.x && c.y === coords.y) ?? emptyCell(coords.x, coords.y))
+            : null;
+        setHoveredCell(cell);
         setHoverPos({ x: e.clientX, y: e.clientY });
     }
   };
@@ -205,7 +216,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         );
         if (newSelection.length > 0) onSelectCells(newSelection);
     } else if (moveDist < 5 && !isSelecting) {
-        // It's a CLICK
         if (hoveredCell) {
             onSelectCells([hoveredCell]);
         } else {
@@ -255,7 +265,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                         <div className="text-[10px] text-gray-500 font-mono">{hoveredCell.owner.slice(0,8)}...</div>
                     </>
                 ) : (
-                    <div className="text-gray-500 italic">单击查看详情 (Click)</div>
+                    <div className="text-agent-green/90 font-medium">空格子 · 点击购买</div>
                 )}
                 {hoveredCell.status === 'LOCKED' && (
                      <div className="text-red-500 font-bold mt-1 text-[10px]">[SYSTEM RESERVED]</div>

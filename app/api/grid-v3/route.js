@@ -5,6 +5,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json([]);
+    }
     // 只获取有主人的格子（已购买的）
     const res = await dbQuery(
       `SELECT id, x, y, owner_address as owner, price_usdc as price,
@@ -38,10 +41,8 @@ export async function GET() {
     return NextResponse.json(cells);
   } catch (error) {
     console.error("[API ERROR] Grid fetch failed:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error", details: error.message },
-      { status: 500 }
-    );
+    // 无 DB 或连接失败时返回空数组，避免页面卡在 loading
+    return NextResponse.json([]);
   }
 }
 

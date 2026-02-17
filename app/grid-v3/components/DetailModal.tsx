@@ -2,7 +2,47 @@
 import React, { useState, useEffect } from 'react';
 import { GridCell, AgentProfile, CellStatus } from '../types';
 import { BASE_LAND_PRICE } from '../constants';
-import { X, Terminal, Layers, Globe, FileText, Code, Lock, Copy, Bot, ExternalLink, Cpu, Wallet, Box } from 'lucide-react';
+import { X, Terminal, Layers, Globe, FileText, Code, Lock, Copy, Bot, ExternalLink, Cpu, Wallet, Box, Loader2 } from 'lucide-react';
+
+function CoinbaseBuyButton({ x, y }: { x: number; y: number }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const handlePay = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/commerce/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x, y }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || data.detail || 'Create payment failed');
+      const url = data.hosted_url || data.url;
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      throw new Error('No payment URL returned');
+    } catch (e: any) {
+      setError(e?.message || 'Failed');
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        onClick={handlePay}
+        disabled={loading}
+        className="flex items-center justify-center gap-2 px-4 py-3 bg-agent-green/20 border border-agent-green text-agent-green rounded font-mono text-sm font-bold hover:bg-agent-green/30 disabled:opacity-50"
+      >
+        {loading ? <Loader2 size={16} className="animate-spin" /> : <Wallet size={16} />}
+        {loading ? '跳转中...' : '用 Coinbase 付款 (2 USDC)'}
+      </button>
+      {error && <p className="text-[10px] text-red-400 font-mono">{error}</p>}
+    </div>
+  );
+}
 
 interface DetailModalProps {
   cells: GridCell[];
@@ -157,6 +197,12 @@ Verification Code: .${decimalPart}
                 {/* --- TAB: PAYMENT --- */}
                 {tab === 'PAYMENT' && !isLocked && (
                     <div className="space-y-6">
+                        {/* Coinbase 人类付款：跳转 Payment Link */}
+                        <div className="flex flex-col gap-2">
+                            <h4 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">人类买格子 (Coinbase)</h4>
+                            <CoinbaseBuyButton x={firstCell.x} y={firstCell.y} />
+                        </div>
+
                         <div className="bg-gradient-to-r from-blue-900/10 to-purple-900/10 border border-blue-800/30 rounded p-4 relative overflow-hidden">
                             <div className="flex justify-between items-start mb-4 relative z-10">
                                 <div>

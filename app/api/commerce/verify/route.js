@@ -42,6 +42,22 @@ export async function GET(req) {
         'update grid_orders set status = $1 where receipt_id = $2',
         ['paid', orderRow.receipt_id]
       )
+      const cellX = Number(orderRow.x)
+      const cellY = Number(orderRow.y)
+      if (Number.isFinite(cellX) && Number.isFinite(cellY)) {
+        const cellId = cellY * 100 + cellX
+        const owner = charge?.payments?.[0]?.value?.address || '0xCommerce'
+        await dbQuery(
+          `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, last_updated)
+           VALUES ($1,$2,$3,$4,'HOLDING',false,NOW())
+           ON CONFLICT (x,y) DO UPDATE SET
+             owner_address = EXCLUDED.owner_address,
+             status = EXCLUDED.status,
+             is_for_sale = false,
+             last_updated = NOW()`,
+          [cellId, cellX, cellY, owner]
+        )
+      }
     }
     return NextResponse.json({ ok:true, paid: completed, status, charge })
   } catch {
