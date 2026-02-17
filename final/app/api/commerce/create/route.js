@@ -65,6 +65,8 @@ export async function POST(req) {
       }
     }
 
+    const refCode = body?.ref || null
+
     const receiptId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     const origin = req.nextUrl?.origin || 'http://localhost:3005'
     const returnPath = (body?.return_path ?? '') || ''
@@ -80,7 +82,7 @@ export async function POST(req) {
       local_price: { amount: price.toFixed(2), currency: 'USD' },
       redirect_url: redirectUrl,
       cancel_url: `${origin}/?paid=0`,
-      metadata: { receipt_id: receiptId, x, y, block_w: blockW, block_h: blockH },
+      metadata: { receipt_id: receiptId, x, y, block_w: blockW, block_h: blockH, ref: refCode || '' },
     }
     const res = await fetch('https://api.commerce.coinbase.com/charges', {
       method: 'POST',
@@ -102,8 +104,8 @@ export async function POST(req) {
     if (process.env.DATABASE_URL) {
       try {
         await dbQuery(
-          'INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, commerce_charge_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-          [receiptId, x, y, price, 0, 'commerce', 'pending', chargeId]
+          'INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, commerce_charge_id, ref_code) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+          [receiptId, x, y, price, 0, 'commerce', 'pending', chargeId, refCode]
         )
       } catch (e) {
         console.error('[commerce/create]', e?.message)

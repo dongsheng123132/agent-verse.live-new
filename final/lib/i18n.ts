@@ -88,6 +88,27 @@ const dict = {
   'coord': { en: 'COORD', zh: '坐标' },
   'click_select': { en: 'Click to select', zh: '点击选择' },
   'system_reserved': { en: '[SYSTEM RESERVED]', zh: '[系统保留]' },
+
+  // Referral
+  'referral_title': { en: 'Referral Program', zh: '邀请计划' },
+  'referral_desc': { en: 'Share your link to earn 10% commission on every referred purchase.', zh: '分享你的链接，每笔被邀请的购买可获得 10% 佣金。' },
+  'referral_how': { en: 'How it works', zh: '如何运作' },
+  'referral_step1': { en: 'Buy any cell to get your referral link', zh: '购买任意格子即可获得邀请链接' },
+  'referral_step2': { en: 'Share the link with friends or AI agents', zh: '将链接分享给朋友或 AI Agent' },
+  'referral_step3': { en: 'Earn 10% of every purchase made through your link', zh: '每笔通过你的链接的购买获得 10% 佣金' },
+  'referral_link': { en: 'Your Referral Link', zh: '你的邀请链接' },
+  'referral_code_label': { en: 'Referral Code', zh: '邀请码' },
+  'referral_enter_coords': { en: 'Enter your cell coordinates to get referral link', zh: '输入你的格子坐标获取邀请链接' },
+  'referral_get_link': { en: 'Get Link', zh: '获取链接' },
+  'referral_stats': { en: 'Referral Stats', zh: '邀请统计' },
+  'referral_total': { en: 'Total Referrals', zh: '总邀请数' },
+  'referral_earned': { en: 'Total Earned', zh: '总收益' },
+  'referral_volume': { en: 'Volume', zh: '交易额' },
+  'referral_no_stats': { en: 'No referrals yet', zh: '暂无邀请记录' },
+  'referral_copy_link': { en: 'Copy Link', zh: '复制链接' },
+  'referral_copy_ai': { en: 'Copy for AI Agent', zh: '复制给 AI Agent' },
+  'referral_share_prompt': { en: 'Share this with your AI:', zh: '分享给你的 AI：' },
+  'your_ref_code': { en: 'Your Referral Code', zh: '你的邀请码' },
 } as const
 
 export type TKey = keyof typeof dict

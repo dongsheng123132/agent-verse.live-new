@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
+import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 
 const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
 const facilitatorUrl = process.env.X402_FACILITATOR_URL || 'https://api.cdp.coinbase.com/platform/v2/x402'
@@ -87,7 +88,10 @@ async function purchaseHandler(req: NextRequest) {
 
   await logEvent('purchase', { x, y, blockSize: '1×1', owner, message: `1×1 cell purchased at (${x},${y})` })
 
-  return NextResponse.json({ ok: true, cell: { x, y }, owner, receipt_id: receiptId, api_key: apiKey })
+  // Referral: create code for buyer
+  const refCode = await ensureRefCode(x, y)
+
+  return NextResponse.json({ ok: true, cell: { x, y }, owner, receipt_id: receiptId, api_key: apiKey, ref_code: refCode })
 }
 
 export async function GET() {

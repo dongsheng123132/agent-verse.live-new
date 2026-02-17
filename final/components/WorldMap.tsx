@@ -132,18 +132,65 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                             }
                             ctx.fillStyle = cell.color || '#10b981';
                             ctx.fillRect(screenX, screenY, size, size);
+
+                            // Loading indicator
+                            if (cellSize > 10) {
+                                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                                ctx.font = `${Math.max(8, cellSize / 3)}px monospace`;
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText('...', screenX + size / 2, screenY + size / 2);
+                            }
                         }
                     } else {
+                        // PROCEDURAL AVATAR / COOL STUFF
                         ctx.fillStyle = cell.color || '#10b981';
                         ctx.fillRect(screenX, screenY, size, size);
+
+                        if (cellSize > 10) {
+                            // Draw "Avatar" based on owner address
+                            const seed = (cell.owner || '??').charCodeAt(0) + (cell.owner || '??').charCodeAt(cell.owner?.length - 1 || 0);
+                            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                            ctx.beginPath();
+                            // Simple geometric pattern
+                            if (seed % 3 === 0) {
+                                ctx.fillRect(screenX + size * 0.2, screenY + size * 0.2, size * 0.6, size * 0.6);
+                            } else if (seed % 3 === 1) {
+                                ctx.arc(screenX + size / 2, screenY + size / 2, size * 0.3, 0, Math.PI * 2);
+                                ctx.fill();
+                            } else {
+                                ctx.moveTo(screenX + size / 2, screenY + size * 0.2);
+                                ctx.lineTo(screenX + size * 0.8, screenY + size * 0.8);
+                                ctx.lineTo(screenX + size * 0.2, screenY + size * 0.8);
+                                ctx.fill();
+                            }
+
+                            // Text (Initials)
+                            if (cellSize > 20) {
+                                ctx.fillStyle = '#fff';
+                                ctx.font = `bold ${cellSize * 0.4}px monospace`;
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                const initial = (cell.title || cell.owner || '?').substring(0, 1).toUpperCase();
+                                ctx.fillText(initial, screenX + size / 2, screenY + size / 2);
+                            }
+                        }
                     }
                 } else if (isReservedCell) {
                     ctx.fillStyle = '#111118';
                     ctx.fillRect(screenX, screenY, size, size);
-                    // Locked texture
+                    // System Pattern
                     if (cellSize > 4) {
-                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                        ctx.fillRect(screenX, screenY, size, size);
+                        ctx.strokeStyle = '#222';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(screenX + 2, screenY + 2, size - 4, size - 4);
+                        if (cellSize > 10) {
+                            ctx.fillStyle = '#333';
+                            ctx.font = `${cellSize * 0.3}px monospace`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('SYS', screenX + size / 2, screenY + size / 2);
+                        }
                     }
                 } else {
                     ctx.fillStyle = '#161616';

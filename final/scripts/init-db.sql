@@ -62,6 +62,27 @@ CREATE INDEX IF NOT EXISTS idx_cell_api_keys_hash ON cell_api_keys (key_hash);
 CREATE INDEX IF NOT EXISTS idx_grid_events_created ON grid_events (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_grid_cells_fts ON grid_cells USING GIN (to_tsvector('simple', COALESCE(markdown,'')));
 
+-- Referral system
+CREATE TABLE IF NOT EXISTS referrals (
+  code       TEXT PRIMARY KEY,            -- e.g. 'ref_30_32'
+  owner_x    INTEGER NOT NULL,
+  owner_y    INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS referral_rewards (
+  id              SERIAL PRIMARY KEY,
+  referrer_code   TEXT NOT NULL REFERENCES referrals(code),
+  buyer_receipt_id TEXT,
+  buyer_x         INTEGER NOT NULL,
+  buyer_y         INTEGER NOT NULL,
+  purchase_amount NUMERIC(18,6) DEFAULT 0,
+  reward_amount   NUMERIC(18,6) DEFAULT 0,   -- 10% of purchase
+  status          TEXT DEFAULT 'pending',     -- pending / credited
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_referral_rewards_code ON referral_rewards (referrer_code);
+
 -- Migration for existing databases
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS content_url TEXT;
@@ -71,3 +92,4 @@ ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS block_w INTEGER DEFAULT 1;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS block_h INTEGER DEFAULT 1;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS block_origin_x INTEGER;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS block_origin_y INTEGER;
+ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS ref_code TEXT;

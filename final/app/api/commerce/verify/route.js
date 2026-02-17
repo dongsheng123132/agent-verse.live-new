@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
-import { getBlockLabel } from '../../../../lib/pricing.js'
+import { getBlockLabel, getBlockPrice } from '../../../../lib/pricing.js'
+import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,7 @@ export async function GET(req) {
     const blockH = Number(charge?.metadata?.block_h) || 1
 
     let apiKey = null
+    let refCodeOut = null
 
     if (completed && process.env.DATABASE_URL && cellX != null && cellY != null) {
       const firstPayment = charge?.payments?.[0]
@@ -91,14 +93,28 @@ export async function GET(req) {
 
       // Log event
       const label = getBlockLabel(blockW, blockH)
+      const price = getBlockPrice(blockW, blockH) || 0
       await logEvent('purchase', {
         x: cellX, y: cellY,
         blockSize: label,
         owner,
         message: `${label} block purchased at (${cellX},${cellY})`
       })
+
+      // Referral: create code for new buyer + track referrer reward
+      const buyerRefCode = await ensureRefCode(cellX, cellY)
+      const referrerCode = charge?.metadata?.ref || orderRow?.ref_code
+      if (referrerCode) {
+        await trackReferral(referrerCode, {
+          receiptId: orderRow?.receipt_id || `c_${chargeId}`,
+          buyerX: cellX, buyerY: cellY,
+          purchaseAmount: price,
+        })
+      }
+
+      refCodeOut = buyerRefCode
     }
-    return NextResponse.json({ ok: true, paid: completed, status, charge, api_key: apiKey })
+    return NextResponse.json({ ok: true, paid: completed, status, charge, api_key: apiKey, ref_code: refCodeOut })
   } catch (e) {
     console.error('[commerce/verify]', e)
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 })
