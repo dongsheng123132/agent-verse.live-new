@@ -3,7 +3,7 @@ import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
 
 const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
-const regenPrice = '0.01'
+const regenPrice = '0.10'
 const regenPriceStr = `$${regenPrice}`
 
 // x402 handler for micro-payment key recovery
@@ -101,7 +101,7 @@ export async function GET() {
     endpoint: '/api/cells/regen-key',
     method: 'POST',
     price: regenPriceStr,
-    description: 'Pay 0.01 USDC to recover your API key. The payment proves wallet ownership.',
+    description: 'Pay 0.10 USDC to recover your API key. The payment proves wallet ownership.',
     network: 'Base (eip155:8453)',
     x402_ready: !!x402Handler,
   })
