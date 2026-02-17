@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Key, RefreshCw, BookOpen, ExternalLink, Share2, Check, Users } from 'lucide-react';
+import { Copy, Key, BookOpen, ExternalLink, Share2, Check, Users } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
 
 interface BotConnectProps {
@@ -112,28 +112,7 @@ const ReferralSection: React.FC = () => {
 
 export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
   const { t } = useLang();
-  const [regenX, setRegenX] = useState('')
-  const [regenY, setRegenY] = useState('')
-  const [regenOwner, setRegenOwner] = useState('')
-  const [regenResult, setRegenResult] = useState<string | null>(null)
-  const [regenError, setRegenError] = useState<string | null>(null)
-  const [regenLoading, setRegenLoading] = useState(false)
-
-  const handleRegen = async () => {
-    setRegenResult(null); setRegenError(null); setRegenLoading(true)
-    try {
-      const res = await fetch('/api/cells/regen-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x: Number(regenX), y: Number(regenY), owner_address: regenOwner })
-      })
-      const d = await res.json()
-      if (d?.ok && d?.api_key) setRegenResult(d.api_key)
-      else setRegenError(d?.message || d?.error || 'Failed')
-    } catch (e: any) {
-      setRegenError(e?.message || 'Request failed')
-    } finally { setRegenLoading(false) }
-  }
+  const [regenCopied, setRegenCopied] = useState(false)
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
@@ -161,31 +140,23 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
         </h3>
         <p className="text-gray-500 text-[10px] mb-3">{t('recover_desc')}</p>
         <div className="space-y-2">
-          <div className="flex gap-2">
-            <input type="number" placeholder="X" value={regenX} onChange={e => setRegenX(e.target.value)}
-              className="flex-1 bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none" />
-            <input type="number" placeholder="Y" value={regenY} onChange={e => setRegenY(e.target.value)}
-              className="flex-1 bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none" />
+          <div className="bg-[#0a0a0a] border border-[#222] rounded p-2 mb-1">
+            <p className="text-gray-600 text-[9px] uppercase mb-1">{t('recover_cmd_label')}</p>
+            <pre className="text-[9px] text-yellow-400/80 font-mono whitespace-pre-wrap break-all select-all">
+{`npx awal@latest x402 pay ${origin}/api/cells/regen-key \\
+  -X POST -d '{"x":YOUR_X,"y":YOUR_Y}'`}
+            </pre>
           </div>
-          <input type="text" placeholder={t('owner_placeholder')} value={regenOwner} onChange={e => setRegenOwner(e.target.value)}
-            className="w-full bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none" />
-          <button onClick={handleRegen} disabled={regenLoading || !regenX || !regenY || !regenOwner}
-            className="w-full py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-[#222] disabled:text-gray-600 text-white text-xs rounded font-bold flex items-center justify-center gap-2">
-            <RefreshCw size={12} className={regenLoading ? 'animate-spin' : ''} />
-            {regenLoading ? t('regenerating') : t('regenerate')}
+          <p className="text-gray-600 text-[9px]">{t('recover_cost')}</p>
+          <button onClick={() => {
+            navigator.clipboard.writeText(`npx awal@latest x402 pay ${origin}/api/cells/regen-key -X POST -d '{"x":0,"y":0}'`)
+            setRegenCopied(true); setTimeout(() => setRegenCopied(false), 2000)
+          }}
+            className={`w-full py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${
+              regenCopied ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-yellow-500'
+            }`}>
+            {regenCopied ? <><Check size={10} /> {t('copied')}</> : <><Copy size={10} /> {t('recover_copy')}</>}
           </button>
-          {regenResult && (
-            <div className="bg-green-900/20 border border-green-700/50 p-3 rounded">
-              <div className="text-green-400 text-xs break-all select-all mb-2">{regenResult}</div>
-              <button onClick={() => navigator.clipboard.writeText(regenResult)}
-                className="text-[10px] text-green-500 hover:text-green-400 flex items-center gap-1">
-                <Copy size={10} /> {t('copy_key')}
-              </button>
-            </div>
-          )}
-          {regenError && (
-            <div className="bg-red-900/20 border border-red-900/50 p-2 rounded text-red-400 text-xs">{regenError}</div>
-          )}
         </div>
       </div>
 
