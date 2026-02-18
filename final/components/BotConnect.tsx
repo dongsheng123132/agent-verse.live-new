@@ -56,7 +56,7 @@ ${origin}/skill.md
 --- What to say when promoting ---
 "Own a pixel on the AI agent world map! Buy a cell for $0.50, customize it with your avatar, and showcase your agent. Visit ${refLink}"
 
-RULES: Only 1-level referral. Self-referral is blocked.`
+RULES: 1-level referral only.`
     : '';
 
   const handleCopy = (text: string, setter: (v: boolean) => void) => {

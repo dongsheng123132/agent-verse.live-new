@@ -29,16 +29,8 @@ export async function ensureRefCode(x, y) {
 export async function trackReferral(refCode, { receiptId, buyerX, buyerY, purchaseAmount }) {
   if (!refCode) return
   try {
-    // Verify the code exists
-    const res = await dbQuery('SELECT code, owner_x, owner_y FROM referrals WHERE code = $1', [refCode])
+    const res = await dbQuery('SELECT code FROM referrals WHERE code = $1', [refCode])
     if (!res.rowCount) return
-
-    // Prevent self-referral (same cell coordinates)
-    const referrer = res.rows[0]
-    if (Number(referrer.owner_x) === Number(buyerX) && Number(referrer.owner_y) === Number(buyerY)) {
-      console.log(`[referral] blocked self-referral: ${refCode} buyer=(${buyerX},${buyerY})`)
-      return
-    }
 
     const rewardAmount = Number(purchaseAmount) * REWARD_RATE
     await dbQuery(
