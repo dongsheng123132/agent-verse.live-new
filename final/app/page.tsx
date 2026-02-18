@@ -269,19 +269,26 @@ function PageInner() {
     }
   };
 
-  // Resize Obs
+  // Resize Observer (with proper cleanup)
+  const containerNodeRef = React.useRef<HTMLDivElement | null>(null)
   const containerRef = useCallback((node: HTMLDivElement | null) => {
+    containerNodeRef.current = node
     if (node) {
-      setContainerSize({ width: node.clientWidth, height: node.clientHeight });
-      const observer = new ResizeObserver(entries => {
-        for (let entry of entries) {
-          setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height });
-        }
-      });
-      observer.observe(node);
-      return () => observer.disconnect();
+      setContainerSize({ width: node.clientWidth, height: node.clientHeight })
     }
-  }, []);
+  }, [])
+
+  useEffect(() => {
+    const node = containerNodeRef.current
+    if (!node) return
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height })
+      }
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   const hasConflict = selectedCells.length > 0
     ? blockConflict(selectedCells[0].x, selectedCells[0].y, blockSize.w, blockSize.h)
@@ -422,7 +429,7 @@ function PageInner() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <button className="bg-[#111] border border-[#333] p-2 text-gray-400 hover:text-white rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.min(3, z + 0.5))}><Plus size={18} /></button>
+                <button className="bg-[#111] border border-[#333] p-2 text-gray-400 hover:text-white rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.min(6, z + 0.5))}><Plus size={18} /></button>
                 <button className="bg-[#111] border border-[#333] p-2 text-gray-400 hover:text-white rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.max(0.1, z - 0.5))}><Minus size={18} /></button>
                 <button className="bg-[#111] border border-[#333] p-2 text-gray-400 hover:text-white rounded shadow-lg backdrop-blur-sm" onClick={() => {
                   const cellSize = CELL_PX * 1;

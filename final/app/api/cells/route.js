@@ -26,9 +26,12 @@ export async function GET(req) {
       return NextResponse.json({ ok: true, cell: null })
     }
 
-    // Fire-and-forget hit increment for owned cells
+    // Fire-and-forget hit increment on block origin (or single cell)
     if (res.rows[0].owner) {
-      dbQuery('UPDATE grid_cells SET hit_count = COALESCE(hit_count, 0) + 1 WHERE x = $1 AND y = $2', [x, y]).catch(() => {})
+      const row = res.rows[0]
+      const ox = row.block_origin_x ?? x
+      const oy = row.block_origin_y ?? y
+      dbQuery('UPDATE grid_cells SET hit_count = COALESCE(hit_count, 0) + 1 WHERE x = $1 AND y = $2', [ox, oy]).catch(() => {})
     }
 
     return NextResponse.json({ ok: true, cell: res.rows[0] })

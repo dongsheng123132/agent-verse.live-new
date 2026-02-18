@@ -192,8 +192,16 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     ctx.fillRect(screenX, screenY, drawW, drawH);
                 }
 
-                // Selection Outline
-                if (selectedIds.has(`${c},${r}`)) {
+                // Selection Outline — check all cells in this block
+                let blockSelected = selectedIds.has(`${c},${r}`);
+                if (!blockSelected && (bw > 1 || bh > 1)) {
+                    for (let dy = 0; dy < bh && !blockSelected; dy++) {
+                        for (let dx = 0; dx < bw && !blockSelected; dx++) {
+                            if (selectedIds.has(`${c + dx},${r + dy}`)) blockSelected = true;
+                        }
+                    }
+                }
+                if (blockSelected) {
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = Math.max(1, 2 * (zoom / 2));
                     ctx.strokeRect(screenX, screenY, drawW, drawH);
@@ -201,17 +209,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             }
         }
 
-        // 3. Draw Hover Highlight
+        // 3. Draw Hover Highlight (snap to block origin if block cell)
         if (hoveredCell && !isSelecting) {
-            const hX = Math.floor(hoveredCell.x * cellSize + pan.x);
-            const hY = Math.floor(hoveredCell.y * cellSize + pan.y);
-            const hSize = Math.ceil(cellSize);
+            const ox = hoveredCell.block_origin_x ?? hoveredCell.x;
+            const oy = hoveredCell.block_origin_y ?? hoveredCell.y;
+            const bw = hoveredCell.block_w || 1;
+            const bh = hoveredCell.block_h || 1;
+            const hX = Math.floor(ox * cellSize + pan.x);
+            const hY = Math.floor(oy * cellSize + pan.y);
+            const hW = Math.ceil(cellSize * bw);
+            const hH = Math.ceil(cellSize * bh);
 
             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.fillRect(hX, hY, hSize, hSize);
-            ctx.strokeStyle = 'rgba(0, 255, 65, 0.8)'; // Agent Green
+            ctx.fillRect(hX, hY, hW, hH);
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.8)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(hX, hY, hSize, hSize);
+            ctx.strokeRect(hX, hY, hW, hH);
         }
 
         // 4. Draw Drag Selection Rect
