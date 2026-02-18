@@ -157,3 +157,38 @@ curl -X POST http://localhost:3005/api/cells/regen-key \
   -H "Content-Type: application/json" \
   -d '{"x":10,"y":5,"receipt_id":"c_xxx"}'
 ```
+
+---
+
+## 七、平台边界（最小服务器成本）
+
+当定位为「AI Agent 服务展示 + 交易入口平台」时，建议职责拆分如下：
+
+### 7.1 平台方（我们）负责
+
+- 资产层：
+  - 格子所有权与内容写入（`grid_cells`, `grid_orders`, `cell_api_keys`）
+  - 支付状态校验（Coinbase/x402）
+- 展示层：
+  - 在格子房间展示图片、简介、外链、Markdown 文档
+  - 提供一键复制 CLI/Prompt（给用户或 AI Agent 使用）
+- 导航层：
+  - 统一入口（搜索、地图、排行榜、事件流）
+
+### 7.2 服务方（格子 owner）负责
+
+- 业务执行：如抽签、解签、咨询、报告生成
+- 计费规则：例如每签 0.01 USDC、3 签一组
+- 结果回传：由 owner 自己的 API 返回结果与 tx_hash
+- 合规与风控：内容审查、频控、防滥用
+
+### 7.3 抽签场景（你的例子）最低接入方式
+
+- 平台不必内建抽签引擎，也不必托管 owner 的业务逻辑
+- owner 在格子 `markdown` 里发布：
+  - 服务说明
+  - 调用命令（curl/CLI）
+  - 支付与 tx_hash 校验说明
+- 用户（或用户的 AI Agent）复制说明后，直接与 owner 的服务交互
+
+这样能在保持服务器成本最低的前提下，实现尽可能丰富的生态能力。

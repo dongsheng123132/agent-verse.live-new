@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GridEvent, Ranking, truncAddr } from '../app/types';
 import { Activity, Trophy, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
@@ -12,18 +12,81 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNavigate }) => {
     const { t } = useLang();
+    const MIN_WIDTH = 280;
+    const MAX_WIDTH = 520;
+    const COLLAPSED_WIDTH = 56;
+    const DEFAULT_WIDTH = 320;
+
     const [collapsed, setCollapsed] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
     const [logsOpen, setLogsOpen] = useState(true);
     const [rankingsOpen, setRankingsOpen] = useState(true);
+    const [isResizing, setIsResizing] = useState(false);
+
+    const resizeStartXRef = useRef(0);
+    const resizeStartWidthRef = useRef(DEFAULT_WIDTH);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const savedCollapsed = localStorage.getItem('sidebar:collapsed');
+        const savedWidth = localStorage.getItem('sidebar:width');
+        if (savedCollapsed != null) setCollapsed(savedCollapsed === '1');
+        if (savedWidth != null) {
+            const parsed = Number(savedWidth);
+            if (Number.isFinite(parsed)) {
+                setSidebarWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parsed)));
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem('sidebar:collapsed', collapsed ? '1' : '0');
+    }, [collapsed]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem('sidebar:width', String(Math.round(sidebarWidth)));
+    }, [sidebarWidth]);
+
+    useEffect(() => {
+        if (!isResizing) return;
+
+        const onMouseMove = (e: MouseEvent) => {
+            const delta = e.clientX - resizeStartXRef.current;
+            const next = resizeStartWidthRef.current + delta;
+            setSidebarWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, next)));
+        };
+        const onMouseUp = () => setIsResizing(false);
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+    }, [isResizing]);
+
+    const beginResize = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (collapsed) return;
+        resizeStartXRef.current = e.clientX;
+        resizeStartWidthRef.current = sidebarWidth;
+        setIsResizing(true);
+    };
+
+    const toggleCollapsed = () => setCollapsed(v => !v);
 
     return (
-        <div className={`h-full ${collapsed ? 'w-14' : 'w-80'} bg-[#0a0a0a] border-r border-[#222] flex flex-col font-mono text-xs transition-all duration-200`}>
+        <div
+            className={`relative h-full bg-[#0a0a0a] border-r border-[#222] flex flex-col font-mono text-xs ${isResizing ? 'select-none' : ''} ${isResizing ? '' : 'transition-[width] duration-200'}`}
+            style={{ width: collapsed ? COLLAPSED_WIDTH : sidebarWidth }}
+        >
             <div className="h-11 px-2 border-b border-[#222] bg-[#111] flex items-center justify-between">
                 {!collapsed && <span className="text-[10px] tracking-wider text-gray-500 uppercase">{t('terminal_logs')} / {t('top_agents')}</span>}
                 <button
                     type="button"
                     className="w-7 h-7 flex items-center justify-center rounded border border-[#333] text-gray-500 hover:text-white hover:border-gray-500"
-                    onClick={() => setCollapsed(v => !v)}
+                    onClick={toggleCollapsed}
                     title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                     {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -122,6 +185,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNav
                         )}
                     </div>
                 </>
+            )}
+
+            {!collapsed && (
+                <div
+                    className={`absolute right-0 top-0 h-full w-2 translate-x-1/2 cursor-col-resize ${isResizing ? 'bg-green-500/30' : 'bg-transparent hover:bg-green-500/15'}`}
+                    onMouseDown={beginResize}
+                    onDoubleClick={() => setSidebarWidth(DEFAULT_WIDTH)}
+                    title="Drag to resize"
+                />
             )}
         </div>
     );

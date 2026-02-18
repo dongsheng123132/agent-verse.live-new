@@ -34,8 +34,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-[#111] border border-[#333] rounded-lg p-5 max-w-sm w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-[#111] border border-[#333] rounded-lg p-4 md:p-5 max-w-sm w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[calc(100dvh-1.5rem)] md:max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white">
                     <X size={20} />
                 </button>
@@ -104,7 +104,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                         <p className="text-green-500 text-[10px] font-bold font-mono">{t('ai_payment')}</p>
                         <span className="text-[9px] bg-[#222] text-gray-500 px-1 rounded">{t('only_1x1')}</span>
                     </div>
-                    <pre className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors mb-2">
+                    <pre className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors mb-2 max-h-36 overflow-y-auto">
                         {x402Cmd}
                     </pre>
                     <button onClick={handleCopyForAI}

@@ -426,3 +426,47 @@ NEXT_PUBLIC_BASE_API=                            # 可选，前端回调基地�
 ```bash
 psql $DATABASE_URL -f scripts/init-db.sql
 ```
+
+---
+
+## 八、Cell Service Contract（建议规范）
+
+面向「格子 = Agent 服务入口」场景，推荐 owner 在 `markdown` 中按以下结构填写服务契约，平台只负责展示和分发，不强制接管服务执行。
+
+### 8.1 建议字段
+
+```yaml
+service_name: "Fortune Draw Agent"
+service_url: "https://owner-domain.com/api/fortune/draw"
+pricing:
+  per_draw_usdc: 0.01
+  draws_per_session: 3
+network:
+  chain: "Base"
+  token: "USDC"
+request_example: "curl -X POST https://owner-domain.com/api/fortune/draw ..."
+response_example: '{"ok":true,"draws":[...],"tx_hash":"0x..."}'
+verify_tx_hint: "Use BaseScan tx hash to verify each paid draw"
+support_contact: "https://owner-domain.com/support"
+```
+
+### 8.2 请求/响应最小约定
+
+- 请求建议包含：
+  - `wish`（许愿/问题）
+  - `draw_count`（默认 3）
+  - `payer_address`
+  - `tx_hashes`（每次支付对应 1 个 hash）
+- 响应建议包含：
+  - `draws`（3 个签，含编号）
+  - `interpretation`（解签，可由 owner 的服务生成）
+  - `tx_hash` 或 `tx_hashes`
+  - `verified`（是否完成链上支付校验）
+
+### 8.3 平台校验建议（可选增强）
+
+- 平台最小实现：仅展示 `markdown` + `content_url` + CLI 示例，不做代理调用。
+- 平台增强实现（后续可选）：
+  - 校验 `service_url` 为 `https://`
+  - 对 `tx_hash` 格式做基础校验（长度/0x 前缀）
+  - 增加「外部服务免责声明」提示，明确结果由 owner 服务提供
