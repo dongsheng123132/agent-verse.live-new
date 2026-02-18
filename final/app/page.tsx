@@ -151,9 +151,10 @@ function PageInner() {
     return { x: newX, y: newY };
   }, []);
 
-  // Initial Center
+  // Initial Center — only trigger when container has a reasonable size
+  const initialCentered = React.useRef(false)
   useEffect(() => {
-    if (containerSize.width > 0 && containerSize.height > 0 && pan.x === 0 && pan.y === 0) {
+    if (containerSize.width > 100 && containerSize.height > 100 && !initialCentered.current) {
       // Center on (16, 16)
       const cellSize = CELL_PX * 2.5;
       const targetX = 16 * cellSize;
@@ -161,8 +162,9 @@ function PageInner() {
       const cx = (containerSize.width / 2) - targetX;
       const cy = (containerSize.height / 2) - targetY;
       setPan(clampPan({ x: cx, y: cy }, 2.5, containerSize));
+      initialCentered.current = true;
     }
-  }, [containerSize, clampPan, pan.x, pan.y])
+  }, [containerSize, clampPan])
 
 
   const blockConflict = useCallback((x: number, y: number, w: number, h: number) => {
@@ -271,26 +273,46 @@ function PageInner() {
     }
   };
 
-  // Resize Observer (with proper cleanup)
+  // Container measurement — robust approach using getBoundingClientRect
   const containerNodeRef = React.useRef<HTMLDivElement | null>(null)
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    containerNodeRef.current = node
-    if (node) {
-      setContainerSize({ width: node.clientWidth, height: node.clientHeight })
+  const observerRef = React.useRef<ResizeObserver | null>(null)
+
+  const measureContainer = useCallback(() => {
+    const node = containerNodeRef.current
+    if (!node) return
+    const rect = node.getBoundingClientRect()
+    const w = Math.round(rect.width)
+    const h = Math.round(rect.height)
+    if (w > 0 && h > 0) {
+      setContainerSize(prev => (prev.width === w && prev.height === h) ? prev : { width: w, height: h })
     }
   }, [])
 
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+      observerRef.current = null
+    }
+    containerNodeRef.current = node
+    if (node) {
+      measureContainer()
+      observerRef.current = new ResizeObserver(measureContainer)
+      observerRef.current.observe(node)
+    }
+  }, [measureContainer])
+
   useEffect(() => {
-    const node = containerNodeRef.current
-    if (!node) return
-    const observer = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height })
-      }
-    })
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [])
+    // Re-measure after layout stabilizes (CSS load, paint)
+    const raf = requestAnimationFrame(measureContainer)
+    const timer = setTimeout(measureContainer, 300)
+    window.addEventListener('resize', measureContainer)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timer)
+      window.removeEventListener('resize', measureContainer)
+      if (observerRef.current) observerRef.current.disconnect()
+    }
+  }, [measureContainer])
 
   const hasConflict = selectedCells.length > 0
     ? blockConflict(selectedCells[0].x, selectedCells[0].y, blockSize.w, blockSize.h)
