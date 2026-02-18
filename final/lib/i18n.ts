@@ -115,6 +115,7 @@ const dict = {
   'tab_embed': { en: 'Embed', zh: '嵌入' },
   'tab_info': { en: 'Info', zh: '信息' },
   'hot_cells': { en: 'HOT CELLS', zh: '热门格子' },
+  'recently_active': { en: 'RECENTLY ACTIVE', zh: '最近活跃' },
   'views': { en: 'views', zh: '次' },
   'no_data': { en: 'No data yet', zh: '暂无数据' },
 } as const

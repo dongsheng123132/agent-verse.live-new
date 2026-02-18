@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Cell, COLS, ROWS, CELL_PX, BLOCK_SIZES, GridEvent, Ranking, isReserved, truncAddr } from './types'
 import { WorldMap } from '../components/WorldMap'
 import { Sidebar } from '../components/Sidebar'
-import { ForumFeed } from '../components/ForumFeed'
+import { MobileFeed } from '../components/MobileFeed'
 import { MobileNav } from '../components/MobileNav'
 import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
@@ -496,10 +496,10 @@ function PageInner() {
             </div>
           </div>
 
-          {/* FEED VIEW */}
+          {/* FEED VIEW — unified Logs + Rankings + Hot */}
           {viewMode === 'FORUM' && (
             <div className="absolute inset-0 z-10 bg-[#050505] flex flex-col">
-              <ForumFeed events={events} onNavigate={handleNavigate} />
+              <MobileFeed events={events} holders={holders} recent={recent} hot={hot} onNavigate={handleNavigate} />
             </div>
           )}
 
