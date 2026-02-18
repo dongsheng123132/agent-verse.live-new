@@ -42,7 +42,7 @@ export const Minimap: React.FC<MinimapProps> = ({ grid, pan, zoom, viewport, onN
         ctx.fillRect(0, 0, displayW, displayH);
 
         // Grid contents
-        const dotSize = Math.max(1.5, CELL_PX * scale);
+        const dotSize = Math.max(2, CELL_PX * scale);
 
         // Draw all cells
         for (let y = 0; y < ROWS; y++) {
@@ -121,11 +121,6 @@ export const Minimap: React.FC<MinimapProps> = ({ grid, pan, zoom, viewport, onN
     const updatePan = (mx: number, my: number, vw: number, vh: number) => {
         if (!onPanTo) return;
 
-        // We want the top-left of the viewport to be at (mx - offset)
-        // targetMinimapX = mx - dragOffset.x
-        // But onPanTo takes CENTER in world coords.
-        // So centerMinimapX = targetMinimapX + vw/2
-
         const targetMinimapLeft = mx - dragOffset.current.x;
         const targetMinimapTop = my - dragOffset.current.y;
 
@@ -138,6 +133,44 @@ export const Minimap: React.FC<MinimapProps> = ({ grid, pan, zoom, viewport, onN
         onPanTo(worldX, worldY);
     };
 
+    // Touch handlers
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const mx = e.touches[0].clientX - rect.left;
+        const my = e.touches[0].clientY - rect.top;
+
+        const vx = (-pan.x / zoom) * scale;
+        const vy = (-pan.y / zoom) * scale;
+        const vw = (viewport.width / zoom) * scale;
+        const vh = (viewport.height / zoom) * scale;
+
+        if (mx >= vx && mx <= vx + vw && my >= vy && my <= vy + vh) {
+            setIsDragging(true);
+            dragOffset.current = { x: mx - vx, y: my - vy };
+        } else {
+            setIsDragging(true);
+            dragOffset.current = { x: vw / 2, y: vh / 2 };
+            updatePan(mx, my, vw, vh);
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        e.preventDefault();
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const mx = e.touches[0].clientX - rect.left;
+        const my = e.touches[0].clientY - rect.top;
+        const vw = (viewport.width / zoom) * scale;
+        const vh = (viewport.height / zoom) * scale;
+        updatePan(mx, my, vw, vh);
+    };
+
+    const handleTouchEnd = () => setIsDragging(false);
+
     return (
         <div
             ref={containerRef}
@@ -148,11 +181,14 @@ export const Minimap: React.FC<MinimapProps> = ({ grid, pan, zoom, viewport, onN
                 ref={canvasRef}
                 width={displayW}
                 height={displayH}
-                className={`block ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                className={`block touch-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
             />
         </div>
     );

@@ -505,9 +505,11 @@ function PageInner() {
 
           {/* ACCESS VIEW */}
           {viewMode === 'ACCESS' && (
-            <div className="absolute inset-0 z-10 bg-[#050505] flex flex-col items-center justify-center p-6">
-              <div className="w-full max-w-md">
-                <BotConnect mode="EMBED" />
+            <div className="absolute inset-0 z-10 bg-[#050505] overflow-y-auto overscroll-contain">
+              <div className="flex flex-col items-center p-4 md:p-6 pb-8">
+                <div className="w-full max-w-md">
+                  <BotConnect mode="EMBED" />
+                </div>
               </div>
             </div>
           )}

@@ -209,6 +209,28 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             }
         }
 
+        // 2.5 Draw Grid Lines
+        if (cellSize >= 3) {
+            ctx.beginPath();
+            ctx.strokeStyle = cellSize >= 12 ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            const gridStartX = Math.round(renderStartCol * cellSize + pan.x);
+            const gridEndX = Math.round(renderEndCol * cellSize + pan.x);
+            const gridStartY = Math.round(renderStartRow * cellSize + pan.y);
+            const gridEndY = Math.round(renderEndRow * cellSize + pan.y);
+            for (let c = renderStartCol; c <= renderEndCol; c++) {
+                const x = Math.round(c * cellSize + pan.x) + 0.5;
+                ctx.moveTo(x, gridStartY);
+                ctx.lineTo(x, gridEndY);
+            }
+            for (let r = renderStartRow; r <= renderEndRow; r++) {
+                const y = Math.round(r * cellSize + pan.y) + 0.5;
+                ctx.moveTo(gridStartX, y);
+                ctx.lineTo(gridEndX, y);
+            }
+            ctx.stroke();
+        }
+
         // 3. Draw Hover Highlight (snap to block origin if block cell)
         if (hoveredCell && !isSelecting) {
             const ox = hoveredCell.block_origin_x ?? hoveredCell.x;

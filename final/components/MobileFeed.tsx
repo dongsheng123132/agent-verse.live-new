@@ -46,24 +46,24 @@ export const MobileFeed: React.FC<MobileFeedProps> = ({ events, holders, recent,
 
                 {/* === LOGS TAB === */}
                 {tab === 'logs' && (
-                    <div className="p-3 space-y-2">
+                    <div className="p-3 space-y-1.5">
                         {events.length === 0 && (
-                            <div className="text-center text-gray-600 italic py-12 text-sm">{t('system_idle')}</div>
+                            <div className="text-center text-gray-600 italic py-12 text-xs font-mono">{t('system_idle')}</div>
                         )}
                         {events.map((ev) => (
                             <div key={ev.id}
-                                className="bg-[#111] border border-[#222] rounded-lg p-3 flex gap-3 active:bg-[#1a1a1a] cursor-pointer"
+                                className="bg-[#111] border border-[#222] rounded-lg px-3 py-2.5 flex gap-2.5 active:bg-[#1a1a1a] cursor-pointer"
                                 onClick={() => ev.x != null && onNavigate(ev.x, ev.y!)}>
                                 <div className="shrink-0 pt-0.5">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
                                         ev.event_type === 'purchase' ? 'bg-green-900/30' : 'bg-blue-900/30'
                                     }`}>
-                                        <User size={14} className={ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'} />
+                                        <User size={12} className={ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'} />
                                     </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center">
-                                        <span className={`font-mono text-xs font-bold ${
+                                        <span className={`font-mono text-[11px] font-bold ${
                                             ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'
                                         }`}>
                                             {ev.event_type === 'purchase' ? 'BUY' : 'UPDATE'}
@@ -72,10 +72,10 @@ export const MobileFeed: React.FC<MobileFeedProps> = ({ events, holders, recent,
                                             {new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
-                                    <div className="mt-1 text-gray-300 text-sm break-words">
-                                        {ev.x != null && <span className="text-green-500/70 font-mono">({ev.x},{ev.y}) </span>}
+                                    <div className="mt-0.5 text-gray-400 text-xs break-words font-mono">
+                                        {ev.x != null && <span className="text-green-500/70">({ev.x},{ev.y}) </span>}
                                         {ev.owner && <span className="text-gray-500">{truncAddr(ev.owner)} </span>}
-                                        {ev.message || (ev.event_type === 'purchase' ? t('buy_action') : t('update_action'))}
+                                        <span className="text-gray-400 font-sans">{ev.message || (ev.event_type === 'purchase' ? t('buy_action') : t('update_action'))}</span>
                                     </div>
                                 </div>
                             </div>
@@ -87,41 +87,41 @@ export const MobileFeed: React.FC<MobileFeedProps> = ({ events, holders, recent,
                 {tab === 'rankings' && (
                     <div className="p-3">
                         {/* Holders */}
-                        <div className="mb-2 px-1 text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                        <div className="mb-2 px-1 text-[10px] text-gray-500 uppercase font-bold tracking-wider font-mono">
                             {t('top_agents')}
                         </div>
                         {holders.length === 0 && (
-                            <div className="text-center text-gray-600 italic py-8 text-sm">{t('no_data')}</div>
+                            <div className="text-center text-gray-600 italic py-8 text-xs font-mono">{t('no_data')}</div>
                         )}
                         {holders.map((h, i) => (
                             <div key={`h-${i}`}
-                                className="flex justify-between items-center px-3 py-2.5 rounded-lg active:bg-[#111] cursor-pointer"
+                                className="flex justify-between items-center px-3 py-2 rounded-lg active:bg-[#111] cursor-pointer"
                                 onClick={() => h.x != null && onNavigate(h.x, h.y!)}>
-                                <div className="flex items-center gap-3">
-                                    <span className={`font-mono w-5 text-right text-sm font-bold ${
+                                <div className="flex items-center gap-2.5">
+                                    <span className={`font-mono w-5 text-right text-xs font-bold ${
                                         i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-gray-600'
                                     }`}>
                                         #{i + 1}
                                     </span>
-                                    <span className="text-gray-300 font-mono text-sm">{truncAddr(h.owner)}</span>
+                                    <span className="text-gray-300 font-mono text-xs">{truncAddr(h.owner)}</span>
                                 </div>
-                                <span className="text-green-500 font-bold font-mono text-sm">{h.cell_count}</span>
+                                <span className="text-green-500 font-bold font-mono text-xs">{h.cell_count}</span>
                             </div>
                         ))}
 
                         {/* Recently Active */}
                         {recent.length > 0 && (
                             <>
-                                <div className="mt-6 mb-2 px-1 text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                                <div className="mt-5 mb-2 px-1 text-[10px] text-gray-500 uppercase font-bold tracking-wider font-mono">
                                     {t('recently_active')}
                                 </div>
                                 {recent.map((r, i) => (
                                     <div key={`r-${i}`}
-                                        className="flex justify-between items-center px-3 py-2.5 rounded-lg active:bg-[#111] cursor-pointer"
+                                        className="flex justify-between items-center px-3 py-2 rounded-lg active:bg-[#111] cursor-pointer"
                                         onClick={() => r.x != null && onNavigate(r.x, r.y!)}>
                                         <div className="flex items-center gap-2 min-w-0">
-                                            <span className="text-gray-500 font-mono text-xs shrink-0">({r.x},{r.y})</span>
-                                            <span className="text-gray-300 text-sm truncate">{r.title || truncAddr(r.owner)}</span>
+                                            <span className="text-gray-500 font-mono text-[11px] shrink-0">({r.x},{r.y})</span>
+                                            <span className="text-gray-300 text-xs truncate">{r.title || truncAddr(r.owner)}</span>
                                         </div>
                                         <span className="text-gray-600 text-[10px] font-mono shrink-0 ml-2">
                                             {r.last_updated ? new Date(r.last_updated).toLocaleDateString() : ''}
@@ -137,24 +137,24 @@ export const MobileFeed: React.FC<MobileFeedProps> = ({ events, holders, recent,
                 {tab === 'hot' && (
                     <div className="p-3">
                         {hot.length === 0 && (
-                            <div className="text-center text-gray-600 italic py-12 text-sm">{t('no_data')}</div>
+                            <div className="text-center text-gray-600 italic py-12 text-xs font-mono">{t('no_data')}</div>
                         )}
                         {hot.map((h, i) => (
                             <div key={i}
-                                className="flex justify-between items-center px-3 py-3 rounded-lg active:bg-[#111] cursor-pointer transition-colors"
+                                className="flex justify-between items-center px-3 py-2 rounded-lg active:bg-[#111] cursor-pointer transition-colors"
                                 onClick={() => onNavigate(h.x, h.y)}>
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <span className={`font-mono w-5 text-right text-sm font-bold ${
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className={`font-mono w-5 text-right text-xs font-bold ${
                                         i < 3 ? 'text-orange-500' : 'text-gray-600'
                                     }`}>
                                         #{i + 1}
                                     </span>
                                     <div className="min-w-0">
-                                        <div className="text-gray-300 text-sm truncate">{h.title || truncAddr(h.owner)}</div>
+                                        <div className="text-gray-300 text-xs truncate">{h.title || truncAddr(h.owner)}</div>
                                         <div className="text-gray-600 font-mono text-[10px]">({h.x},{h.y})</div>
                                     </div>
                                 </div>
-                                <span className="text-orange-400 font-bold font-mono text-sm shrink-0 ml-2">
+                                <span className="text-orange-400 font-bold font-mono text-xs shrink-0 ml-2">
                                     {h.hit_count} {t('views')}
                                 </span>
                             </div>
