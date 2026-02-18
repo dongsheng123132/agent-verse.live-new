@@ -35,7 +35,8 @@ export async function trackReferral(refCode, { receiptId, buyerX, buyerY, purcha
     const rewardAmount = Number(purchaseAmount) * REWARD_RATE
     await dbQuery(
       `INSERT INTO referral_rewards (referrer_code, buyer_receipt_id, buyer_x, buyer_y, purchase_amount, reward_amount)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (buyer_receipt_id) DO NOTHING`,
       [refCode, receiptId, buyerX, buyerY, purchaseAmount, rewardAmount]
     )
   } catch (e) {
@@ -43,4 +44,3 @@ export async function trackReferral(refCode, { receiptId, buyerX, buyerY, purcha
   }
 }
 
-export { REWARD_RATE }

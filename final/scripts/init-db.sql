@@ -4,9 +4,9 @@ CREATE TABLE IF NOT EXISTS grid_cells (
   x             INTEGER NOT NULL,
   y             INTEGER NOT NULL,
   owner_address TEXT,
-  status        TEXT DEFAULT 'EMPTY',
-  is_for_sale   BOOLEAN DEFAULT FALSE,
-  price_usdc    NUMERIC(18, 6),
+  status        TEXT DEFAULT 'EMPTY',         -- always 'HOLDING' after purchase
+  is_for_sale   BOOLEAN DEFAULT FALSE,       -- reserved for future marketplace
+  price_usdc    NUMERIC(18, 6),              -- reserved for future marketplace
   fill_color    TEXT,
   title         TEXT,
   summary       TEXT,
@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS referral_rewards (
   status          TEXT DEFAULT 'pending',     -- pending / credited
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_referral_rewards_receipt ON referral_rewards (buyer_receipt_id);
 CREATE INDEX IF NOT EXISTS idx_referral_rewards_code ON referral_rewards (referrer_code);
 
 -- Migration for existing databases

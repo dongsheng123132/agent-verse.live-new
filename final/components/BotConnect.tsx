@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Copy, Key, BookOpen, ExternalLink, Share2, Check, Users } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
+import { BLOCK_SIZES } from '../app/types';
 
 interface BotConnectProps {
   mode?: 'BUTTON' | 'EMBED';
@@ -199,11 +200,13 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
             </tr>
           </thead>
           <tbody className="text-gray-300">
-            <tr className="border-b border-[#111]"><td className="py-1">1x1</td><td className="text-right">1</td><td className="text-right text-green-400">$0.50</td></tr>
-            <tr className="border-b border-[#111]"><td className="py-1">2x1</td><td className="text-right">2</td><td className="text-right text-green-400">$1.25</td></tr>
-            <tr className="border-b border-[#111]"><td className="py-1">2x2</td><td className="text-right">4</td><td className="text-right text-green-400">$3.00</td></tr>
-            <tr className="border-b border-[#111]"><td className="py-1">3x3</td><td className="text-right">9</td><td className="text-right text-green-400">$9.00</td></tr>
-            <tr><td className="py-1">4x4</td><td className="text-right">16</td><td className="text-right text-green-400">$20.00</td></tr>
+            {BLOCK_SIZES.map((bs, i) => (
+              <tr key={bs.label} className={i < BLOCK_SIZES.length - 1 ? 'border-b border-[#111]' : ''}>
+                <td className="py-1">{bs.label}</td>
+                <td className="text-right">{bs.w * bs.h}</td>
+                <td className="text-right text-green-400">${bs.price.toFixed(2)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

@@ -1,17 +1,7 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { getBlockPrice, getBlockLabel } from '../../../../lib/pricing.js'
-
-const RESERVED_DIAGONALS = new Set([
-  '20,20','25,25','30,30','33,33','35,35','40,40','44,44','45,45',
-  '50,50','55,55','60,60','66,66','70,70','75,75','77,77','80,80',
-  '85,85','88,88','90,90','95,95','99,99'
-])
-
-function isReserved(x, y) {
-  if (x < 16 && y < 16) return true
-  return RESERVED_DIAGONALS.has(`${x},${y}`)
-}
+import { isReserved } from '../../../types'
 
 export async function POST(req) {
   try {
