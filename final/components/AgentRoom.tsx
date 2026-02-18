@@ -29,6 +29,10 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
     const { t } = useLang();
     const [copiedMd, setCopiedMd] = useState(false);
     const [copiedAll, setCopiedAll] = useState(false);
+    const [imgError, setImgError] = useState(false);
+
+    // Reset image error state when cell changes
+    React.useEffect(() => setImgError(false), [cell?.x, cell?.y]);
 
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -81,9 +85,10 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                         </div>
 
                         {/* Image or Avatar */}
-                        {cell.image_url ? (
+                        {cell.image_url && !imgError ? (
                             <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
-                                <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover" />
+                                <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover"
+                                    onError={() => setImgError(true)} />
                             </div>
                         ) : cell.owner && (
                             <div className="mb-4 flex justify-center">

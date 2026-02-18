@@ -42,6 +42,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     const imageCache = useRef<{ [key: string]: HTMLImageElement }>({});
     const [frameCount, setFrameCount] = useState(0);
+    const failedImages = useRef(new Set<string>());
 
     // Helper: Screen to Grid
     const getGridCoord = (screenX: number, screenY: number) => {
@@ -83,9 +84,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         const startRow = Math.floor((-pan.y) / cellSize);
         const endRow = startRow + Math.ceil(height / cellSize) + 1;
 
-        const renderStartCol = Math.max(0, startCol);
+        const renderStartCol = Math.max(0, startCol - 4);
         const renderEndCol = Math.min(COLS, endCol);
-        const renderStartRow = Math.max(0, startRow);
+        const renderStartRow = Math.max(0, startRow - 4);
         const renderEndRow = Math.min(ROWS, endRow);
 
         const selectedIds = new Set(selectedCells.map(c => `${c.x},${c.y}`));
@@ -94,98 +95,108 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             for (let c = renderStartCol; c < renderEndCol; c++) {
                 const cell = cellMap.get(`${c},${r}`);
 
-                const screenX = Math.floor(c * cellSize + pan.x);
-                const screenY = Math.floor(r * cellSize + pan.y);
-                // Ensure no gaps
-                const size = Math.ceil(cellSize);
-
-                // Mega Node Logic (Block)
-                // If it's part of a block but not the origin, strict rendering might skip it if we iterate by 1x1.
-                // But `Cell` has `block_w` etc.
-                // If we are strictly rendering per 1x1 grid slot:
-                if (cell?.block_origin_x !== undefined && (cell.block_origin_x !== c || cell.block_origin_y !== r)) {
-                    // It's a member of a block, but not the origin.
-                    // WE SHOULD DRAW IT if we want simple 1x1 rendering, OR we handle it at origin.
-                    // The reference handled it at origin.
-                    // But `final` data might just have `owner` on all cells.
-                    // Let's check `final`'s `Cell` type: `block_id`, `block_w`, `block_h`.
-                    // If `block_w` > 1, it's a block.
-                    // If `cell` exists, it's sold/owned.
+                // Block rendering: skip non-origin cells (origin draws the full block)
+                if (cell?.block_origin_x != null && (cell.block_origin_x !== c || cell.block_origin_y !== r)) {
+                    continue;
                 }
 
-                // Draw Cell Content
+                const screenX = Math.floor(c * cellSize + pan.x);
+                const screenY = Math.floor(r * cellSize + pan.y);
+                const bw = cell?.block_w || 1;
+                const bh = cell?.block_h || 1;
+                const drawW = Math.ceil(cellSize * bw);
+                const drawH = Math.ceil(cellSize * bh);
+
                 let isSold = !!cell?.owner;
                 let isReservedCell = isReserved(c, r);
 
                 if (isSold && cell) {
-                    // Image
-                    if (cell.image_url) {
-                        const img = imageCache.current[cell.image_url];
+                    const imgUrl = cell.image_url;
+                    const imgFailed = imgUrl ? failedImages.current.has(imgUrl) : true;
+
+                    if (imgUrl && !imgFailed) {
+                        const img = imageCache.current[imgUrl];
                         if (img && img.complete && img.naturalWidth > 0) {
-                            ctx.drawImage(img, screenX, screenY, size, size);
+                            ctx.drawImage(img, screenX, screenY, drawW, drawH);
                         } else {
-                            if (!img && cellSize > 5) { // Only load if visible enough
+                            if (!img && cellSize > 5) {
                                 const newImg = new Image();
                                 newImg.crossOrigin = 'anonymous';
-                                newImg.src = cell.image_url;
+                                newImg.src = imgUrl;
                                 newImg.onload = () => setFrameCount(f => f + 1);
-                                imageCache.current[cell.image_url] = newImg;
+                                newImg.onerror = () => {
+                                    failedImages.current.add(imgUrl);
+                                    setFrameCount(f => f + 1);
+                                };
+                                imageCache.current[imgUrl] = newImg;
                             }
                             ctx.fillStyle = cell.color || '#10b981';
-                            ctx.fillRect(screenX, screenY, size, size);
-
-                            // Loading indicator
+                            ctx.fillRect(screenX, screenY, drawW, drawH);
                             if (cellSize > 10) {
                                 ctx.fillStyle = 'rgba(255,255,255,0.5)';
                                 ctx.font = `${Math.max(8, cellSize / 3)}px monospace`;
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
-                                ctx.fillText('...', screenX + size / 2, screenY + size / 2);
+                                ctx.fillText('...', screenX + drawW / 2, screenY + drawH / 2);
                             }
                         }
                     } else {
-                        // Pixel avatar (deterministic from owner address)
+                        // No image or failed → pixel avatar
                         const avatar = getPixelAvatar(cell.owner || cell.id.toString());
                         ctx.fillStyle = cell.color ? cell.color : avatar.colors.bg;
-                        ctx.fillRect(screenX, screenY, size, size);
+                        ctx.fillRect(screenX, screenY, drawW, drawH);
+
+                        const avatarSize = Math.min(drawW, drawH);
+                        const avatarX = screenX + (drawW - avatarSize) / 2;
+                        const avatarY = screenY + (drawH - avatarSize) / 2;
 
                         if (cellSize >= 20) {
-                            drawPixelAvatar(ctx, avatar, screenX, screenY, size);
+                            drawPixelAvatar(ctx, avatar, avatarX, avatarY, avatarSize);
                         } else if (cellSize >= 8) {
-                            // Mid zoom: 6×6 downsampled avatar
-                            drawPixelAvatarSmall(ctx, avatar, screenX, screenY, size);
+                            drawPixelAvatarSmall(ctx, avatar, avatarX, avatarY, avatarSize);
                         } else if (cellSize > 3) {
-                            // Small zoom: centered dot in avatar color
                             ctx.fillStyle = cell.color || avatar.colors.primary;
-                            ctx.fillRect(screenX + size * 0.15, screenY + size * 0.15, size * 0.7, size * 0.7);
+                            ctx.fillRect(screenX + drawW * 0.15, screenY + drawH * 0.15, drawW * 0.7, drawH * 0.7);
                         }
+                    }
+
+                    // Title overlay for blocks when zoomed in
+                    if (bw > 1 && cell.title && cellSize >= 12) {
+                        const fontSize = Math.min(cellSize * 0.35, 14);
+                        const textH = fontSize + 6;
+                        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                        ctx.fillRect(screenX, screenY + drawH - textH, drawW, textH);
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `bold ${fontSize}px monospace`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(cell.title.slice(0, 20), screenX + drawW / 2, screenY + drawH - textH / 2);
                     }
                 } else if (isReservedCell) {
                     ctx.fillStyle = '#111118';
-                    ctx.fillRect(screenX, screenY, size, size);
-                    // System Pattern
+                    ctx.fillRect(screenX, screenY, drawW, drawH);
                     if (cellSize > 4) {
                         ctx.strokeStyle = '#222';
                         ctx.lineWidth = 1;
-                        ctx.strokeRect(screenX + 2, screenY + 2, size - 4, size - 4);
+                        ctx.strokeRect(screenX + 2, screenY + 2, drawW - 4, drawH - 4);
                         if (cellSize > 10) {
                             ctx.fillStyle = '#333';
                             ctx.font = `${cellSize * 0.3}px monospace`;
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText('SYS', screenX + size / 2, screenY + size / 2);
+                            ctx.fillText('SYS', screenX + drawW / 2, screenY + drawH / 2);
                         }
                     }
                 } else {
                     ctx.fillStyle = '#161616';
-                    ctx.fillRect(screenX, screenY, size, size);
+                    ctx.fillRect(screenX, screenY, drawW, drawH);
                 }
 
                 // Selection Outline
                 if (selectedIds.has(`${c},${r}`)) {
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = Math.max(1, 2 * (zoom / 2));
-                    ctx.strokeRect(screenX, screenY, size, size);
+                    ctx.strokeRect(screenX, screenY, drawW, drawH);
                 }
             }
         }
