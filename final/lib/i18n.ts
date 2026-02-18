@@ -114,6 +114,9 @@ const dict = {
   'tab_room': { en: 'Room', zh: '房间' },
   'tab_embed': { en: 'Embed', zh: '嵌入' },
   'tab_info': { en: 'Info', zh: '信息' },
+  'hot_cells': { en: 'HOT CELLS', zh: '热门格子' },
+  'views': { en: 'views', zh: '次' },
+  'no_data': { en: 'No data yet', zh: '暂无数据' },
 } as const
 
 export type TKey = keyof typeof dict

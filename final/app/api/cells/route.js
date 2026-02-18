@@ -17,13 +17,18 @@ export async function GET(req) {
       `SELECT id, x, y, owner_address as owner, fill_color as color,
               title, summary, image_url, iframe_url, content_url, markdown,
               block_id, block_w, block_h, block_origin_x, block_origin_y,
-              last_updated
+              hit_count, last_updated
        FROM grid_cells WHERE x = $1 AND y = $2`,
       [x, y]
     )
 
     if (!res.rowCount) {
       return NextResponse.json({ ok: true, cell: null })
+    }
+
+    // Fire-and-forget hit increment for owned cells
+    if (res.rows[0].owner) {
+      dbQuery('UPDATE grid_cells SET hit_count = COALESCE(hit_count, 0) + 1 WHERE x = $1 AND y = $2', [x, y]).catch(() => {})
     }
 
     return NextResponse.json({ ok: true, cell: res.rows[0] })

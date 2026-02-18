@@ -15,7 +15,8 @@ export type Cell = {
   block_origin_y?: number;
   content_url?: string; // from CellDetail
   markdown?: string;    // from CellDetail
-  last_updated?: string;// from CellDetail
+  hit_count?: number;
+  last_updated?: string;
 }
 
 export type GridEvent = { 

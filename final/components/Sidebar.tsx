@@ -1,16 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GridEvent, Ranking, truncAddr } from '../app/types';
-import { Activity, Trophy, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Activity, Trophy, Flame, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
+
+type HotCell = { x: number; y: number; title?: string; hit_count: number; owner: string }
 
 interface SidebarProps {
     events: GridEvent[];
     holders: Ranking[];
     recent: Ranking[];
+    hot: HotCell[];
     onNavigate: (x: number, y: number) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNavigate }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, hot, onNavigate }) => {
     const { t } = useLang();
     const MIN_WIDTH = 280;
     const MAX_WIDTH = 520;
@@ -21,6 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNav
     const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
     const [logsOpen, setLogsOpen] = useState(true);
     const [rankingsOpen, setRankingsOpen] = useState(true);
+    const [hotOpen, setHotOpen] = useState(true);
     const [isResizing, setIsResizing] = useState(false);
 
     const resizeStartXRef = useRef(0);
@@ -111,6 +115,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNav
                     >
                         <Trophy size={16} />
                     </button>
+                    <button
+                        type="button"
+                        className={`w-9 h-9 rounded border flex items-center justify-center ${hotOpen ? 'border-orange-500 text-orange-500 bg-orange-500/10' : 'border-[#333] text-gray-500 hover:text-white'}`}
+                        onClick={() => { setCollapsed(false); setHotOpen(true); }}
+                        title={t('hot_cells')}
+                    >
+                        <Flame size={16} />
+                    </button>
                 </div>
             )}
 
@@ -154,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNav
                         )}
                     </div>
 
-                    <div className="h-1/3 flex flex-col bg-[#050505]">
+                    <div className="flex flex-col bg-[#050505]">
                         <button
                             type="button"
                             onClick={() => setRankingsOpen(v => !v)}
@@ -167,7 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNav
                             <ChevronDown size={14} className={`transition-transform ${rankingsOpen ? 'rotate-0' : '-rotate-90'}`} />
                         </button>
                         {rankingsOpen && (
-                            <div className="flex-1 overflow-y-auto p-2">
+                            <div className="overflow-y-auto p-2">
                                 <div className="flex justify-between text-[10px] text-gray-600 mb-2 px-2">
                                     <span>{t('agent_col')}</span>
                                     <span>{t('nodes_col')}</span>
@@ -179,6 +191,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, onNav
                                             <span>{truncAddr(h.owner)}</span>
                                         </div>
                                         <span className="text-green-500 font-bold">{h.cell_count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col bg-[#050505]">
+                        <button
+                            type="button"
+                            onClick={() => setHotOpen(v => !v)}
+                            className="p-3 bg-[#111] border-b border-[#222] flex items-center justify-between gap-2 text-gray-400 font-bold uppercase tracking-wider hover:bg-[#151515]"
+                        >
+                            <span className="flex items-center gap-2">
+                                <Flame size={14} className="text-orange-500" />
+                                {t('hot_cells')}
+                            </span>
+                            <ChevronDown size={14} className={`transition-transform ${hotOpen ? 'rotate-0' : '-rotate-90'}`} />
+                        </button>
+                        {hotOpen && (
+                            <div className="overflow-y-auto p-2">
+                                {hot.length === 0 && <div className="text-gray-600 italic text-[10px] p-2">{t('no_data')}</div>}
+                                {hot.map((h, i) => (
+                                    <div key={i} className="flex justify-between items-center px-2 py-1 text-gray-400 hover:bg-[#111] rounded cursor-pointer" onClick={() => onNavigate(h.x, h.y)}>
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className={`font-mono w-4 text-right shrink-0 ${i < 3 ? 'text-orange-500' : 'text-gray-600'}`}>#{i + 1}</span>
+                                            <span className="text-gray-500 shrink-0">({h.x},{h.y})</span>
+                                            {h.title && <span className="truncate text-gray-300">{h.title}</span>}
+                                        </div>
+                                        <span className="text-orange-400 font-bold shrink-0 ml-2">{h.hit_count} {t('views')}</span>
                                     </div>
                                 ))}
                             </div>

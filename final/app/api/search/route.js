@@ -18,6 +18,7 @@ export async function GET(req) {
       const ftsRes = await dbQuery(
         `SELECT x, y, owner_address as owner, fill_color as color, title, summary, image_url,
                 block_id, block_w, block_h, block_origin_x, block_origin_y,
+                hit_count,
                 ts_rank(to_tsvector('simple', COALESCE(markdown,'')), plainto_tsquery('simple', $1)) as rank
          FROM grid_cells
          WHERE owner_address IS NOT NULL
@@ -35,7 +36,8 @@ export async function GET(req) {
       const pattern = `%${q}%`
       const likeRes = await dbQuery(
         `SELECT x, y, owner_address as owner, fill_color as color, title, summary, image_url,
-                block_id, block_w, block_h, block_origin_x, block_origin_y
+                block_id, block_w, block_h, block_origin_x, block_origin_y,
+                hit_count
          FROM grid_cells
          WHERE owner_address IS NOT NULL
            AND (title ILIKE $1 OR summary ILIKE $1 OR markdown ILIKE $1 OR owner_address ILIKE $1)

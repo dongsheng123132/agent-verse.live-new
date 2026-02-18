@@ -95,3 +95,5 @@ ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS block_origin_x INTEGER;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS block_origin_y INTEGER;
 ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS ref_code TEXT;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS iframe_url TEXT;
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS hit_count INTEGER DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_grid_cells_hits ON grid_cells (hit_count DESC) WHERE owner_address IS NOT NULL;

@@ -29,10 +29,21 @@ export async function GET() {
       .sort((a, b) => new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime())
       .slice(0, 10)
 
+    // Hot cells by view count
+    const hotRes = await dbQuery(
+      `SELECT x, y, title, image_url, hit_count, owner_address as owner
+       FROM grid_cells
+       WHERE owner_address IS NOT NULL AND hit_count > 0
+       ORDER BY hit_count DESC
+       LIMIT 10`,
+      []
+    )
+
     return NextResponse.json({
       ok: true,
       holders: holdersRes.rows,
-      recent: recentSorted
+      recent: recentSorted,
+      hot: hotRes.rows,
     })
   } catch (e) {
     console.error('[rankings]', e)

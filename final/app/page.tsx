@@ -25,6 +25,7 @@ function PageInner() {
   const [events, setEvents] = useState<GridEvent[]>([])
   const [holders, setHolders] = useState<Ranking[]>([])
   const [recent, setRecent] = useState<Ranking[]>([])
+  const [hot, setHot] = useState<any[]>([])
 
   // Navigation
   const [viewMode, setViewMode] = useState<'GRID' | 'FORUM' | 'ACCESS'>('GRID')
@@ -89,6 +90,7 @@ function PageInner() {
     fetch('/api/rankings').then(r => r.json()).then(d => {
       if (d?.holders) setHolders(d.holders)
       if (d?.recent) setRecent(d.recent)
+      if (d?.hot) setHot(d.hot)
     }).catch(() => { })
   }, [])
 
@@ -380,7 +382,7 @@ function PageInner() {
       <div className="flex-1 flex overflow-hidden relative pb-14 md:pb-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex h-full shrink-0 z-20">
-          <Sidebar events={events} holders={holders} recent={recent} onNavigate={handleNavigate} />
+          <Sidebar events={events} holders={holders} recent={recent} hot={hot} onNavigate={handleNavigate} />
         </div>
 
         {/* Main Content */}
