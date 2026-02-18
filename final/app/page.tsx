@@ -412,8 +412,8 @@ function PageInner() {
               </div>
             )}
           </div>
-          <button onClick={() => window.open('https://github.com/dongsheng123132/agent-verse.live', '_blank')} className="hidden md:flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
-            <Globe size={10} /> SOURCE
+          <button onClick={() => window.open('/skill.md', '_blank')} className="hidden md:flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
+            <Globe size={10} /> DOCS
           </button>
         </div>
       </header>

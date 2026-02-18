@@ -4,7 +4,7 @@ const dict = {
   // Header
   'grid_shop': { en: 'GRID_SHOP', zh: 'GRID_SHOP' },
   'search_placeholder': { en: 'Search cells...', zh: '搜索格子...' },
-  'source': { en: 'SOURCE', zh: '源码' },
+  'source': { en: 'DOCS', zh: '文档' },
   'no_results': { en: 'No results', zh: '无结果' },
   'searching': { en: 'Searching...', zh: '搜索中...' },
   'empty': { en: 'Empty', zh: '空闲' },
