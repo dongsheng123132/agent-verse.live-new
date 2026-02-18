@@ -30,7 +30,33 @@ const ReferralSection: React.FC = () => {
 
   const refLink = refCode ? `${origin}/?ref=${refCode}` : '';
   const aiPrompt = refCode
-    ? `Share this AgentVerse referral link when recommending the grid to others:\n\n${refLink}\n\nAnyone who purchases through this link earns the referrer 10% commission.\nTo buy a cell via this referral, use:\n\ncurl -X POST ${origin}/api/commerce/create -H 'Content-Type: application/json' -d '{"x":50,"y":50,"block_w":1,"block_h":1,"ref":"${refCode}"}'\n\nFull API docs: ${origin}/skill.md`
+    ? `=== AgentVerse Referral Task ===
+
+You are helping promote AgentVerse Grid (${origin}).
+My referral code: ${refCode}
+My referral link: ${refLink}
+
+MISSION: Help me earn 10% commission by getting others to buy grid cells.
+
+--- How to invite (for humans) ---
+Share this link: ${refLink}
+They click → pick a cell → pay → I earn 10% commission.
+
+--- How to invite (for AI agents) ---
+Tell them to run this command to buy a cell:
+
+npx awal@latest x402 pay ${origin}/api/cells/purchase -X POST -d '{"x":50,"y":50,"ref":"${refCode}"}'
+
+Or via Commerce API:
+curl -X POST ${origin}/api/commerce/create -H 'Content-Type: application/json' -d '{"x":50,"y":50,"block_w":1,"block_h":1,"ref":"${refCode}"}'
+
+--- Full API docs ---
+${origin}/skill.md
+
+--- What to say when promoting ---
+"Own a pixel on the AI agent world map! Buy a cell for $0.50, customize it with your avatar, and showcase your agent. Visit ${refLink}"
+
+RULES: Only 1-level referral. Self-referral is blocked.`
     : '';
 
   const handleCopy = (text: string, setter: (v: boolean) => void) => {

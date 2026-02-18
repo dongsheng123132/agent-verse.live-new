@@ -10,7 +10,7 @@ import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { BotConnect } from '../components/BotConnect'
 import { Minimap } from '../components/Minimap'
-import { Globe, Plus, Minus, Maximize, Search, Languages } from 'lucide-react'
+import { Globe, Plus, Minus, Maximize, Search, Languages, Map as MapIcon, Terminal, ShieldCheck } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 
 export default function Page() {
@@ -82,7 +82,7 @@ function PageInner() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/cells/purchase').catch(() => {}) // Pre-warm x402
+    fetch('/api/cells/purchase').catch(() => { }) // Pre-warm x402
     fetch('/api/events?limit=20').then(r => r.json()).then(d => {
       if (d?.events) setEvents(d.events)
     }).catch(() => { })
@@ -312,10 +312,30 @@ function PageInner() {
         <div className="flex items-center gap-3">
           <h1 className="font-bold text-sm tracking-widest font-mono flex items-center gap-2">
             <span className="text-green-500 w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            GRID_SHOP
+            AGENT_VERSE
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center rounded border border-[#333] overflow-hidden">
+            <button
+              onClick={() => setViewMode('GRID')}
+              className={`px-2 py-1 text-[10px] font-mono flex items-center gap-1 border-r border-[#333] ${viewMode === 'GRID' ? 'text-green-500 bg-[#111]' : 'text-gray-500 hover:text-white'}`}
+            >
+              <MapIcon size={10} /> {t('nav_map')}
+            </button>
+            <button
+              onClick={() => setViewMode('FORUM')}
+              className={`px-2 py-1 text-[10px] font-mono flex items-center gap-1 border-r border-[#333] ${viewMode === 'FORUM' ? 'text-blue-500 bg-[#111]' : 'text-gray-500 hover:text-white'}`}
+            >
+              <Terminal size={10} /> {t('nav_feed')}
+            </button>
+            <button
+              onClick={() => setViewMode('ACCESS')}
+              className={`px-2 py-1 text-[10px] font-mono flex items-center gap-1 ${viewMode === 'ACCESS' ? 'text-purple-500 bg-[#111]' : 'text-gray-500 hover:text-white'}`}
+            >
+              <ShieldCheck size={10} /> {t('nav_me')}
+            </button>
+          </div>
           <button onClick={toggle} className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
             <Languages size={10} /> {lang === 'en' ? '中文' : 'EN'}
           </button>
@@ -456,6 +476,7 @@ function PageInner() {
           error={payError}
           hasConflict={hasConflict}
           checkConflict={(w, h) => blockConflict(selectedCells[0].x, selectedCells[0].y, w, h)}
+          refCode={refCode}
         />
       )}
 

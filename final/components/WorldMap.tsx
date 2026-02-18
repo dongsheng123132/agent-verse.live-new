@@ -320,6 +320,62 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         setSelectionRect(null);
     };
 
+    // --- Touch Handlers ---
+    const lastTouchDist = useRef<number>(0);
+
+    const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
+        return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2));
+    };
+
+    const getTouchCenter = (t1: React.Touch, t2: React.Touch) => {
+        return {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 1) {
+            // Pan
+            lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            setIsDragging(true);
+        } else if (e.touches.length === 2) {
+            // Pinch
+            lastTouchDist.current = getTouchDist(e.touches[0], e.touches[1]);
+            setIsDragging(false); // Disable pan logic, use pinch logic
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        e.preventDefault(); // Prevent page scroll
+        if (e.touches.length === 1 && isDragging) {
+            // Pan
+            const dx = e.touches[0].clientX - lastMousePos.current.x;
+            const dy = e.touches[0].clientY - lastMousePos.current.y;
+            onPan(dx, dy);
+            lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            // Pinch Zoom
+            const newDist = getTouchDist(e.touches[0], e.touches[1]);
+            const delta = lastTouchDist.current - newDist; // Positive gap = zoom out
+            const center = getTouchCenter(e.touches[0], e.touches[1]);
+
+            // Adjust sensitivity
+            if (Math.abs(delta) > 5) {
+                const rect = canvasRef.current?.getBoundingClientRect();
+                if (rect) {
+                    onZoom(delta * 2, center.x - rect.left, center.y - rect.top);
+                    lastTouchDist.current = newDist;
+                }
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        lastTouchDist.current = 0;
+    };
+
     return (
         <div className="relative w-full h-full bg-[#050505] overflow-hidden select-none">
             <canvas
@@ -332,10 +388,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 onMouseUp={handleMouseUp}
                 onMouseLeave={() => { setIsDragging(false); setIsSelecting(false); setSelectionRect(null); setHoveredCell(null); }}
                 onWheel={(e) => {
+                    e.preventDefault();
                     const rect = canvasRef.current?.getBoundingClientRect();
                     if (!rect) return;
                     onZoom(e.deltaY, e.clientX - rect.left, e.clientY - rect.top);
                 }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
             />
 
             {/* Tooltip Overlay */}

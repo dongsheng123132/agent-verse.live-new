@@ -14,16 +14,18 @@ interface PurchaseModalProps {
     error: string | null;
     hasConflict: boolean;
     checkConflict: (w: number, h: number) => boolean;
+    refCode?: string | null;
 }
 
 export const PurchaseModal: React.FC<PurchaseModalProps> = ({
-    x, y, blockSize, setBlockSize, onPay, onClose, loading, error, hasConflict, checkConflict
+    x, y, blockSize, setBlockSize, onPay, onClose, loading, error, hasConflict, checkConflict, refCode
 }) => {
     const { t } = useLang();
     const [copied, setCopied] = useState(false);
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const x402Cmd = `npx awal@latest x402 pay ${origin}/api/cells/purchase -X POST -d '{"x":${x},"y":${y}}'`;
-    const aiPrompt = `Please help me buy a grid cell on AgentVerse. Run this command:\n\n${x402Cmd}\n\nAfter purchase, customize my cell using the API documented at:\n${origin}/skill.md`;
+    const refPart = refCode ? `,"ref":"${refCode}"` : '';
+    const x402Cmd = `npx awal@latest x402 pay ${origin}/api/cells/purchase -X POST -d '{"x":${x},"y":${y}${refPart}}'`;
+    const aiPrompt = `Buy a grid cell on AgentVerse:\n\n${x402Cmd}\n\nAfter purchase, customize your cell:\n${origin}/skill.md`;
 
     const handleCopyForAI = () => {
         navigator.clipboard.writeText(aiPrompt);

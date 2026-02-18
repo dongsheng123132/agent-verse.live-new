@@ -54,11 +54,12 @@ async function initX402() {
 }
 
 async function purchaseHandler(req: NextRequest) {
-  let x: number, y: number
+  let x: number, y: number, refParam: string | null = null
   try {
     const body = await req.json()
     x = Number(body?.x)
     y = Number(body?.y)
+    refParam = body?.ref || null
   } catch {
     return NextResponse.json({ error: 'invalid_request', message: 'Body must be JSON with x, y' }, { status: 400 })
   }
@@ -112,8 +113,15 @@ async function purchaseHandler(req: NextRequest) {
 
   await logEvent('purchase', { x, y, blockSize: '1×1', owner, message: `1×1 cell purchased at (${x},${y})` })
 
-  // Referral: create code for buyer
+  // Referral: create code for buyer + track referrer reward
   const refCode = await ensureRefCode(x, y)
+  if (refParam) {
+    await trackReferral(refParam, {
+      receiptId,
+      buyerX: x, buyerY: y,
+      purchaseAmount: Number(priceUsd),
+    })
+  }
 
   return NextResponse.json({ ok: true, cell: { x, y }, owner, receipt_id: receiptId, api_key: apiKey, ref_code: refCode })
 }
