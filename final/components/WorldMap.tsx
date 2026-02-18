@@ -346,6 +346,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     // --- Touch Handlers ---
     const lastTouchDist = useRef<number>(0);
+    const touchStartPos = useRef({ x: 0, y: 0 });
+    const touchStartTime = useRef(0);
 
     const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
         return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2));
@@ -360,31 +362,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     const handleTouchStart = (e: React.TouchEvent) => {
         if (e.touches.length === 1) {
-            // Pan
             lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            touchStartTime.current = Date.now();
             setIsDragging(true);
         } else if (e.touches.length === 2) {
-            // Pinch
             lastTouchDist.current = getTouchDist(e.touches[0], e.touches[1]);
-            setIsDragging(false); // Disable pan logic, use pinch logic
+            setIsDragging(false);
         }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        e.preventDefault(); // Prevent page scroll
+        e.preventDefault();
         if (e.touches.length === 1 && isDragging) {
-            // Pan
             const dx = e.touches[0].clientX - lastMousePos.current.x;
             const dy = e.touches[0].clientY - lastMousePos.current.y;
             onPan(dx, dy);
             lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         } else if (e.touches.length === 2) {
-            // Pinch Zoom
             const newDist = getTouchDist(e.touches[0], e.touches[1]);
-            const delta = lastTouchDist.current - newDist; // Positive gap = zoom out
+            const delta = lastTouchDist.current - newDist;
             const center = getTouchCenter(e.touches[0], e.touches[1]);
-
-            // Adjust sensitivity
             if (Math.abs(delta) > 5) {
                 const rect = canvasRef.current?.getBoundingClientRect();
                 if (rect) {
@@ -395,7 +393,38 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         }
     };
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        // Tap detection — select cell on tap
+        if (e.changedTouches.length === 1) {
+            const touch = e.changedTouches[0];
+            const moveDist = Math.sqrt(
+                Math.pow(touch.clientX - touchStartPos.current.x, 2) +
+                Math.pow(touch.clientY - touchStartPos.current.y, 2)
+            );
+            const elapsed = Date.now() - touchStartTime.current;
+            if (moveDist < 12 && elapsed < 300) {
+                const rect = canvasRef.current?.getBoundingClientRect();
+                if (rect) {
+                    const tx = touch.clientX - rect.left;
+                    const ty = touch.clientY - rect.top;
+                    const coords = getGridCoord(tx, ty);
+                    if (coords.x >= 0 && coords.x < COLS && coords.y >= 0 && coords.y < ROWS) {
+                        const key = `${coords.x},${coords.y}`;
+                        const cell = cellMap.get(key) || {
+                            id: coords.y * COLS + coords.x,
+                            x: coords.x,
+                            y: coords.y,
+                            owner: null
+                        };
+                        if (!isReserved(coords.x, coords.y)) {
+                            onSelectCells([cell]);
+                        } else {
+                            onSelectCells([]);
+                        }
+                    }
+                }
+            }
+        }
         setIsDragging(false);
         lastTouchDist.current = 0;
     };

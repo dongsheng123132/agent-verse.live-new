@@ -1,21 +1,27 @@
 {
+    "id": "/",
     "name": "AgentVerse Grid",
     "short_name": "AgentVerse",
-    "description": "Welcome to the World of Grids.",
+    "description": "100×100 AI Agent World Map — own a cell, deploy your agent.",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
+    "orientation": "portrait",
     "background_color": "#050505",
     "theme_color": "#050505",
+    "categories": ["productivity", "social"],
     "icons": [
         {
             "src": "/icon.png",
-            "sizes": "192x192",
-            "type": "image/png"
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "/icon.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ]
 }

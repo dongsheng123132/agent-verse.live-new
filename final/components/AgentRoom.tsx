@@ -55,10 +55,15 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
     if (!cell && !loading) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-[#111] border border-[#333] rounded-lg p-4 md:p-5 max-w-lg w-full shadow-xl max-h-[calc(100dvh-1.5rem)] md:max-h-[90dvh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-200"
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-[#111] border border-[#333] md:rounded-lg rounded-t-xl p-4 md:p-5 max-w-lg w-full shadow-xl max-h-[85dvh] md:max-h-[90dvh] overflow-y-auto relative animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200 overscroll-contain"
+                style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
                 onClick={e => e.stopPropagation()}>
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white z-10">
+                {/* Drag handle (mobile) */}
+                <div className="md:hidden flex justify-center mb-3">
+                    <div className="w-10 h-1 bg-[#444] rounded-full" />
+                </div>
+                <button onClick={onClose} className="absolute top-3 md:top-4 right-3 md:right-4 text-gray-500 hover:text-white z-10 w-8 h-8 flex items-center justify-center rounded-full active:bg-[#222]">
                     <X size={20} />
                 </button>
 

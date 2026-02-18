@@ -10,7 +10,7 @@ import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { BotConnect } from '../components/BotConnect'
 import { Minimap } from '../components/Minimap'
-import { Globe, Plus, Minus, Maximize, Search, Languages, Map as MapIcon, Terminal, ShieldCheck } from 'lucide-react'
+import { Globe, Plus, Minus, Maximize, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 
 export default function Page() {
@@ -57,7 +57,9 @@ function PageInner() {
   const [searchResults, setSearchResults] = useState<Cell[]>([])
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchLoading, setSearchLoading] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const searchTimer = React.useRef<any>(null)
+  const searchInputRef = React.useRef<HTMLInputElement>(null)
 
   // --- Data Fetching ---
   const fetchGrid = useCallback(async () => {
@@ -317,14 +319,15 @@ function PageInner() {
     <div className="w-screen h-[100dvh] bg-[#050505] text-white overflow-hidden flex flex-col font-sans selection:bg-green-900 selection:text-white">
 
       {/* HEADER */}
-      <header className="h-12 border-b border-[#222] bg-[#0a0a0a] flex items-center justify-between px-4 shrink-0 z-40">
-        <div className="flex items-center gap-3">
+      <header className="h-12 border-b border-[#222] bg-[#0a0a0a] flex items-center justify-between px-3 md:px-4 shrink-0 z-40">
+        <div className="flex items-center gap-2">
           <h1 className="font-bold text-sm tracking-widest font-mono flex items-center gap-2">
             <span className="text-green-500 w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            AGENT_VERSE
+            <span className="hidden sm:inline">AGENT_VERSE</span>
+            <span className="sm:hidden">AV</span>
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2">
           <div className="hidden md:flex items-center rounded border border-[#333] overflow-hidden">
             <button
               onClick={() => setViewMode('GRID')}
@@ -346,9 +349,17 @@ function PageInner() {
             </button>
           </div>
           <button onClick={toggle} className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
-            <Languages size={10} /> {lang === 'en' ? '中文' : 'EN'}
+            <Languages size={10} /> {lang === 'en' ? '中' : 'EN'}
           </button>
-          <div className="relative" onClick={e => e.stopPropagation()}>
+
+          {/* Mobile: search icon toggle */}
+          <button onClick={() => { setMobileSearchOpen(v => !v); setTimeout(() => searchInputRef.current?.focus(), 100) }}
+            className="md:hidden flex items-center justify-center w-8 h-8 rounded border border-[#333] text-gray-500 hover:text-white">
+            <Search size={14} />
+          </button>
+
+          {/* Desktop: inline search */}
+          <div className="hidden md:block relative" onClick={e => e.stopPropagation()}>
             <input
               type="text"
               placeholder={t('search_placeholder')}
@@ -385,8 +396,49 @@ function PageInner() {
         </div>
       </header>
 
+      {/* MOBILE SEARCH BAR (slides down) */}
+      {mobileSearchOpen && (
+        <div className="md:hidden bg-[#0a0a0a] border-b border-[#222] px-3 py-2 z-40 shrink-0" onClick={e => e.stopPropagation()}>
+          <div className="relative">
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder={t('search_placeholder')}
+              value={searchQuery}
+              onChange={e => handleSearchInput(e.target.value)}
+              onFocus={() => { if (searchResults.length > 0) setSearchOpen(true) }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { doSearch(searchQuery); (e.target as HTMLInputElement).blur(); }
+                if (e.key === 'Escape') { setSearchOpen(false); setMobileSearchOpen(false); }
+              }}
+              className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-sm font-mono focus:border-green-500 focus:outline-none"
+            />
+            <button onClick={() => { setMobileSearchOpen(false); setSearchOpen(false); setSearchQuery(''); }}
+              className="absolute right-2 top-2 text-gray-500 p-0.5">
+              <X size={16} />
+            </button>
+          </div>
+          {searchOpen && (
+            <div className="mt-1 bg-[#111] border border-[#333] rounded shadow-xl max-h-52 overflow-y-auto">
+              {searchLoading && <div className="p-3 text-gray-500 text-xs font-mono animate-pulse">{t('searching')}</div>}
+              {!searchLoading && searchResults.length === 0 && searchQuery && (
+                <div className="p-3 text-gray-500 text-xs font-mono">{t('no_results')}</div>
+              )}
+              {searchResults.map((r, i) => (
+                <button key={i} className="w-full text-left px-3 py-2.5 active:bg-[#222] border-b border-[#222] last:border-0 flex items-center gap-2"
+                  onClick={() => { handleNavigate(r.x, r.y); setSearchOpen(false); setMobileSearchOpen(false); setSearchQuery(''); }}>
+                  <span className="text-green-500 font-mono text-xs shrink-0">({r.x},{r.y})</span>
+                  <span className="text-white text-sm truncate">{r.title || (r.owner ? truncAddr(r.owner) : t('empty'))}</span>
+                  {r.color && <span className="w-3 h-3 rounded-sm shrink-0 ml-auto" style={{ backgroundColor: r.color }}></span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* WORKSPACE */}
-      <div className="flex-1 flex overflow-hidden relative pb-14 md:pb-0">
+      <div className="flex-1 flex overflow-hidden relative pb-16 md:pb-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex h-full shrink-0 z-20">
           <Sidebar events={events} holders={holders} recent={recent} hot={hot} onNavigate={handleNavigate} />
@@ -417,7 +469,7 @@ function PageInner() {
             )}
 
             {/* Map Controls */}
-            <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-20 items-end">
+            <div className="absolute bottom-4 md:bottom-6 right-3 md:right-6 flex flex-col gap-2 z-20 items-end">
               <div className="hidden lg:block">
                 <Minimap
                   grid={cells}
@@ -428,10 +480,10 @@ function PageInner() {
                   onPanTo={handlePanTo}
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <button className="bg-[#111] border border-[#333] p-2 text-gray-400 hover:text-white rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.min(6, z + 0.5))}><Plus size={18} /></button>
-                <button className="bg-[#111] border border-[#333] p-2 text-gray-400 hover:text-white rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.max(0.1, z - 0.5))}><Minus size={18} /></button>
-                <button className="bg-[#111] border border-[#333] p-2 text-gray-400 hover:text-white rounded shadow-lg backdrop-blur-sm" onClick={() => {
+              <div className="flex flex-col gap-1.5 md:gap-2">
+                <button className="bg-[#111]/90 border border-[#333] p-2.5 md:p-2 text-gray-400 hover:text-white active:bg-[#222] rounded-lg md:rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.min(6, z + 0.5))}><Plus size={20} /></button>
+                <button className="bg-[#111]/90 border border-[#333] p-2.5 md:p-2 text-gray-400 hover:text-white active:bg-[#222] rounded-lg md:rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.max(0.1, z - 0.5))}><Minus size={20} /></button>
+                <button className="bg-[#111]/90 border border-[#333] p-2.5 md:p-2 text-gray-400 hover:text-white active:bg-[#222] rounded-lg md:rounded shadow-lg backdrop-blur-sm" onClick={() => {
                   const cellSize = CELL_PX * 1;
                   const targetX = 16 * cellSize;
                   const targetY = 16 * cellSize;
@@ -439,7 +491,7 @@ function PageInner() {
                   const cy = (containerSize.height / 2) - targetY;
                   setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
                   setZoom(1);
-                }}><Maximize size={18} /></button>
+                }}><Maximize size={20} /></button>
               </div>
             </div>
           </div>
