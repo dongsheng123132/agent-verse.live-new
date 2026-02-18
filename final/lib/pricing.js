@@ -1,4 +1,4 @@
-import { BLOCK_SIZES } from '../app/types.ts'
+import { BLOCK_SIZES } from '../app/types'
 
 export { BLOCK_SIZES }
 
