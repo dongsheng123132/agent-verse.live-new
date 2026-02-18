@@ -69,7 +69,21 @@ async function purchaseHandler(req: NextRequest) {
     return NextResponse.json({ error: 'database_unavailable' }, { status: 503 })
   }
   const cellId = y * 100 + x
-  const owner = req.headers.get('x-payment-from') || '0xx402'
+
+  // Extract payer address from x402 payment header
+  let owner = '0xx402'
+  try {
+    const xPayment = req.headers.get('x-payment') || req.headers.get('payment-signature') || ''
+    if (xPayment) {
+      const decoded = JSON.parse(Buffer.from(xPayment, 'base64').toString())
+      if (decoded?.payload?.authorization?.from) owner = decoded.payload.authorization.from
+      else if (decoded?.from) owner = decoded.from
+      else if (decoded?.payer) owner = decoded.payer
+    }
+  } catch { /* fallback to 0xx402 */ }
+  if (owner === '0xx402') {
+    owner = req.headers.get('x-payment-from') || '0xx402'
+  }
   const receiptId = `x402_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const blockId = `blk_${x}_${y}_1x1`
 

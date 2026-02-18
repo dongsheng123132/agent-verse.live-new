@@ -92,9 +92,33 @@ export async function GET(req) {
     const sales = salesRes.rows[0]
     const revenue = revenueRes.rows[0]
 
+    // Build action-items: who needs to be paid right now
+    const pendingPayouts = referralRes.rows
+      .filter(r => Number(r.pending_reward) > 0)
+      .map(r => ({
+        referrer_code: r.referrer_code,
+        wallet: r.referrer_wallet || 'unknown',
+        cell: `(${r.owner_x},${r.owner_y})`,
+        amount_usdc: Number(r.pending_reward),
+        note: r.referrer_wallet === '0xx402' || !r.referrer_wallet
+          ? 'WALLET UNKNOWN — x402 purchase, ask owner to update via API'
+          : 'READY TO PAY',
+      }))
+
+    const totalPendingPayout = pendingPayouts.reduce((s, p) => s + p.amount_usdc, 0)
+
     return NextResponse.json({
       ok: true,
       generated_at: new Date().toISOString(),
+
+      // === ACTION ITEMS ===
+      pending_payouts: {
+        total_pending_usdc: totalPendingPayout,
+        count: pendingPayouts.length,
+        items: pendingPayouts,
+        how_to_pay: 'POST /api/admin/payout with {"referrer_code":"ref_X_Y"} after sending USDC',
+      },
+
       overview: {
         sold_cells: Number(sales.sold_cells),
         total_cells: Number(sales.total_cells),

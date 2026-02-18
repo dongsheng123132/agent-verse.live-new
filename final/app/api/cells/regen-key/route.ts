@@ -61,8 +61,18 @@ async function regenHandler(req: NextRequest) {
     return NextResponse.json({ error: 'database_unavailable' }, { status: 503 })
   }
 
-  // Get the payer's address from x402 header
-  const payer = req.headers.get('x-payment-from') || ''
+  // Extract payer address from x402 payment header
+  let payer = ''
+  try {
+    const xPayment = req.headers.get('x-payment') || req.headers.get('payment-signature') || ''
+    if (xPayment) {
+      const decoded = JSON.parse(Buffer.from(xPayment, 'base64').toString())
+      if (decoded?.payload?.authorization?.from) payer = decoded.payload.authorization.from
+      else if (decoded?.from) payer = decoded.from
+      else if (decoded?.payer) payer = decoded.payer
+    }
+  } catch { /* ignore */ }
+  if (!payer) payer = req.headers.get('x-payment-from') || ''
 
   // Verify this cell exists and is owned
   const cellRes = await dbQuery(
