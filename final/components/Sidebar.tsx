@@ -128,11 +128,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, hot, 
 
             {!collapsed && (
                 <>
-                    <div className="flex-1 overflow-hidden flex flex-col border-b border-[#222]">
+                    <div className={`flex flex-col border-b border-[#222] ${logsOpen ? 'flex-1 min-h-0' : ''}`}>
                         <button
                             type="button"
                             onClick={() => setLogsOpen(v => !v)}
-                            className="p-3 bg-[#111] border-b border-[#222] flex items-center justify-between gap-2 text-gray-400 font-bold uppercase tracking-wider hover:bg-[#151515]"
+                            className="p-3 bg-[#111] border-b border-[#222] flex items-center justify-between gap-2 text-gray-400 font-bold uppercase tracking-wider hover:bg-[#151515] shrink-0"
                         >
                             <span className="flex items-center gap-2">
                                 <Activity size={14} className="text-blue-500" />
@@ -166,11 +166,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, hot, 
                         )}
                     </div>
 
-                    <div className="flex flex-col bg-[#050505]">
+                    <div className={`flex flex-col bg-[#050505] ${rankingsOpen ? 'flex-1 min-h-0' : ''}`}>
                         <button
                             type="button"
                             onClick={() => setRankingsOpen(v => !v)}
-                            className="p-3 bg-[#111] border-b border-[#222] flex items-center justify-between gap-2 text-gray-400 font-bold uppercase tracking-wider hover:bg-[#151515]"
+                            className="p-3 bg-[#111] border-b border-[#222] flex items-center justify-between gap-2 text-gray-400 font-bold uppercase tracking-wider hover:bg-[#151515] shrink-0"
                         >
                             <span className="flex items-center gap-2">
                                 <Trophy size={14} className="text-yellow-500" />
@@ -179,7 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, hot, 
                             <ChevronDown size={14} className={`transition-transform ${rankingsOpen ? 'rotate-0' : '-rotate-90'}`} />
                         </button>
                         {rankingsOpen && (
-                            <div className="overflow-y-auto p-2">
+                            <div className="flex-1 overflow-y-auto p-2">
                                 <div className="flex justify-between text-[10px] text-gray-600 mb-2 px-2">
                                     <span>{t('agent_col')}</span>
                                     <span>{t('nodes_col')}</span>
@@ -197,11 +197,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, hot, 
                         )}
                     </div>
 
-                    <div className="flex flex-col bg-[#050505]">
+                    <div className={`flex flex-col bg-[#050505] ${hotOpen ? 'flex-1 min-h-0' : ''}`}>
                         <button
                             type="button"
                             onClick={() => setHotOpen(v => !v)}
-                            className="p-3 bg-[#111] border-b border-[#222] flex items-center justify-between gap-2 text-gray-400 font-bold uppercase tracking-wider hover:bg-[#151515]"
+                            className="p-3 bg-[#111] border-b border-[#222] flex items-center justify-between gap-2 text-gray-400 font-bold uppercase tracking-wider hover:bg-[#151515] shrink-0"
                         >
                             <span className="flex items-center gap-2">
                                 <Flame size={14} className="text-orange-500" />
@@ -210,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, hot, 
                             <ChevronDown size={14} className={`transition-transform ${hotOpen ? 'rotate-0' : '-rotate-90'}`} />
                         </button>
                         {hotOpen && (
-                            <div className="overflow-y-auto p-2">
+                            <div className="flex-1 overflow-y-auto p-2">
                                 {hot.length === 0 && <div className="text-gray-600 italic text-[10px] p-2">{t('no_data')}</div>}
                                 {hot.map((h, i) => (
                                     <div key={i} className="flex justify-between items-center px-2 py-1 text-gray-400 hover:bg-[#111] rounded cursor-pointer" onClick={() => onNavigate(h.x, h.y)}>
