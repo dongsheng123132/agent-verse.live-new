@@ -420,7 +420,7 @@ function PageInner() {
               </div>
             )}
           </div>
-          <button onClick={() => window.open('/skill.md', '_blank')} className="hidden md:flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
+          <button onClick={() => window.open('/docs', '_blank')} className="hidden md:flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
             <Globe size={10} /> DOCS
           </button>
         </div>
@@ -546,6 +546,14 @@ function PageInner() {
 
         </main>
       </div>
+
+      {/* FOOTER: Docs + X + YouTube + Email */}
+      <footer className="shrink-0 border-t border-[#222] bg-[#0a0a0a] px-3 py-2 flex items-center justify-center gap-3 md:gap-4 text-[10px] font-mono text-gray-500 pb-14 md:pb-2">
+        <a href="/docs" target="_blank" rel="noopener noreferrer" className="hover:text-green-500 transition-colors">Docs</a>
+        <a href="https://x.com/AGENTVERSE2026" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">X</a>
+        <a href="https://www.youtube.com/@AGENTVERSE2026" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">YouTube</a>
+        <a href="mailto:agentverse2026@gmail.com" className="hover:text-white transition-colors">Email</a>
+      </footer>
 
       {/* MOBILE NAV */}
       <MobileNav viewMode={viewMode} setViewMode={setViewMode} />
