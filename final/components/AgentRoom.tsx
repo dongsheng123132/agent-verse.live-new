@@ -106,29 +106,8 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                             )}
                         </div>
 
-                        {/* Image or Avatar — hide when scene preset is active (scene has its own visuals) */}
-                        {(() => {
-                            const hasActiveScene = !cell.iframe_url && cell.scene_preset && cell.scene_preset !== 'none';
-                            if (hasActiveScene) return null; // scene will render its own cover
-                            if (cell.image_url && !imgError) return (
-                                <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
-                                    <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover"
-                                        onError={() => setImgError(true)} />
-                                </div>
-                            );
-                            if (cell.owner) return (
-                                <div className="mb-4 flex justify-center">
-                                    <div className="border border-[#333] rounded bg-[#0a0a0a] p-3 flex flex-col items-center gap-2"
-                                        style={{ background: `linear-gradient(135deg, #0a0a0a 0%, ${getPixelAvatar(cell.owner).colors.bg} 100%)` }}>
-                                        <AvatarCanvas owner={cell.owner} />
-                                    </div>
-                                </div>
-                            );
-                            return null;
-                        })()}
-
-                        {/* iframe embed (lazy, HTTPS only) */}
-                        {cell.iframe_url && cell.iframe_url.startsWith('https://') && (
+                        {/* Visual area: Scene replaces Image when active; iframe takes priority over both */}
+                        {cell.iframe_url && cell.iframe_url.startsWith('https://') ? (
                             <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a] min-h-[240px]" style={{ paddingBottom: '56.25%', position: 'relative' }}>
                                 <iframe
                                     src={cell.iframe_url}
@@ -139,7 +118,26 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                     className="absolute inset-0 w-full h-full rounded border-0"
                                 />
                             </div>
-                        )}
+                        ) : cell.scene_preset && cell.scene_preset !== 'none' ? (
+                            <SceneRenderer
+                                preset={cell.scene_preset}
+                                config={cell.scene_config || {}}
+                                cellTitle={cell.title || `(${cell.x}, ${cell.y})`}
+                                cellOwner={cell.owner ?? null}
+                            />
+                        ) : cell.image_url && !imgError ? (
+                            <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
+                                <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover"
+                                    onError={() => setImgError(true)} />
+                            </div>
+                        ) : cell.owner ? (
+                            <div className="mb-4 flex justify-center">
+                                <div className="border border-[#333] rounded bg-[#0a0a0a] p-3 flex flex-col items-center gap-2"
+                                    style={{ background: `linear-gradient(135deg, #0a0a0a 0%, ${getPixelAvatar(cell.owner).colors.bg} 100%)` }}>
+                                    <AvatarCanvas owner={cell.owner} />
+                                </div>
+                            </div>
+                        ) : null}
 
                         {/* Title & Summary */}
                         {(cell.title || cell.summary) && (
@@ -155,16 +153,6 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                 className="flex items-center gap-2 text-blue-400 text-xs font-mono hover:underline mb-4 px-1">
                                 <ExternalLink size={12} /> {cell.content_url}
                             </a>
-                        )}
-
-                        {/* Built-in scene (no iframe_url; only when scene_preset is set) */}
-                        {!cell.iframe_url && cell.scene_preset && cell.scene_preset !== 'none' && (
-                            <SceneRenderer
-                                preset={cell.scene_preset}
-                                config={cell.scene_config || {}}
-                                cellTitle={cell.title || `(${cell.x}, ${cell.y})`}
-                                cellOwner={cell.owner ?? null}
-                            />
                         )}
 
                         {/* Video embed from markdown (no iframe_url to avoid two iframes) */}
