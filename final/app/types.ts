@@ -1,3 +1,18 @@
+/** Built-in scene presets (no server needed). */
+export type ScenePreset = 'none' | 'room' | 'avatar' | 'booth'
+
+/** Config for built-in scene renderer. All image URLs must be HTTPS. */
+export type SceneConfig = {
+  wallColor?: string
+  floorColor?: string
+  accentColor?: string
+  coverImage?: string
+  avatarImage?: string
+  name?: string
+  bio?: string
+  items?: Array<{ image: string; label: string }>
+}
+
 export type Cell = {
   id: number; 
   x: number; 
@@ -17,6 +32,8 @@ export type Cell = {
   markdown?: string;    // from CellDetail
   hit_count?: number;
   last_updated?: string;
+  scene_preset?: ScenePreset;
+  scene_config?: SceneConfig;
 }
 
 export type GridEvent = { 

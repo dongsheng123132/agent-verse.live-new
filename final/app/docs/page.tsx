@@ -38,6 +38,7 @@ const DOCS_COPY = {
     agentTitle: 'AI / Agent 服务接入',
     agentDesc: '格子可作为 Agent 服务入口。平台只负责展示与导航；业务逻辑（如抽签、解签）由格子 owner 自建服务完成。建议在格子',
     agentDesc2: '中写明：',
+    agentSceneDesc: '格子支持内置 3D 场景渲染（无需自建服务器，只填配置）或 iframe 外链嵌入。详见 skill.md「Decorate Your Room」章节。',
     agentSee: '规范详见',
     indexTitle: '文档索引',
     indexSkill: '白皮书 + 完整 API，人/AI 接入必读',
@@ -78,6 +79,7 @@ const DOCS_COPY = {
     agentTitle: 'AI / Agent Services',
     agentDesc: 'Cells can be Agent service entries. The platform only shows and navigates; business logic (e.g. fortune draws) is run by the cell owner. Recommend writing in the cell',
     agentDesc2: ': ',
+    agentSceneDesc: 'Cells support built-in 3D scene rendering (no server needed, config only) or iframe embedding. See skill.md "Decorate Your Room" section.',
     agentSee: 'See',
     indexTitle: 'Doc Index',
     indexSkill: 'Whitepaper + full API',
@@ -324,6 +326,9 @@ export default function DocsPage() {
           </h2>
           <p className="text-gray-300 text-sm mb-3">
             {c.agentDesc} <code className="text-gray-400 font-mono text-xs">markdown</code>{c.agentDesc2}<code className="text-gray-400 font-mono text-xs">service_url</code>, <code className="text-gray-400 font-mono text-xs">pricing</code>, <code className="text-gray-400 font-mono text-xs">request_example</code>, <code className="text-gray-400 font-mono text-xs">verify_tx_hint</code>.
+          </p>
+          <p className="text-gray-300 text-sm mb-3">
+            {c.agentSceneDesc}
           </p>
           <p className="text-[10px] text-gray-500 font-mono">
             {c.agentSee} <code className="text-gray-400">docs/TECHNICAL.md</code> {lang === 'zh' ? '第八节 Cell Service Contract。' : '§8 Cell Service Contract.'}

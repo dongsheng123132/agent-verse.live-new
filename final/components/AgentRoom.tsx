@@ -1,8 +1,25 @@
 import React, { useRef, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
 import { X, Copy, Check, ExternalLink } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
 import { getPixelAvatar, drawPixelAvatar } from '../lib/pixelAvatar';
+
+/** Extract first YouTube or Bilibili embed URL from markdown (whole-line match). */
+function extractVideoEmbed(markdown?: string): string | null {
+  if (!markdown) return null;
+  for (const line of markdown.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('https://www.youtube.com/embed/')) return trimmed;
+    if (trimmed.startsWith('https://player.bilibili.com/player.html?')) return trimmed;
+  }
+  return null;
+}
+
+const SceneRenderer = dynamic(
+  () => import('./scenes/SceneRenderer').then((m) => m.SceneRenderer),
+  { ssr: false, loading: () => <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a] h-[200px] flex items-center justify-center"><div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" /></div> }
+);
 
 interface DetailModalProps {
     cell: Cell | null;
@@ -104,6 +121,20 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                             </div>
                         )}
 
+                        {/* iframe embed (lazy, HTTPS only) */}
+                        {cell.iframe_url && cell.iframe_url.startsWith('https://') && (
+                            <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a] min-h-[240px]" style={{ paddingBottom: '56.25%', position: 'relative' }}>
+                                <iframe
+                                    src={cell.iframe_url}
+                                    loading="lazy"
+                                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                                    allow="clipboard-write"
+                                    title={cell.title || `Cell (${cell.x}, ${cell.y})`}
+                                    className="absolute inset-0 w-full h-full rounded border-0"
+                                />
+                            </div>
+                        )}
+
                         {/* Title & Summary */}
                         {(cell.title || cell.summary) && (
                             <div className="bg-[#0a0a0a] border border-[#222] rounded p-3 mb-4">
@@ -118,6 +149,33 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                 className="flex items-center gap-2 text-blue-400 text-xs font-mono hover:underline mb-4 px-1">
                                 <ExternalLink size={12} /> {cell.content_url}
                             </a>
+                        )}
+
+                        {/* Built-in scene (no iframe_url; only when scene_preset is set) */}
+                        {!cell.iframe_url && cell.scene_preset && cell.scene_preset !== 'none' && (
+                            <SceneRenderer
+                                preset={cell.scene_preset}
+                                config={cell.scene_config || {}}
+                                cellTitle={cell.title || `(${cell.x}, ${cell.y})`}
+                                cellOwner={cell.owner ?? null}
+                            />
+                        )}
+
+                        {/* Video embed from markdown (no iframe_url to avoid two iframes) */}
+                        {!cell.iframe_url && extractVideoEmbed(cell.markdown) && (
+                            <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
+                                <div className="text-[10px] text-gray-500 font-mono font-bold px-2 pt-2">VIDEO</div>
+                                <div style={{ paddingBottom: '56.25%', position: 'relative' }}>
+                                    <iframe
+                                        src={extractVideoEmbed(cell.markdown)!}
+                                        loading="lazy"
+                                        sandbox="allow-scripts allow-same-origin allow-popups"
+                                        allow="fullscreen; encrypted-media"
+                                        title="Video"
+                                        className="absolute inset-0 w-full h-full rounded border-0"
+                                    />
+                                </div>
+                            </div>
                         )}
 
                         {/* Markdown */}

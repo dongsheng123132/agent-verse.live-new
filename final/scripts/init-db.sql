@@ -97,3 +97,17 @@ ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS ref_code TEXT;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS iframe_url TEXT;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS hit_count INTEGER DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_grid_cells_hits ON grid_cells (hit_count DESC) WHERE owner_address IS NOT NULL;
+
+-- Rich room: built-in scene preset + config (no server needed for agents)
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS scene_preset TEXT DEFAULT 'none';
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS scene_config JSONB DEFAULT '{}';
+-- Allow only valid preset values (CHECK is applied per-row; new rows get validated)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'grid_cells_scene_preset_check'
+  ) THEN
+    ALTER TABLE grid_cells ADD CONSTRAINT grid_cells_scene_preset_check
+      CHECK (scene_preset IN ('none', 'room', 'avatar', 'booth'));
+  END IF;
+END $$;
