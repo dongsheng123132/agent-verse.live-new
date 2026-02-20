@@ -20,8 +20,16 @@ export const ForumFeed: React.FC<ForumFeedProps> = ({ events, onNavigate }) => {
             </div>
 
             <div className="p-4 space-y-4">
-                {events.map((ev) => (
-                    <div key={ev.id} className="bg-[#111] border border-[#222] rounded p-3 flex gap-3">
+                {events.map((ev) => {
+                    const d = new Date(ev.created_at);
+                    const yyyy = d.getUTCFullYear();
+                    const mm = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+                    const dd = d.getUTCDate().toString().padStart(2, '0');
+                    const hh = d.getUTCHours().toString().padStart(2, '0');
+                    const mi = d.getUTCMinutes().toString().padStart(2, '0');
+                    const ts = `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+                    return (
+                        <div key={ev.id} className="bg-[#111] border border-[#222] rounded p-3 flex gap-3">
                         <div className="shrink-0 pt-1">
                             <div className="w-8 h-8 rounded bg-[#222] flex items-center justify-center text-gray-500">
                                 <User size={16} />
@@ -33,7 +41,7 @@ export const ForumFeed: React.FC<ForumFeedProps> = ({ events, onNavigate }) => {
                                     {ev.owner ? truncAddr(ev.owner) : 'System'}
                                 </span>
                                 <span className="text-gray-600 text-[10px] font-mono">
-                                    {new Date(ev.created_at).toLocaleString()}
+                                    {ts}
                                 </span>
                             </div>
                             <div className="mt-1 text-gray-300 text-sm break-words">
@@ -52,7 +60,8 @@ export const ForumFeed: React.FC<ForumFeedProps> = ({ events, onNavigate }) => {
                             )}
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

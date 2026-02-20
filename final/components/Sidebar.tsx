@@ -143,25 +143,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ events, holders, recent, hot, 
                         {logsOpen && (
                             <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
                                 {events.length === 0 && <div className="text-gray-600 italic p-2">{t('system_idle')}</div>}
-                                {events.map((ev) => (
-                                    <div key={ev.id} className="group flex gap-2 text-[10px] text-gray-500 hover:bg-[#111] p-1 rounded transition-colors">
-                                        <div className="text-gray-600 shrink-0 w-16 text-right">
-                                            {new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {events.map((ev) => {
+                                    const d = new Date(ev.created_at);
+                                    const hh = d.getUTCHours().toString().padStart(2, '0');
+                                    const mm = d.getUTCMinutes().toString().padStart(2, '0');
+                                    const timeLabel = `${hh}:${mm}`;
+                                    return (
+                                        <div
+                                            key={ev.id}
+                                            className="group flex gap-2 text-[10px] text-gray-500 hover:bg-[#111] p-1 rounded transition-colors"
+                                        >
+                                            <div className="text-gray-600 shrink-0 w-16 text-right">
+                                                {timeLabel}
+                                            </div>
+                                            <div className="flex-1 break-all">
+                                                <span className={ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'}>
+                                                    [{ev.event_type === 'purchase' ? 'BUY' : 'UPD'}]
+                                                </span>{' '}
+                                                {ev.x != null && (
+                                                    <button
+                                                        onClick={() => onNavigate(ev.x!, ev.y!)}
+                                                        className="hover:text-white underline decoration-gray-700"
+                                                    >
+                                                        ({ev.x},{ev.y})
+                                                    </button>
+                                                )}{' '}
+                                                {ev.owner && <span className="text-gray-400">{truncAddr(ev.owner)}</span>}{' '}
+                                                {ev.message || (ev.event_type === 'purchase' ? t('buy_action') : t('update_action'))}
+                                            </div>
                                         </div>
-                                        <div className="flex-1 break-all">
-                                            <span className={ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'}>
-                                                [{ev.event_type === 'purchase' ? 'BUY' : 'UPD'}]
-                                            </span>{' '}
-                                            {ev.x != null && (
-                                                <button onClick={() => onNavigate(ev.x!, ev.y!)} className="hover:text-white underline decoration-gray-700">
-                                                    ({ev.x},{ev.y})
-                                                </button>
-                                            )}{' '}
-                                            {ev.owner && <span className="text-gray-400">{truncAddr(ev.owner)}</span>}{' '}
-                                            {ev.message || (ev.event_type === 'purchase' ? t('buy_action') : t('update_action'))}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

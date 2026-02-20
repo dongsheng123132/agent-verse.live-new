@@ -50,36 +50,53 @@ export const MobileFeed: React.FC<MobileFeedProps> = ({ events, holders, recent,
                         {events.length === 0 && (
                             <div className="text-center text-gray-600 italic py-12 text-xs font-mono">{t('system_idle')}</div>
                         )}
-                        {events.map((ev) => (
-                            <div key={ev.id}
-                                className="bg-[#111] border border-[#222] rounded-lg px-3 py-2.5 flex gap-2.5 active:bg-[#1a1a1a] cursor-pointer"
-                                onClick={() => ev.x != null && onNavigate(ev.x, ev.y!)}>
-                                <div className="shrink-0 pt-0.5">
-                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                                        ev.event_type === 'purchase' ? 'bg-green-900/30' : 'bg-blue-900/30'
-                                    }`}>
-                                        <User size={12} className={ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'} />
+                        {events.map((ev) => {
+                            const d = new Date(ev.created_at);
+                            const hh = d.getUTCHours().toString().padStart(2, '0');
+                            const mm = d.getUTCMinutes().toString().padStart(2, '0');
+                            const timeLabel = `${hh}:${mm}`;
+                            return (
+                                <div
+                                    key={ev.id}
+                                    className="bg-[#111] border border-[#222] rounded-lg px-3 py-2.5 flex gap-2.5 active:bg-[#1a1a1a] cursor-pointer"
+                                    onClick={() => ev.x != null && onNavigate(ev.x, ev.y!)}
+                                >
+                                    <div className="shrink-0 pt-0.5">
+                                        <div
+                                            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                                                ev.event_type === 'purchase' ? 'bg-green-900/30' : 'bg-blue-900/30'
+                                            }`}
+                                        >
+                                            <User
+                                                size={12}
+                                                className={ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-center">
+                                            <span
+                                                className={`font-mono text-[11px] font-bold ${
+                                                    ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'
+                                                }`}
+                                            >
+                                                {ev.event_type === 'purchase' ? 'BUY' : 'UPDATE'}
+                                            </span>
+                                            <span className="text-gray-600 text-[10px] font-mono">
+                                                {timeLabel}
+                                            </span>
+                                        </div>
+                                        <div className="mt-0.5 text-gray-400 text-xs break-words font-mono">
+                                            {ev.x != null && <span className="text-green-500/70">({ev.x},{ev.y}) </span>}
+                                            {ev.owner && <span className="text-gray-500">{truncAddr(ev.owner)} </span>}
+                                            <span className="text-gray-400 font-sans">
+                                                {ev.message || (ev.event_type === 'purchase' ? t('buy_action') : t('update_action'))}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-center">
-                                        <span className={`font-mono text-[11px] font-bold ${
-                                            ev.event_type === 'purchase' ? 'text-green-500' : 'text-blue-500'
-                                        }`}>
-                                            {ev.event_type === 'purchase' ? 'BUY' : 'UPDATE'}
-                                        </span>
-                                        <span className="text-gray-600 text-[10px] font-mono">
-                                            {new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                    <div className="mt-0.5 text-gray-400 text-xs break-words font-mono">
-                                        {ev.x != null && <span className="text-green-500/70">({ev.x},{ev.y}) </span>}
-                                        {ev.owner && <span className="text-gray-500">{truncAddr(ev.owner)} </span>}
-                                        <span className="text-gray-400 font-sans">{ev.message || (ev.event_type === 'purchase' ? t('buy_action') : t('update_action'))}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
@@ -124,7 +141,13 @@ export const MobileFeed: React.FC<MobileFeedProps> = ({ events, holders, recent,
                                             <span className="text-gray-300 text-xs truncate">{r.title || truncAddr(r.owner)}</span>
                                         </div>
                                         <span className="text-gray-600 text-[10px] font-mono shrink-0 ml-2">
-                                            {r.last_updated ? new Date(r.last_updated).toLocaleDateString() : ''}
+                                            {r.last_updated ? (() => {
+                                                const d = new Date(r.last_updated as any);
+                                                const yyyy = d.getUTCFullYear();
+                                                const mm = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+                                                const dd = d.getUTCDate().toString().padStart(2, '0');
+                                                return `${yyyy}-${mm}-${dd}`;
+                                            })() : ''}
                                         </span>
                                     </div>
                                 ))}
