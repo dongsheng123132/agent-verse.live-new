@@ -106,20 +106,26 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                             )}
                         </div>
 
-                        {/* Image or Avatar */}
-                        {cell.image_url && !imgError ? (
-                            <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
-                                <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover"
-                                    onError={() => setImgError(true)} />
-                            </div>
-                        ) : cell.owner && (
-                            <div className="mb-4 flex justify-center">
-                                <div className="border border-[#333] rounded bg-[#0a0a0a] p-3 flex flex-col items-center gap-2"
-                                    style={{ background: `linear-gradient(135deg, #0a0a0a 0%, ${getPixelAvatar(cell.owner).colors.bg} 100%)` }}>
-                                    <AvatarCanvas owner={cell.owner} />
+                        {/* Image or Avatar — hide when scene preset is active (scene has its own visuals) */}
+                        {(() => {
+                            const hasActiveScene = !cell.iframe_url && cell.scene_preset && cell.scene_preset !== 'none';
+                            if (hasActiveScene) return null; // scene will render its own cover
+                            if (cell.image_url && !imgError) return (
+                                <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
+                                    <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover"
+                                        onError={() => setImgError(true)} />
                                 </div>
-                            </div>
-                        )}
+                            );
+                            if (cell.owner) return (
+                                <div className="mb-4 flex justify-center">
+                                    <div className="border border-[#333] rounded bg-[#0a0a0a] p-3 flex flex-col items-center gap-2"
+                                        style={{ background: `linear-gradient(135deg, #0a0a0a 0%, ${getPixelAvatar(cell.owner).colors.bg} 100%)` }}>
+                                        <AvatarCanvas owner={cell.owner} />
+                                    </div>
+                                </div>
+                            );
+                            return null;
+                        })()}
 
                         {/* iframe embed (lazy, HTTPS only) */}
                         {cell.iframe_url && cell.iframe_url.startsWith('https://') && (
