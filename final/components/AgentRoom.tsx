@@ -1,9 +1,8 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
 import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
-import { getPixelAvatar, drawPixelAvatar } from '../lib/pixelAvatar';
 
 /** Extract first YouTube or Bilibili embed URL from markdown (whole-line match). */
 function extractVideoEmbed(markdown?: string): string | null {
@@ -26,21 +25,6 @@ interface DetailModalProps {
     loading: boolean;
     onClose: () => void;
 }
-
-const AvatarCanvas: React.FC<{ owner: string; size?: number }> = ({ owner, size = 36 }) => {
-    const ref = useRef<HTMLCanvasElement>(null);
-    useEffect(() => {
-        const canvas = ref.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        const avatar = getPixelAvatar(owner);
-        ctx.fillStyle = avatar.colors.bg;
-        ctx.fillRect(0, 0, size, size);
-        drawPixelAvatar(ctx, avatar, 0, 0, size);
-    }, [owner, size]);
-    return <canvas ref={ref} width={size} height={size} className="rounded" style={{ imageRendering: 'pixelated', width: size, height: size }} />;
-};
 
 export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }) => {
     const { t } = useLang();
@@ -76,7 +60,7 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
 
     return (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-[#111] border border-[#333] md:rounded-lg rounded-t-xl p-4 md:p-5 max-w-lg w-full shadow-xl max-h-[85dvh] md:max-h-[90dvh] overflow-y-auto relative animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200 overscroll-contain"
+            <div className="bg-[#111] border border-[#333] md:rounded-lg rounded-t-xl p-4 md:p-6 max-w-3xl w-full shadow-xl max-h-[92dvh] md:max-h-[90dvh] overflow-y-auto relative animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200 overscroll-contain"
                 style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
                 onClick={e => e.stopPropagation()}>
                 {/* Drag handle (mobile) */}
@@ -94,27 +78,19 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                     </div>
                 ) : cell ? (
                     <>
-                        {/* ── Header (unified for all cells) ── */}
-                        <div className="flex items-start gap-2.5 mb-4">
-                            {/* Pixel Avatar (small) */}
-                            {cell.owner && (
-                                <div className="shrink-0 rounded overflow-hidden border border-[#333] mt-0.5" style={{ background: getPixelAvatar(cell.owner).colors.bg }}>
-                                    <AvatarCanvas owner={cell.owner} size={36} />
-                                </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                                <h2 className="text-white font-bold text-lg leading-tight truncate">
-                                    {cell.title || `Cell (${cell.x}, ${cell.y})`}
-                                </h2>
-                                {cell.summary && <p className="text-gray-400 text-sm mt-0.5 line-clamp-2">{cell.summary}</p>}
-                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                    <span className="text-green-500 font-mono text-[11px]">({cell.x},{cell.y})</span>
-                                    {cell.block_w && cell.block_w > 1 && <span className="text-[10px] font-mono text-gray-500">{cell.block_w}×{cell.block_h}</span>}
-                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#222] border border-[#333] text-gray-500">{truncAddr(cell.owner || '')}</span>
-                                    {cell.hit_count != null && cell.hit_count > 0 && (
-                                        <span className="text-[10px] text-orange-400 font-mono">{cell.hit_count} views</span>
-                                    )}
-                                </div>
+                        {/* ── Header (no avatar — keep it clean) ── */}
+                        <div className="mb-4 pr-8">
+                            <h2 className="text-white font-bold text-lg leading-tight truncate">
+                                {cell.title || `Cell (${cell.x}, ${cell.y})`}
+                            </h2>
+                            {cell.summary && <p className="text-gray-400 text-sm mt-0.5 line-clamp-2">{cell.summary}</p>}
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                <span className="text-green-500 font-mono text-[11px]">({cell.x},{cell.y})</span>
+                                {cell.block_w && cell.block_w > 1 && <span className="text-[10px] font-mono text-gray-500">{cell.block_w}×{cell.block_h}</span>}
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#222] border border-[#333] text-gray-500">{truncAddr(cell.owner || '')}</span>
+                                {cell.hit_count != null && cell.hit_count > 0 && (
+                                    <span className="text-[10px] text-orange-400 font-mono">{cell.hit_count} views</span>
+                                )}
                             </div>
                         </div>
 
@@ -176,14 +152,15 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                             <>
                                 {/* Visual area: iframe > scene > image */}
                                 {cell.iframe_url && cell.iframe_url.startsWith('https://') ? (
-                                    <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]" style={{ paddingBottom: '56.25%', position: 'relative' }}>
+                                    <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
                                         <iframe
                                             src={cell.iframe_url}
                                             loading="lazy"
                                             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                                             allow="clipboard-write; fullscreen"
                                             title={cell.title || `Cell (${cell.x}, ${cell.y})`}
-                                            className="absolute inset-0 w-full h-full rounded border-0"
+                                            className="w-full rounded border-0"
+                                            style={{ height: 'min(60dvh, 520px)' }}
                                         />
                                     </div>
                                 ) : cell.scene_preset && cell.scene_preset !== 'none' ? (
