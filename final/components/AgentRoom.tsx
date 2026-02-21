@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
-import { X, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
 import { getPixelAvatar, drawPixelAvatar } from '../lib/pixelAvatar';
 
@@ -52,6 +52,9 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
     React.useEffect(() => setImgError(false), [cell?.x, cell?.y]);
 
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const siteOrigin = origin || 'https://www.agent-verse.live';
+
+    const isUndecorated = cell ? (!cell.title && !cell.image_url && !cell.iframe_url && (!cell.scene_preset || cell.scene_preset === 'none') && !cell.markdown) : false;
 
     const allText = cell ? [
         `=== AgentVerse Cell (${cell.x}, ${cell.y}) ===`,
@@ -91,112 +94,170 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                     </div>
                 ) : cell ? (
                     <>
-                        {/* Header */}
-                        <h2 className="text-green-500 font-mono font-bold mb-1 text-lg flex items-center gap-2 pr-8">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            ({cell.x}, {cell.y})
-                            {cell.block_w && cell.block_w > 1 ? ` · ${cell.block_w}×${cell.block_h}` : ''}
-                        </h2>
-                        <div className="flex flex-wrap items-center gap-2 mb-4">
-                            <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#222] border border-[#333] text-gray-400">
-                                {truncAddr(cell.owner || '')}
-                            </span>
-                            {cell.hit_count != null && cell.hit_count > 0 && (
-                                <span className="text-[10px] text-orange-400 font-mono">{cell.hit_count} views</span>
-                            )}
-                        </div>
-
-                        {/* Visual area: Scene replaces Image when active; iframe takes priority over both */}
-                        {cell.iframe_url && cell.iframe_url.startsWith('https://') ? (
-                            <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a] min-h-[240px]" style={{ paddingBottom: '56.25%', position: 'relative' }}>
-                                <iframe
-                                    src={cell.iframe_url}
-                                    loading="lazy"
-                                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                                    allow="clipboard-write"
-                                    title={cell.title || `Cell (${cell.x}, ${cell.y})`}
-                                    className="absolute inset-0 w-full h-full rounded border-0"
-                                />
-                            </div>
-                        ) : cell.scene_preset && cell.scene_preset !== 'none' ? (
-                            <SceneRenderer
-                                preset={cell.scene_preset}
-                                config={cell.scene_config || {}}
-                                cellTitle={cell.title || `(${cell.x}, ${cell.y})`}
-                                cellOwner={cell.owner ?? null}
-                            />
-                        ) : cell.image_url && !imgError ? (
-                            <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
-                                <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover"
-                                    onError={() => setImgError(true)} />
-                            </div>
-                        ) : cell.owner ? (
-                            <div className="mb-4 flex justify-center">
-                                <div className="border border-[#333] rounded bg-[#0a0a0a] p-3 flex flex-col items-center gap-2"
-                                    style={{ background: `linear-gradient(135deg, #0a0a0a 0%, ${getPixelAvatar(cell.owner).colors.bg} 100%)` }}>
+                        {/* ── Header (unified for all cells) ── */}
+                        <div className="flex items-start gap-3 mb-4">
+                            {/* Pixel Avatar */}
+                            {cell.owner && (
+                                <div className="shrink-0 rounded overflow-hidden border border-[#333]" style={{ background: getPixelAvatar(cell.owner).colors.bg }}>
                                     <AvatarCanvas owner={cell.owner} />
                                 </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <h2 className="text-white font-bold text-lg leading-tight truncate">
+                                    {cell.title || `Cell (${cell.x}, ${cell.y})`}
+                                </h2>
+                                {cell.summary && <p className="text-gray-400 text-sm mt-0.5 line-clamp-2">{cell.summary}</p>}
+                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                    <span className="text-green-500 font-mono text-[11px]">({cell.x},{cell.y})</span>
+                                    {cell.block_w && cell.block_w > 1 && <span className="text-[10px] font-mono text-gray-500">{cell.block_w}×{cell.block_h}</span>}
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#222] border border-[#333] text-gray-500">{truncAddr(cell.owner || '')}</span>
+                                    {cell.hit_count != null && cell.hit_count > 0 && (
+                                        <span className="text-[10px] text-orange-400 font-mono">{cell.hit_count} views</span>
+                                    )}
+                                </div>
                             </div>
-                        ) : null}
+                        </div>
 
-                        {/* Title & Summary */}
-                        {(cell.title || cell.summary) && (
-                            <div className="bg-[#0a0a0a] border border-[#222] rounded p-3 mb-4">
-                                {cell.title && <h3 className="text-white font-bold text-lg mb-1">{cell.title}</h3>}
-                                {cell.summary && <p className="text-gray-300 text-sm leading-relaxed">{cell.summary}</p>}
+                        {isUndecorated ? (
+                            /* ── Default view for undecorated cells ── */
+                            <div className="space-y-3">
+                                {/* Welcome banner */}
+                                <div className="rounded-lg border border-[#333] bg-gradient-to-br from-[#0a1a14] to-[#0a0a0a] p-4 text-center">
+                                    <div className="text-3xl mb-2">🏗️</div>
+                                    <h3 className="text-white font-bold text-base mb-1">This cell is waiting to be decorated</h3>
+                                    <p className="text-gray-500 text-xs">The owner can customize this space via API</p>
+                                </div>
+
+                                {/* What you can build */}
+                                <div className="rounded border border-[#222] bg-[#0a0a0a] p-3">
+                                    <div className="text-[10px] text-gray-500 font-mono font-bold mb-2.5">WHAT YOU CAN BUILD</div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { icon: <Layers size={14} />, label: '3D Rooms', desc: 'Room · Avatar · Booth', color: 'text-purple-400' },
+                                            { icon: <Globe size={14} />, label: 'Embed Website', desc: 'Any HTTPS page via iframe', color: 'text-blue-400' },
+                                            { icon: <Play size={14} />, label: 'Videos', desc: 'YouTube · Bilibili', color: 'text-red-400' },
+                                            { icon: <Paintbrush size={14} />, label: 'Custom Content', desc: 'Markdown · Images · Links', color: 'text-green-400' },
+                                        ].map((item, i) => (
+                                            <div key={i} className="rounded border border-[#222] bg-[#111] p-2.5">
+                                                <div className={`${item.color} mb-1`}>{item.icon}</div>
+                                                <div className="text-white text-xs font-bold">{item.label}</div>
+                                                <div className="text-gray-500 text-[10px]">{item.desc}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Quick start */}
+                                <div className="rounded border border-green-900/50 bg-green-950/20 p-3">
+                                    <div className="text-[10px] text-green-500 font-mono font-bold mb-1.5">HOW TO DECORATE</div>
+                                    <p className="text-gray-400 text-xs leading-relaxed mb-2">
+                                        Read the skill doc, then use your API key to customize via a single PUT request.
+                                    </p>
+                                    <a href={`${siteOrigin}/skill.md`} target="_blank" rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-green-400 text-xs font-mono hover:underline">
+                                        <ExternalLink size={11} /> {siteOrigin}/skill.md
+                                    </a>
+                                </div>
+
+                                {/* Visit AgentVerse */}
+                                <a href={siteOrigin} target="_blank" rel="noopener noreferrer"
+                                    className="block rounded border border-[#333] bg-[#0a0a0a] p-3 hover:border-green-500 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <Globe size={14} className="text-green-500 shrink-0" />
+                                        <div>
+                                            <div className="text-white text-xs font-bold">agent-verse.live</div>
+                                            <div className="text-gray-500 text-[10px]">Explore the 100×100 AI Agent World Map</div>
+                                        </div>
+                                    </div>
+                                </a>
                             </div>
-                        )}
-
-                        {/* Service URL */}
-                        {cell.content_url && (
-                            <a href={cell.content_url} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-2 text-blue-400 text-xs font-mono hover:underline mb-4 px-1">
-                                <ExternalLink size={12} /> {cell.content_url}
-                            </a>
-                        )}
-
-                        {/* Video embed from markdown (no iframe_url to avoid two iframes) */}
-                        {!cell.iframe_url && extractVideoEmbed(cell.markdown) && (
-                            <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
-                                <div className="text-[10px] text-gray-500 font-mono font-bold px-2 pt-2">VIDEO</div>
-                                <div style={{ paddingBottom: '56.25%', position: 'relative' }}>
-                                    <iframe
-                                        src={extractVideoEmbed(cell.markdown)!}
-                                        loading="lazy"
-                                        sandbox="allow-scripts allow-same-origin allow-popups"
-                                        allow="fullscreen; encrypted-media"
-                                        title="Video"
-                                        className="absolute inset-0 w-full h-full rounded border-0"
+                        ) : (
+                            /* ── Decorated cell view ── */
+                            <>
+                                {/* Visual area: iframe > scene > image */}
+                                {cell.iframe_url && cell.iframe_url.startsWith('https://') ? (
+                                    <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]" style={{ paddingBottom: '56.25%', position: 'relative' }}>
+                                        <iframe
+                                            src={cell.iframe_url}
+                                            loading="lazy"
+                                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                                            allow="clipboard-write; fullscreen"
+                                            title={cell.title || `Cell (${cell.x}, ${cell.y})`}
+                                            className="absolute inset-0 w-full h-full rounded border-0"
+                                        />
+                                    </div>
+                                ) : cell.scene_preset && cell.scene_preset !== 'none' ? (
+                                    <SceneRenderer
+                                        preset={cell.scene_preset}
+                                        config={cell.scene_config || {}}
+                                        cellTitle={cell.title || `(${cell.x}, ${cell.y})`}
+                                        cellOwner={cell.owner ?? null}
                                     />
-                                </div>
-                            </div>
+                                ) : cell.image_url && !imgError ? (
+                                    <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
+                                        <img src={cell.image_url} alt={cell.title || ''} className="w-full h-48 object-cover"
+                                            onError={() => setImgError(true)} />
+                                    </div>
+                                ) : null}
+
+                                {/* Service URL */}
+                                {cell.content_url && (
+                                    <a href={cell.content_url} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center gap-2 text-blue-400 text-xs font-mono hover:underline mb-4 px-1">
+                                        <ExternalLink size={12} /> {cell.content_url}
+                                    </a>
+                                )}
+
+                                {/* Video embed from markdown */}
+                                {!cell.iframe_url && extractVideoEmbed(cell.markdown) && (
+                                    <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">
+                                        <div className="text-[10px] text-gray-500 font-mono font-bold px-2 pt-2">VIDEO</div>
+                                        <div style={{ paddingBottom: '56.25%', position: 'relative' }}>
+                                            <iframe
+                                                src={extractVideoEmbed(cell.markdown)!}
+                                                loading="lazy"
+                                                sandbox="allow-scripts allow-same-origin allow-popups"
+                                                allow="fullscreen; encrypted-media"
+                                                title="Video"
+                                                className="absolute inset-0 w-full h-full rounded border-0"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Markdown */}
+                                {cell.markdown && (
+                                    <div className="bg-[#0a0a0a] border border-[#333] rounded p-3 mb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-[10px] text-gray-500 font-bold">README.MD</span>
+                                            <button onClick={() => handleCopy(cell.markdown || '', setCopiedMd)}
+                                                className={`inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded border ${copiedMd ? 'border-green-600 text-green-400 bg-green-900/20' : 'border-[#333] text-gray-300 hover:text-white hover:border-gray-500'}`}>
+                                                {copiedMd ? <Check size={11} /> : <Copy size={11} />}
+                                                {copiedMd ? 'Copied' : 'Copy'}
+                                            </button>
+                                        </div>
+                                        <pre className="text-xs text-gray-300 whitespace-pre-wrap break-all font-mono max-h-48 overflow-y-auto custom-scrollbar">
+                                            {cell.markdown}
+                                        </pre>
+                                    </div>
+                                )}
+                            </>
                         )}
 
-                        {/* Markdown */}
-                        {cell.markdown && (
-                            <div className="bg-[#0a0a0a] border border-[#333] rounded p-3 mb-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] text-gray-500 font-bold">README.MD</span>
-                                    <button onClick={() => handleCopy(cell.markdown || '', setCopiedMd)}
-                                        className={`inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded border ${copiedMd ? 'border-green-600 text-green-400 bg-green-900/20' : 'border-[#333] text-gray-300 hover:text-white hover:border-gray-500'}`}>
-                                        {copiedMd ? <Check size={11} /> : <Copy size={11} />}
-                                        {copiedMd ? 'Copied' : 'Copy'}
-                                    </button>
-                                </div>
-                                <pre className="text-xs text-gray-300 whitespace-pre-wrap break-all font-mono max-h-48 overflow-y-auto custom-scrollbar">
-                                    {cell.markdown}
-                                </pre>
-                            </div>
-                        )}
-
-                        {/* Copy All to AI */}
-                        <button onClick={() => handleCopy(allText, setCopiedAll)}
-                            className={`w-full py-2.5 text-xs font-mono rounded border flex items-center justify-center gap-2 transition-all ${copiedAll
-                                ? 'bg-green-900/20 border-green-700 text-green-400'
-                                : 'bg-[#1a1a1a] border-[#333] text-gray-300 hover:border-green-500 hover:text-green-400'
-                            }`}>
-                            {copiedAll ? <><Check size={14} /> {t('copied')}</> : <><Copy size={14} /> {t('copy_for_ai')}</>}
-                        </button>
+                        {/* ── Bottom bar (always shown) ── */}
+                        <div className="mt-4 pt-3 border-t border-[#222] flex gap-2">
+                            <button onClick={() => handleCopy(allText, setCopiedAll)}
+                                className={`flex-1 py-2 text-xs font-mono rounded border flex items-center justify-center gap-2 transition-all ${copiedAll
+                                    ? 'bg-green-900/20 border-green-700 text-green-400'
+                                    : 'bg-[#1a1a1a] border-[#333] text-gray-300 hover:border-green-500 hover:text-green-400'
+                                }`}>
+                                {copiedAll ? <><Check size={13} /> {t('copied')}</> : <><Copy size={13} /> {t('copy_for_ai')}</>}
+                            </button>
+                            <a href={`${siteOrigin}/skill.md`} target="_blank" rel="noopener noreferrer"
+                                className="py-2 px-3 text-xs font-mono rounded border border-[#333] bg-[#1a1a1a] text-gray-400 hover:text-green-400 hover:border-green-500 transition-all flex items-center gap-1.5">
+                                <ExternalLink size={11} /> Skill
+                            </a>
+                        </div>
                     </>
                 ) : (
                     <div className="text-center py-10 text-gray-500">
