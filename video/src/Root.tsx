@@ -1,6 +1,7 @@
 import { Composition } from "remotion";
 import { AgentVersePromo } from "./AgentVersePromo";
 import { TerminalPromo } from "./TerminalPromo";
+import { ShowcasePromo } from "./ShowcasePromo";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -17,6 +18,14 @@ export const RemotionRoot: React.FC = () => {
         id="TerminalPromo"
         component={TerminalPromo}
         durationInFrames={500} // ~16.7 seconds at 30fps
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="ShowcasePromo"
+        component={ShowcasePromo}
+        durationInFrames={720} // 24 seconds at 30fps
         fps={30}
         width={1920}
         height={1080}
