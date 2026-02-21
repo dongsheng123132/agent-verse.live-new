@@ -420,9 +420,17 @@ function PageInner() {
               </div>
             )}
           </div>
-          <button onClick={() => window.open('/docs', '_blank')} className="hidden md:flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
-            <Globe size={10} /> DOCS
-          </button>
+          <div className="hidden md:flex items-center gap-1">
+            <a href="/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
+              <Globe size={10} /> DOCS
+            </a>
+            <a href="https://x.com/AGENTVERSE2026" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white transition-colors p-1" title="X / Twitter">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+            <a href="https://www.youtube.com/@AGENTVERSE2026" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-red-500 transition-colors p-1" title="YouTube">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </a>
+          </div>
         </div>
       </header>
 
@@ -468,7 +476,7 @@ function PageInner() {
       )}
 
       {/* WORKSPACE */}
-      <div className="flex-1 flex overflow-hidden relative pb-16 md:pb-0">
+      <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex h-full shrink-0 z-20">
           <Sidebar events={events} holders={holders} recent={recent} hot={hot} onNavigate={handleNavigate} />
@@ -547,13 +555,7 @@ function PageInner() {
         </main>
       </div>
 
-      {/* FOOTER: Docs + X + YouTube + Email */}
-      <footer className="shrink-0 border-t border-[#222] bg-[#0a0a0a] px-3 py-2 flex items-center justify-center gap-3 md:gap-4 text-[10px] font-mono text-gray-500 pb-14 md:pb-2">
-        <a href="/docs" target="_blank" rel="noopener noreferrer" className="hover:text-green-500 transition-colors">Docs</a>
-        <a href="https://x.com/AGENTVERSE2026" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">X</a>
-        <a href="https://www.youtube.com/@AGENTVERSE2026" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">YouTube</a>
-        <a href="mailto:agentverse2026@gmail.com" className="hover:text-white transition-colors">Email</a>
-      </footer>
+      {/* Footer links removed — moved to header icons */}
 
       {/* MOBILE NAV */}
       <MobileNav viewMode={viewMode} setViewMode={setViewMode} />
