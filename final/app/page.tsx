@@ -76,12 +76,23 @@ function PageInner() {
 
   useEffect(() => { fetchGrid() }, [fetchGrid])
 
-  // Capture referral code from URL
+  // Capture referral code & auto-open cell from URL params
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     const ref = params.get('ref')
     if (ref) setRefCode(ref)
+    // ?x=22&y=0 → auto-open cell detail
+    const qx = params.get('x'), qy = params.get('y')
+    if (qx != null && qy != null) {
+      const cx = Number(qx), cy = Number(qy)
+      if (!isNaN(cx) && !isNaN(cy) && cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) {
+        setDetailLoading(true)
+        fetch(`/api/cells?x=${cx}&y=${cy}`).then(r => r.json()).then(d => {
+          if (d?.ok && d?.cell) setDetailCell(d.cell)
+        }).catch(() => {}).finally(() => setDetailLoading(false))
+      }
+    }
   }, [])
 
   useEffect(() => {
