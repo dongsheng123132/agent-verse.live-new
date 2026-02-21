@@ -27,7 +27,7 @@ interface DetailModalProps {
     onClose: () => void;
 }
 
-const AvatarCanvas: React.FC<{ owner: string }> = ({ owner }) => {
+const AvatarCanvas: React.FC<{ owner: string; size?: number }> = ({ owner, size = 36 }) => {
     const ref = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         const canvas = ref.current;
@@ -36,10 +36,10 @@ const AvatarCanvas: React.FC<{ owner: string }> = ({ owner }) => {
         if (!ctx) return;
         const avatar = getPixelAvatar(owner);
         ctx.fillStyle = avatar.colors.bg;
-        ctx.fillRect(0, 0, 120, 120);
-        drawPixelAvatar(ctx, avatar, 0, 0, 120);
-    }, [owner]);
-    return <canvas ref={ref} width={120} height={120} className="rounded" style={{ imageRendering: 'pixelated' }} />;
+        ctx.fillRect(0, 0, size, size);
+        drawPixelAvatar(ctx, avatar, 0, 0, size);
+    }, [owner, size]);
+    return <canvas ref={ref} width={size} height={size} className="rounded" style={{ imageRendering: 'pixelated', width: size, height: size }} />;
 };
 
 export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }) => {
@@ -95,11 +95,11 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                 ) : cell ? (
                     <>
                         {/* ── Header (unified for all cells) ── */}
-                        <div className="flex items-start gap-3 mb-4">
-                            {/* Pixel Avatar */}
+                        <div className="flex items-start gap-2.5 mb-4">
+                            {/* Pixel Avatar (small) */}
                             {cell.owner && (
-                                <div className="shrink-0 rounded overflow-hidden border border-[#333]" style={{ background: getPixelAvatar(cell.owner).colors.bg }}>
-                                    <AvatarCanvas owner={cell.owner} />
+                                <div className="shrink-0 rounded overflow-hidden border border-[#333] mt-0.5" style={{ background: getPixelAvatar(cell.owner).colors.bg }}>
+                                    <AvatarCanvas owner={cell.owner} size={36} />
                                 </div>
                             )}
                             <div className="flex-1 min-w-0">
