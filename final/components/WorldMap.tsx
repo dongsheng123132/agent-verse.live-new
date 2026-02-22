@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Cell, COLS, ROWS, CELL_PX, isReserved } from '../app/types';
 import { useLang } from '../lib/LangContext';
 import { getPixelAvatar, drawPixelAvatar, drawPixelAvatarSmall } from '../lib/pixelAvatar';
@@ -13,6 +13,7 @@ interface WorldMapProps {
     onSelectCells: (cells: Cell[]) => void;
     onPan: (dx: number, dy: number) => void;
     onZoom: (delta: number, clientX: number, clientY: number) => void;
+    mode?: 'pan' | 'select';
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -24,7 +25,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     selectedCells,
     onSelectCells,
     onPan,
-    onZoom
+    onZoom,
+    mode = 'pan'
 }) => {
     const { t } = useLang();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,12 +35,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     // Interaction State
     const [isDragging, setIsDragging] = useState(false);
-    const [isSelecting, setIsSelecting] = useState(false); // Shift + Drag
+    const [isSelecting, setIsSelecting] = useState(false);
     const dragStartPos = useRef({ x: 0, y: 0 });
-    const lastMousePos = useRef({ x: 0, y: 0 }); // For delta calc
+    const lastMousePos = useRef({ x: 0, y: 0 });
 
-    const selectionStart = useRef({ x: 0, y: 0 }); // Screen coords
-    const [selectionRect, setSelectionRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
+    // Selection by grid coordinates (for box-select mode)
+    const [selectGridStart, setSelectGridStart] = useState<{ col: number; row: number } | null>(null);
+    const [selectGridEnd, setSelectGridEnd] = useState<{ col: number; row: number } | null>(null);
 
     const imageCache = useRef<{ [key: string]: HTMLImageElement }>({});
     const [frameCount, setFrameCount] = useState(0);
@@ -64,6 +67,24 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         grid.forEach(c => m.set(`${c.x},${c.y}`, c));
         return m;
     }, [grid]);
+
+    const selectionInfo = useMemo(() => {
+        if (!selectGridStart || !selectGridEnd) return null;
+        const minCol = Math.max(0, Math.min(selectGridStart.col, selectGridEnd.col));
+        const maxCol = Math.min(COLS - 1, Math.max(selectGridStart.col, selectGridEnd.col));
+        const minRow = Math.max(0, Math.min(selectGridStart.row, selectGridEnd.row));
+        const maxRow = Math.min(ROWS - 1, Math.max(selectGridStart.row, selectGridEnd.row));
+        let validCount = 0;
+        let ownedCount = 0;
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                const cell = cellMap.get(`${c},${r}`);
+                if (!cell?.owner && !isReserved(c, r)) validCount++;
+                if (cell?.owner) ownedCount++;
+            }
+        }
+        return { minCol, maxCol, minRow, maxRow, validCount, ownedCount };
+    }, [selectGridStart, selectGridEnd, cellMap]);
 
     // Draw Loop
     useEffect(() => {
@@ -206,6 +227,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     ctx.lineWidth = Math.max(1, 2 * (zoom / 2));
                     ctx.strokeRect(screenX, screenY, drawW, drawH);
                 }
+
+                // For-sale marker (when zoomed in)
+                if (cell?.is_for_sale && cellSize >= 12) {
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
+                    ctx.font = `${Math.max(8, Math.min(12, cellSize * 0.4))}px monospace`;
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText('$', screenX + drawW - 2, screenY + 2);
+                }
             }
         }
 
@@ -249,33 +279,70 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             ctx.strokeRect(hX, hY, hW, hH);
         }
 
-        // 4. Draw Drag Selection Rect
-        if (selectionRect) {
-            ctx.strokeStyle = '#00ff41';
+        // 4. Draw box-select overlay (grid-based)
+        if (selectionInfo && isSelecting) {
+            const { minCol, maxCol, minRow, maxRow, validCount } = selectionInfo;
+            const sx = Math.floor(minCol * cellSize + pan.x);
+            const sy = Math.floor(minRow * cellSize + pan.y);
+            const sw = Math.ceil((maxCol - minCol + 1) * cellSize);
+            const sh = Math.ceil((maxRow - minRow + 1) * cellSize);
+            ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
+            ctx.fillRect(sx, sy, sw, sh);
+            ctx.strokeStyle = '#6366f1';
             ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.strokeRect(selectionRect.x, selectionRect.y, selectionRect.w, selectionRect.h);
-            ctx.fillStyle = 'rgba(0, 255, 65, 0.1)';
-            ctx.fillRect(selectionRect.x, selectionRect.y, selectionRect.w, selectionRect.h);
+            ctx.setLineDash([6, 3]);
+            ctx.strokeRect(sx, sy, sw, sh);
             ctx.setLineDash([]);
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    const cell = cellMap.get(`${c},${r}`);
+                    if (cell?.owner || isReserved(c, r)) {
+                        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+                        ctx.fillRect(
+                            Math.floor(c * cellSize + pan.x),
+                            Math.floor(r * cellSize + pan.y),
+                            Math.ceil(cellSize),
+                            Math.ceil(cellSize)
+                        );
+                    }
+                }
+            }
+            if (validCount > 0 && cellSize >= 8) {
+                const label = `${validCount} cells · $${validCount} USDC`;
+                const font = `${Math.max(10, Math.min(14, cellSize * 0.5))}px monospace`;
+                ctx.font = font;
+                const tw = ctx.measureText(label).width;
+                const th = 18;
+                const lx = sx + (sw - tw) / 2 - 8;
+                const ly = sy + sh + 4;
+                ctx.fillStyle = 'rgba(0,0,0,0.85)';
+                ctx.fillRect(lx, ly, tw + 16, th);
+                ctx.strokeStyle = '#6366f1';
+                ctx.strokeRect(lx, ly, tw + 16, th);
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, lx + 8, ly + th / 2);
+            }
         }
 
-    }, [grid, cellMap, pan, zoom, width, height, selectedCells, selectionRect, frameCount, hoveredCell, isSelecting]);
+    }, [grid, cellMap, pan, zoom, width, height, selectedCells, selectionInfo, isSelecting, frameCount, hoveredCell]);
 
     // --- Event Handlers ---
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
         dragStartPos.current = { x: e.clientX, y: e.clientY };
         lastMousePos.current = { x: e.clientX, y: e.clientY };
 
-        // SHIFT key triggers Area Selection Mode
-        if (e.shiftKey) {
+        if (mode === 'select') {
+            const gc = getGridCoord(mouseX, mouseY);
+            setSelectGridStart({ col: gc.x, row: gc.y });
+            setSelectGridEnd({ col: gc.x, row: gc.y });
             setIsSelecting(true);
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (rect) {
-                selectionStart.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-                setSelectionRect({ x: selectionStart.current.x, y: selectionStart.current.y, w: 0, h: 0 });
-            }
         } else {
             setIsDragging(true);
         }
@@ -287,10 +354,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        if (isSelecting) {
-            const w = mouseX - selectionStart.current.x;
-            const h = mouseY - selectionStart.current.y;
-            setSelectionRect({ x: selectionStart.current.x, y: selectionStart.current.y, w, h });
+        if (isSelecting && mode === 'select') {
+            const gc = getGridCoord(mouseX, mouseY);
+            setSelectGridEnd({ col: gc.x, row: gc.y });
             return;
         }
 
@@ -321,36 +387,38 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     };
 
     const handleMouseUp = (e: React.MouseEvent) => {
-        // Check if it was a click (little movement)
         const moveDist = Math.sqrt(
             Math.pow(e.clientX - dragStartPos.current.x, 2) +
             Math.pow(e.clientY - dragStartPos.current.y, 2)
         );
 
-        if (isSelecting && selectionRect) {
-            const start = getGridCoord(selectionRect.x, selectionRect.y);
-            const end = getGridCoord(selectionRect.x + selectionRect.w, selectionRect.y + selectionRect.h);
-
-            const minX = Math.max(0, Math.min(start.x, end.x));
-            const maxX = Math.min(COLS - 1, Math.max(start.x, end.x));
-            const minY = Math.max(0, Math.min(start.y, end.y));
-            const maxY = Math.min(ROWS - 1, Math.max(start.y, end.y));
-
-            const newSelection: Cell[] = [];
-            for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) {
-                    // Create dummy cell if not exists in map, to allow selecting empty space
-                    const cell = cellMap.get(`${x},${y}`) || { id: y * COLS + x, x, y, owner: null };
-                    if (!isReserved(x, y)) {
-                        newSelection.push(cell);
+        if (isSelecting && mode === 'select' && selectionInfo) {
+            if (moveDist < 5) {
+                const rect = canvasRef.current?.getBoundingClientRect();
+                if (rect) {
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    const gc = getGridCoord(mouseX, mouseY);
+                    const cell = cellMap.get(`${gc.x},${gc.y}`) || { id: gc.y * COLS + gc.x, x: gc.x, y: gc.y, owner: null };
+                    if (!isReserved(gc.x, gc.y)) onSelectCells([cell]);
+                    else onSelectCells([]);
+                }
+            } else {
+                const newSelection: Cell[] = [];
+                for (let r = selectionInfo.minRow; r <= selectionInfo.maxRow; r++) {
+                    for (let c = selectionInfo.minCol; c <= selectionInfo.maxCol; c++) {
+                        const cell = cellMap.get(`${c},${r}`);
+                        if (!isReserved(c, r) && !cell?.owner) {
+                            newSelection.push(cell || { id: r * COLS + c, x: c, y: r, owner: null });
+                        }
                     }
                 }
+                if (newSelection.length > 0) onSelectCells(newSelection);
             }
-            if (newSelection.length > 0) onSelectCells(newSelection);
+            setSelectGridStart(null);
+            setSelectGridEnd(null);
         } else if (moveDist < 5 && !isSelecting) {
-            // It's a CLICK
             if (hoveredCell) {
-                // Check if reserved
                 if (!isReserved(hoveredCell.x, hoveredCell.y)) {
                     onSelectCells([hoveredCell]);
                 } else {
@@ -363,7 +431,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         setIsDragging(false);
         setIsSelecting(false);
-        setSelectionRect(null);
     };
 
     // --- Touch Handlers ---
@@ -387,16 +454,39 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             touchStartTime.current = Date.now();
-            setIsDragging(true);
+            if (mode === 'select') {
+                const rect = canvasRef.current?.getBoundingClientRect();
+                if (rect) {
+                    const tx = e.touches[0].clientX - rect.left;
+                    const ty = e.touches[0].clientY - rect.top;
+                    const gc = getGridCoord(tx, ty);
+                    setSelectGridStart({ col: gc.x, row: gc.y });
+                    setSelectGridEnd({ col: gc.x, row: gc.y });
+                    setIsSelecting(true);
+                } else {
+                    setIsDragging(true);
+                }
+            } else {
+                setIsDragging(true);
+            }
         } else if (e.touches.length === 2) {
             lastTouchDist.current = getTouchDist(e.touches[0], e.touches[1]);
             setIsDragging(false);
+            setIsSelecting(false);
         }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         e.preventDefault();
-        if (e.touches.length === 1 && isDragging) {
+        if (e.touches.length === 1 && isSelecting && mode === 'select') {
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (rect) {
+                const tx = e.touches[0].clientX - rect.left;
+                const ty = e.touches[0].clientY - rect.top;
+                const gc = getGridCoord(tx, ty);
+                setSelectGridEnd({ col: gc.x, row: gc.y });
+            }
+        } else if (e.touches.length === 1 && isDragging) {
             const dx = e.touches[0].clientX - lastMousePos.current.x;
             const dy = e.touches[0].clientY - lastMousePos.current.y;
             onPan(dx, dy);
@@ -416,7 +506,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
-        // Tap detection — select cell on tap
         if (e.changedTouches.length === 1) {
             const touch = e.changedTouches[0];
             const moveDist = Math.sqrt(
@@ -424,7 +513,33 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 Math.pow(touch.clientY - touchStartPos.current.y, 2)
             );
             const elapsed = Date.now() - touchStartTime.current;
-            if (moveDist < 12 && elapsed < 300) {
+
+            if (isSelecting && mode === 'select' && selectionInfo) {
+                const rect = canvasRef.current?.getBoundingClientRect();
+                if (rect) {
+                    const tx = touch.clientX - rect.left;
+                    const ty = touch.clientY - rect.top;
+                    if (moveDist < 12) {
+                        const gc = getGridCoord(tx, ty);
+                        const cell = cellMap.get(`${gc.x},${gc.y}`) || { id: gc.y * COLS + gc.x, x: gc.x, y: gc.y, owner: null };
+                        if (!isReserved(gc.x, gc.y)) onSelectCells([cell]);
+                        else onSelectCells([]);
+                    } else {
+                        const newSelection: Cell[] = [];
+                        for (let r = selectionInfo.minRow; r <= selectionInfo.maxRow; r++) {
+                            for (let c = selectionInfo.minCol; c <= selectionInfo.maxCol; c++) {
+                                const cell = cellMap.get(`${c},${r}`);
+                                if (!isReserved(c, r) && !cell?.owner) {
+                                    newSelection.push(cell || { id: r * COLS + c, x: c, y: r, owner: null });
+                                }
+                            }
+                        }
+                        if (newSelection.length > 0) onSelectCells(newSelection);
+                    }
+                }
+                setSelectGridStart(null);
+                setSelectGridEnd(null);
+            } else if (moveDist < 12 && elapsed < 300 && !isSelecting) {
                 const rect = canvasRef.current?.getBoundingClientRect();
                 if (rect) {
                     const tx = touch.clientX - rect.left;
@@ -432,22 +547,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     const coords = getGridCoord(tx, ty);
                     if (coords.x >= 0 && coords.x < COLS && coords.y >= 0 && coords.y < ROWS) {
                         const key = `${coords.x},${coords.y}`;
-                        const cell = cellMap.get(key) || {
-                            id: coords.y * COLS + coords.x,
-                            x: coords.x,
-                            y: coords.y,
-                            owner: null
-                        };
-                        if (!isReserved(coords.x, coords.y)) {
-                            onSelectCells([cell]);
-                        } else {
-                            onSelectCells([]);
-                        }
+                        const cell = cellMap.get(key) || { id: coords.y * COLS + coords.x, x: coords.x, y: coords.y, owner: null };
+                        if (!isReserved(coords.x, coords.y)) onSelectCells([cell]);
+                        else onSelectCells([]);
                     }
                 }
             }
         }
         setIsDragging(false);
+        setIsSelecting(false);
         lastTouchDist.current = 0;
     };
 
@@ -457,11 +565,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 ref={canvasRef}
                 width={width}
                 height={height}
-                className={`block touch-none ${isSelecting ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
+                className={`block touch-none ${mode === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
-                onMouseLeave={() => { setIsDragging(false); setIsSelecting(false); setSelectionRect(null); setHoveredCell(null); }}
+                onMouseLeave={() => { setIsDragging(false); setIsSelecting(false); setSelectGridStart(null); setSelectGridEnd(null); setHoveredCell(null); }}
                 onWheel={(e) => {
                     e.preventDefault();
                     const rect = canvasRef.current?.getBoundingClientRect();

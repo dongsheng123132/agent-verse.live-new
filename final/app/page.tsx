@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Cell, COLS, ROWS, CELL_PX, BLOCK_SIZES, GridEvent, Ranking, isReserved, truncAddr } from './types'
+import { Cell, COLS, ROWS, CELL_PX, GridEvent, Ranking, isReserved, truncAddr } from './types'
 import { WorldMap } from '../components/WorldMap'
 import { Sidebar } from '../components/Sidebar'
 import { MobileFeed } from '../components/MobileFeed'
@@ -10,7 +10,7 @@ import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { BotConnect } from '../components/BotConnect'
 import { Minimap } from '../components/Minimap'
-import { Globe, Plus, Minus, Maximize, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X } from 'lucide-react'
+import { Globe, Plus, Minus, Maximize, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X, Hand, SquareDashedMousePointer } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 
 export default function Page() {
@@ -37,7 +37,7 @@ function PageInner() {
 
   // Selection & Modals
   const [selectedCells, setSelectedCells] = useState<Cell[]>([])
-  const [blockSize, setBlockSize] = useState(BLOCK_SIZES[0])
+  const [mapMode, setMapMode] = useState<'pan' | 'select'>('pan')
   const [detailCell, setDetailCell] = useState<Cell | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
@@ -178,18 +178,6 @@ function PageInner() {
   }, [containerSize, clampPan])
 
 
-  const blockConflict = useCallback((x: number, y: number, w: number, h: number) => {
-    if (x + w > COLS || y + h > ROWS) return true
-    for (let dy = 0; dy < h; dy++) {
-      for (let dx = 0; dx < w; dx++) {
-        const c = cellMap.get(`${x + dx},${y + dy}`)
-        if (c?.owner) return true
-        if (isReserved(x + dx, y + dy)) return true
-      }
-    }
-    return false
-  }, [cellMap])
-
   // --- Search ---
   const doSearch = useCallback((q: string) => {
     if (!q.trim()) { setSearchResults([]); setSearchOpen(false); return }
@@ -221,24 +209,25 @@ function PageInner() {
   // --- Handlers ---
   const handleSelectCells = (cells: Cell[]) => {
     setSelectedCells(cells);
-    if (cells.length > 0) {
-      const cell = cells[0];
-      if (cell.owner) {
-        // View Details
-        setDetailLoading(true);
-        setDetailCell(cell); // Show immediate partial data
-        fetch(`/api/cells?x=${cell.x}&y=${cell.y}`).then(r => r.json()).then(d => {
-          if (d?.ok && d?.cell) setDetailCell(d.cell)
-        }).catch(() => { }).finally(() => setDetailLoading(false))
-      } else if (!isReserved(cell.x, cell.y)) {
-        // Open Purchase
-        setShowPurchaseModal(true);
-        setBlockSize(BLOCK_SIZES[0]);
-        setPayError(null);
-      }
-    } else {
+    if (cells.length === 0) {
       setDetailCell(null);
       setShowPurchaseModal(false);
+      return;
+    }
+    if (cells.length === 1 && cells[0].owner) {
+      setDetailLoading(true);
+      setDetailCell(cells[0]);
+      fetch(`/api/cells?x=${cells[0].x}&y=${cells[0].y}`).then(r => r.json()).then(d => {
+        if (d?.ok && d?.cell) setDetailCell(d.cell);
+      }).catch(() => {}).finally(() => setDetailLoading(false));
+      return;
+    }
+    const valid = cells.filter(c => !c.owner && !isReserved(c.x, c.y));
+    if (valid.length > 0) {
+      setSelectedCells(valid);
+      setShowPurchaseModal(true);
+      setPayError(null);
+      setMapMode('pan');
     }
   };
 
@@ -262,25 +251,27 @@ function PageInner() {
 
   const handlePay = async () => {
     if (selectedCells.length === 0) return;
-    const selected = selectedCells[0];
     setPayError(null);
     setPayLoading(true);
     try {
       const res = await fetch('/api/commerce/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x: selected.x, y: selected.y, block_w: blockSize.w, block_h: blockSize.h, return_path: '', ref: refCode || undefined }),
-      })
-      const data = await res.json()
+        body: JSON.stringify({
+          cells: selectedCells.map(c => ({ x: c.x, y: c.y })),
+          ref: refCode || undefined,
+        }),
+      });
+      const data = await res.json();
       if (data?.hosted_url) {
-        window.location.href = data.hosted_url
-        return
+        window.location.href = data.hosted_url;
+        return;
       }
-      setPayError(data?.message || data?.error || 'Payment creation failed')
+      setPayError(data?.message || data?.error || 'Payment creation failed');
     } catch (e: any) {
-      setPayError(e?.message || 'Request failed')
+      setPayError(e?.message || 'Request failed');
     } finally {
-      setPayLoading(false)
+      setPayLoading(false);
     }
   };
 
@@ -324,10 +315,6 @@ function PageInner() {
       if (observerRef.current) observerRef.current.disconnect()
     }
   }, [measureContainer])
-
-  const hasConflict = selectedCells.length > 0
-    ? blockConflict(selectedCells[0].x, selectedCells[0].y, blockSize.w, blockSize.h)
-    : false;
 
   // Close search on outside click
   useEffect(() => {
@@ -509,13 +496,29 @@ function PageInner() {
                 onSelectCells={handleSelectCells}
                 onPan={(dx, dy) => setPan(p => clampPan({ x: p.x + dx, y: p.y + dy }, zoom, containerSize))}
                 onZoom={(d, cx, cy) => {
-                  // Zoom logic
                   const newZoom = Math.max(0.1, Math.min(6, zoom - d * 0.001));
                   setZoom(newZoom);
                   setPan(p => clampPan(p, newZoom, containerSize));
                 }}
+                mode={mapMode}
               />
             )}
+
+            {/* Map Mode Toolbar */}
+            <div className="absolute top-3 left-3 z-20 flex gap-1 bg-black/70 backdrop-blur-sm rounded-lg p-1 border border-[#333]">
+              <button
+                onClick={() => setMapMode('pan')}
+                className={`px-3 py-2 md:py-1.5 rounded text-xs font-mono font-medium transition-all flex items-center gap-1.5 ${mapMode === 'pan' ? 'bg-white text-black shadow' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+              >
+                <Hand size={14} /> {lang === 'zh' ? '拖动' : 'Pan'}
+              </button>
+              <button
+                onClick={() => setMapMode('select')}
+                className={`px-3 py-2 md:py-1.5 rounded text-xs font-mono font-medium transition-all flex items-center gap-1.5 ${mapMode === 'select' ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+              >
+                <SquareDashedMousePointer size={14} /> {lang === 'zh' ? '框选' : 'Select'}
+              </button>
+            </div>
 
             {/* Map Controls */}
             <div className="absolute bottom-4 md:bottom-6 right-3 md:right-6 flex flex-col gap-2 z-20 items-end">
@@ -580,16 +583,11 @@ function PageInner() {
 
       {showPurchaseModal && selectedCells.length > 0 && (
         <PurchaseModal
-          x={selectedCells[0].x}
-          y={selectedCells[0].y}
-          blockSize={blockSize}
-          setBlockSize={setBlockSize}
+          selectedCells={selectedCells.map(c => ({ x: c.x, y: c.y }))}
           onPay={handlePay}
           onClose={() => { setShowPurchaseModal(false); setSelectedCells([]); }}
           loading={payLoading}
           error={payError}
-          hasConflict={hasConflict}
-          checkConflict={(w, h) => blockConflict(selectedCells[0].x, selectedCells[0].y, w, h)}
           refCode={refCode}
         />
       )}

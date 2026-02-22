@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Copy, Key, BookOpen, ExternalLink, Share2, Check, Users } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
-import { BLOCK_SIZES } from '../app/types';
+import { PRICE_PER_CELL } from '../app/types';
 
 interface BotConnectProps {
   mode?: 'BUTTON' | 'EMBED';
@@ -137,6 +137,95 @@ RULES: 1-level referral only.`
   );
 };
 
+const ListForSaleSection: React.FC = () => {
+  const { t } = useLang();
+  const [apiKey, setApiKey] = useState('');
+  const [listX, setListX] = useState('');
+  const [listY, setListY] = useState('');
+  const [priceUsdc, setPriceUsdc] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const handleList = async () => {
+    const x = Number(listX);
+    const y = Number(listY);
+    const price = Number(priceUsdc);
+    if (!apiKey.trim() || !Number.isFinite(x) || !Number.isFinite(y) || price <= 0) {
+      setMessage({ ok: false, text: 'API Key, valid x, y, and price required' });
+      return;
+    }
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/cells/list-for-sale', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey.trim()}` },
+        body: JSON.stringify({ x, y, price_usdc: price }),
+      });
+      const data = await res.json();
+      if (data?.ok) setMessage({ ok: true, text: `Listed (${x},${y}) at $${price} USDC` });
+      else setMessage({ ok: false, text: data?.message || data?.error || 'Failed' });
+    } catch {
+      setMessage({ ok: false, text: 'Request failed' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    const x = Number(listX);
+    const y = Number(listY);
+    if (!apiKey.trim() || !Number.isFinite(x) || !Number.isFinite(y)) {
+      setMessage({ ok: false, text: 'API Key and x, y required' });
+      return;
+    }
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/cells/list-for-sale', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey.trim()}` },
+        body: JSON.stringify({ x, y, cancel: true }),
+      });
+      const data = await res.json();
+      if (data?.ok) setMessage({ ok: true, text: 'Listing cancelled' });
+      else setMessage({ ok: false, text: data?.message || data?.error || 'Failed' });
+    } catch {
+      setMessage({ ok: false, text: 'Request failed' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#111] border border-[#222] rounded-lg p-4">
+      <h3 className="text-amber-500 font-bold text-xs uppercase tracking-wider mb-3">List for sale</h3>
+      <p className="text-gray-500 text-[10px] mb-3">Sell your cell: set a price. Others can buy via the Buy button on your cell.</p>
+      <div className="space-y-2">
+        <input type="password" placeholder="API Key (gk_...)" value={apiKey} onChange={e => setApiKey(e.target.value)}
+          className="w-full bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs font-mono focus:border-amber-500 focus:outline-none" />
+        <div className="flex gap-2">
+          <input type="number" placeholder="X" value={listX} onChange={e => setListX(e.target.value)}
+            className="flex-1 bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none" />
+          <input type="number" placeholder="Y" value={listY} onChange={e => setListY(e.target.value)}
+            className="flex-1 bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none" />
+          <input type="number" placeholder="Price USDC" value={priceUsdc} onChange={e => setPriceUsdc(e.target.value)}
+            className="w-24 bg-[#0a0a0a] border border-[#333] rounded px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none" />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleList} disabled={loading}
+            className="flex-1 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:bg-[#222] text-white text-xs rounded font-bold">List</button>
+          <button onClick={handleCancel} disabled={loading}
+            className="flex-1 py-1.5 bg-[#1a1a1a] border border-[#333] hover:border-amber-500 text-gray-400 text-xs rounded font-bold">Cancel listing</button>
+        </div>
+        {message && (
+          <p className={`text-[10px] font-mono ${message.ok ? 'text-green-400' : 'text-red-400'}`}>{message.text}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
   const { t } = useLang();
   const [regenCopied, setRegenCopied] = useState(false)
@@ -189,6 +278,8 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
 
       <ReferralSection />
 
+      <ListForSaleSection />
+
       <div className="bg-[#111] border border-[#222] rounded-lg p-4">
         <h3 className="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">{t('pricing')}</h3>
         <table className="w-full text-xs">
@@ -200,13 +291,11 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
             </tr>
           </thead>
           <tbody className="text-gray-300">
-            {BLOCK_SIZES.map((bs, i) => (
-              <tr key={bs.label} className={i < BLOCK_SIZES.length - 1 ? 'border-b border-[#111]' : ''}>
-                <td className="py-1">{bs.label}</td>
-                <td className="text-right">{bs.w * bs.h}</td>
-                <td className="text-right text-green-400">${bs.price.toFixed(2)}</td>
+            <tr>
+                <td className="py-1">1×1</td>
+                <td className="text-right">1</td>
+                <td className="text-right text-green-400">${PRICE_PER_CELL.toFixed(2)}</td>
               </tr>
-            ))}
           </tbody>
         </table>
       </div>

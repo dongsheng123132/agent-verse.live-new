@@ -26,6 +26,32 @@ interface DetailModalProps {
     onClose: () => void;
 }
 
+const BuyResaleButton: React.FC<{ x: number; y: number; priceUsdc: number; refCode?: string | null }> = ({ x, y, priceUsdc, refCode }) => {
+    const [loading, setLoading] = useState(false);
+    const handleBuy = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/cells/buy-resale', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ x, y, ref: refCode || undefined }),
+            });
+            const data = await res.json();
+            if (data?.hosted_url) {
+                window.location.href = data.hosted_url;
+                return;
+            }
+        } catch {}
+        setLoading(false);
+    };
+    return (
+        <button onClick={handleBuy} disabled={loading}
+            className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-[#222] text-white font-mono text-sm font-bold rounded border border-amber-500/50 flex items-center justify-center gap-2">
+            {loading ? '...' : `Buy this cell — $${priceUsdc} USDC`}
+        </button>
+    );
+};
+
 export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }) => {
     const { t } = useLang();
     const [copiedMd, setCopiedMd] = useState(false);
@@ -91,8 +117,17 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                 {cell.hit_count != null && cell.hit_count > 0 && (
                                     <span className="text-[10px] text-orange-400 font-mono">{cell.hit_count} views</span>
                                 )}
+                                {cell.is_for_sale && cell.price_usdc != null && cell.price_usdc > 0 && (
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-900/40 border border-amber-600/50 text-amber-400">FOR SALE · ${cell.price_usdc} USDC</span>
+                                )}
                             </div>
                         </div>
+
+                        {cell.is_for_sale && cell.price_usdc != null && cell.price_usdc > 0 && (
+                            <div className="mb-4">
+                                <BuyResaleButton x={cell.x} y={cell.y} priceUsdc={cell.price_usdc} refCode={null} />
+                            </div>
+                        )}
 
                         {isUndecorated ? (
                             /* ── Default view for undecorated cells ── */

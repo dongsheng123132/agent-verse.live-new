@@ -111,3 +111,9 @@ BEGIN
       CHECK (scene_preset IN ('none', 'room', 'avatar', 'booth'));
   END IF;
 END $$;
+
+-- Multi-cell purchase support
+ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS cells_json JSONB;
+
+-- Resale: index for listing cells for sale
+CREATE INDEX IF NOT EXISTS idx_grid_cells_for_sale ON grid_cells (is_for_sale) WHERE is_for_sale = true;

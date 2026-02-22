@@ -17,7 +17,8 @@ export async function GET(req) {
       `SELECT id, x, y, owner_address as owner, fill_color as color,
               title, summary, image_url, iframe_url, content_url, markdown,
               block_id, block_w, block_h, block_origin_x, block_origin_y,
-              hit_count, last_updated, scene_preset, scene_config
+              hit_count, last_updated, scene_preset, scene_config,
+              is_for_sale, price_usdc
        FROM grid_cells WHERE x = $1 AND y = $2`,
       [x, y]
     )

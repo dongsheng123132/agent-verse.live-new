@@ -34,6 +34,8 @@ export type Cell = {
   last_updated?: string;
   scene_preset?: ScenePreset;
   scene_config?: SceneConfig;
+  is_for_sale?: boolean;
+  price_usdc?: number;
 }
 
 export type GridEvent = { 
@@ -60,13 +62,10 @@ export const COLS = 100
 export const ROWS = 100
 export const CELL_PX = 8
 
-export const BLOCK_SIZES = [
-  { w: 1, h: 1, label: '1×1', price: 0.50 },
-  { w: 2, h: 1, label: '2×1', price: 1.25 },
-  { w: 2, h: 2, label: '2×2', price: 3.00 },
-  { w: 3, h: 3, label: '3×3', price: 9.00 },
-  { w: 4, h: 4, label: '4×4', price: 20.00 },
-]
+export const PRICE_PER_CELL = 1.0
+
+/** Single-cell option for legacy purchase flow (1×1 at PRICE_PER_CELL). */
+export const SINGLE_CELL_OPTION = { w: 1, h: 1, label: '1×1', price: PRICE_PER_CELL }
 
 export const RESERVED_DIAGONALS = new Set([
   '20,20','25,25','30,30','33,33','35,35','40,40','44,44','45,45',
