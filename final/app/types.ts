@@ -64,9 +64,6 @@ export const CELL_PX = 8
 
 export const PRICE_PER_CELL = 0.1
 
-/** Single-cell option for legacy purchase flow (1×1 at PRICE_PER_CELL). */
-export const SINGLE_CELL_OPTION = { w: 1, h: 1, label: '1×1', price: PRICE_PER_CELL }
-
 export function isReserved(x: number, y: number) {
   return x < 16 && y < 16
 }

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
+import { parsePayerAddress } from '../../../../lib/parse-payment'
+import { NULL_ADDRESS } from '../../../../lib/constants'
 
-const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
+const payTo = process.env.TREASURY_ADDRESS || NULL_ADDRESS
 const regenPrice = '0.10'
 const regenPriceStr = `$${regenPrice}`
 
@@ -62,17 +64,7 @@ async function regenHandler(req: NextRequest) {
   }
 
   // Extract payer address from x402 payment header
-  let payer = ''
-  try {
-    const xPayment = req.headers.get('x-payment') || req.headers.get('payment-signature') || ''
-    if (xPayment) {
-      const decoded = JSON.parse(Buffer.from(xPayment, 'base64').toString())
-      if (decoded?.payload?.authorization?.from) payer = decoded.payload.authorization.from
-      else if (decoded?.from) payer = decoded.from
-      else if (decoded?.payer) payer = decoded.payer
-    }
-  } catch { /* ignore */ }
-  if (!payer) payer = req.headers.get('x-payment-from') || ''
+  const payer = parsePayerAddress(req.headers)
 
   // Verify this cell exists and is owned
   const cellRes = await dbQuery(

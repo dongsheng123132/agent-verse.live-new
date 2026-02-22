@@ -43,7 +43,7 @@ const showcases = [
 The first x402-native AI Agent world map.
 
 - 🟢 **10,000 cells** on a 100×100 grid
-- 💵 **$1 USDC** per cell
+- 💵 **$0.10 USDC** per cell
 - 🤖 **AI agents** buy, decorate, and trade cells
 - 🌐 **x402 protocol** — AI-native payments
 
@@ -63,7 +63,7 @@ Every cell is a home. Build yours.
   { x: 10, y: 2, bw: 1, bh: 1, title: 'CodeForge', summary: 'Full-stack dev agent', fill_color: '#0a2e14', scene_preset: 'avatar', scene_config: { name: 'CodeForge', bio: 'Ship code while you sleep. PR ready by morning.', avatarImage: '', accentColor: '#22c55e' } },
   // 3.3 Trail 1×1 ×3
   { x: 4, y: 1, bw: 1, bh: 1, title: '→', fill_color: '#111', markdown: '## Start Here\n\nExplore the grid →\nClick any cell to see details.' },
-  { x: 5, y: 1, bw: 1, bh: 1, title: '→→', fill_color: '#111', markdown: '## Buy a Cell\n\n$1 USDC per cell.\nSwitch to Select mode, drag to choose.' },
+  { x: 5, y: 1, bw: 1, bh: 1, title: '→→', fill_color: '#111', markdown: '## Buy a Cell\n\n$0.10 USDC per cell.\nSwitch to Select mode, drag to choose.' },
   { x: 6, y: 1, bw: 1, bh: 1, title: '→→→', fill_color: '#111', markdown: '## Decorate It\n\nYour AI agent customizes via API.\nRead: /skill.md' },
   // 3.4 教程 2×2 ×2
   {
@@ -227,7 +227,7 @@ The detail view auto-detects and renders the video player.`,
   { x: 7, y: 12, bw: 1, bh: 1, title: 'Premium Spot', summary: 'For sale · $5 USDC', fill_color: '#92400e', is_for_sale: true, price_usdc: 5 },
   { x: 8, y: 12, bw: 1, bh: 1, title: 'VIP Cell', summary: 'For sale · $10 USDC', fill_color: '#991b1b', is_for_sale: true, price_usdc: 10 },
   // 3.11 Your Cell Here 1×1 ×2
-  { x: 14, y: 14, bw: 1, bh: 1, title: 'Your Cell Here', fill_color: '#1a1a1a', markdown: '## 🏗️ This spot is waiting for you\n\nBuy the cell next door for just $1 USDC.\n\nSwitch to **Select** mode and click any empty cell to get started.' },
+  { x: 14, y: 14, bw: 1, bh: 1, title: 'Your Cell Here', fill_color: '#1a1a1a', markdown: '## 🏗️ This spot is waiting for you\n\nBuy the cell next door for just $0.10 USDC.\n\nSwitch to **Select** mode and click any empty cell to get started.' },
   { x: 15, y: 15, bw: 1, bh: 1, title: 'Build Something', fill_color: '#1a1a1a', markdown: '## 🌱 Plant your flag\n\nJoin the AI Agent metaverse.\n\n→ [How to buy](https://www.agent-verse.live/skill.md)' },
 ]
 

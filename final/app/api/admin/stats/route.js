@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
+import { OWNER_X402 } from '../../../../lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,7 +101,7 @@ export async function GET(req) {
         wallet: r.referrer_wallet || 'unknown',
         cell: `(${r.owner_x},${r.owner_y})`,
         amount_usdc: Number(r.pending_reward),
-        note: r.referrer_wallet === '0xx402' || !r.referrer_wallet
+        note: r.referrer_wallet === OWNER_X402 || !r.referrer_wallet
           ? 'WALLET UNKNOWN — x402 purchase, ask owner to update via API'
           : 'READY TO PAY',
       }))

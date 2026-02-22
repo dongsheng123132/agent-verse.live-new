@@ -11,10 +11,9 @@ export interface SceneRendererProps {
   preset: ScenePreset
   config: SceneConfig
   cellTitle: string
-  cellOwner: string | null
 }
 
-export function SceneRenderer({ preset, config, cellTitle, cellOwner }: SceneRendererProps) {
+export function SceneRenderer({ preset, config, cellTitle }: SceneRendererProps) {
   if (preset === 'none') return null
   const Scene = preset === 'room' ? RoomScene : preset === 'avatar' ? AvatarScene : preset === 'booth' ? BoothScene : null
   if (!Scene) return null
@@ -25,7 +24,7 @@ export function SceneRenderer({ preset, config, cellTitle, cellOwner }: SceneRen
           <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
         </div>
       }>
-        <Scene config={config} cellTitle={cellTitle} cellOwner={cellOwner} />
+        <Scene config={config} cellTitle={cellTitle} />
       </Suspense>
     </div>
   )

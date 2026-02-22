@@ -28,13 +28,17 @@ export async function PUT(req) {
     const cancel = body?.cancel === true
     const priceUsdc = body?.price_usdc != null ? Number(body.price_usdc) : null
 
-    if (cancel || priceUsdc <= 0) {
+    if (cancel) {
       await dbQuery(
         'UPDATE grid_cells SET is_for_sale = false, price_usdc = NULL WHERE x = $1 AND y = $2',
         [x, y]
       )
       await logEvent('resale', { x, y, message: 'Listing cancelled' })
       return NextResponse.json({ ok: true, listed: false })
+    }
+
+    if (priceUsdc == null || !Number.isFinite(priceUsdc) || priceUsdc <= 0) {
+      return NextResponse.json({ ok: false, error: 'invalid_request', message: 'price_usdc must be a positive number' }, { status: 400 })
     }
 
     await dbQuery(

@@ -9,7 +9,7 @@ const DEFAULT_ACCENT = '#10b981'
 export function BoothScene({
   config,
   cellTitle,
-}: { config: SceneConfig; cellTitle: string; cellOwner: string | null }) {
+}: { config: SceneConfig; cellTitle: string }) {
   const wallColor = config.wallColor || DEFAULT_WALL
   const accent = config.accentColor || DEFAULT_ACCENT
   const items = (config.items || []).slice(0, 6)

@@ -9,7 +9,7 @@ const DEFAULT_FLOOR = '#16213e'
 export function RoomScene({
   config,
   cellTitle,
-}: { config: SceneConfig; cellTitle: string; cellOwner: string | null }) {
+}: { config: SceneConfig; cellTitle: string }) {
   const wallColor = config.wallColor || DEFAULT_WALL
   const floorColor = config.floorColor || DEFAULT_FLOOR
   const items = (config.items || []).slice(0, 6)

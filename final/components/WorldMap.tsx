@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Cell, COLS, ROWS, CELL_PX, isReserved } from '../app/types';
+import { Cell, COLS, ROWS, CELL_PX, PRICE_PER_CELL, isReserved } from '../app/types';
 import { useLang } from '../lib/LangContext';
 import { getPixelAvatar, drawPixelAvatar, drawPixelAvatarSmall } from '../lib/pixelAvatar';
 
@@ -328,7 +328,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 }
             }
             if (validCount > 0 && cellSize >= 8) {
-                const label = `${validCount} cells · $${(validCount * 0.1).toFixed(1)} USDC`;
+                const label = `${validCount} cells · $${(validCount * PRICE_PER_CELL).toFixed(2)} USDC`;
                 const font = `${Math.max(10, Math.min(14, cellSize * 0.5))}px monospace`;
                 ctx.font = font;
                 const tw = ctx.measureText(label).width;

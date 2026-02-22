@@ -9,7 +9,7 @@ const DEFAULT_ACCENT = '#6366f1'
 export function AvatarScene({
   config,
   cellTitle,
-}: { config: SceneConfig; cellTitle: string; cellOwner: string | null }) {
+}: { config: SceneConfig; cellTitle: string }) {
   const accent = config.accentColor || DEFAULT_ACCENT
 
   return (

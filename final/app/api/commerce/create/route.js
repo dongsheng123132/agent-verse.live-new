@@ -118,14 +118,17 @@ export async function POST(req) {
 
     if (process.env.DATABASE_URL) {
       const coords = []
+      const params = []
       for (let dy = 0; dy < blockH; dy++) {
         for (let dx = 0; dx < blockW; dx++) {
-          coords.push(`(${x + dx},${y + dy})`)
+          const i = coords.length
+          coords.push(`($${i * 2 + 1}::int, $${i * 2 + 2}::int)`)
+          params.push(x + dx, y + dy)
         }
       }
       const res = await dbQuery(
-        `SELECT x, y FROM grid_cells WHERE owner_address IS NOT NULL AND (x, y) IN (${coords.join(',')})`,
-        []
+        `SELECT x, y FROM grid_cells WHERE owner_address IS NOT NULL AND (x, y) IN (VALUES ${coords.join(',')})`,
+        params
       )
       if (res.rowCount > 0) {
         const sold = res.rows.map(r => `(${r.x},${r.y})`).join(', ')

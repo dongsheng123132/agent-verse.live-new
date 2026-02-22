@@ -207,7 +207,6 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                         preset={cell.scene_preset}
                                         config={cell.scene_config || {}}
                                         cellTitle={cell.title || `(${cell.x}, ${cell.y})`}
-                                        cellOwner={cell.owner ?? null}
                                     />
                                 ) : cell.image_url && !imgError ? (
                                     <div className="mb-4 rounded border border-[#333] overflow-hidden bg-[#0a0a0a]">

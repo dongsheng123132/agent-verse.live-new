@@ -3,8 +3,10 @@ import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
+import { parsePayerAddress } from '../../../../lib/parse-payment'
+import { OWNER_X402, NULL_ADDRESS } from '../../../../lib/constants'
 
-const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
+const payTo = process.env.TREASURY_ADDRESS || NULL_ADDRESS
 const priceUsd = process.env.PURCHASE_PRICE_USD || '0.10'
 const priceStr = `$${priceUsd}`
 
@@ -72,19 +74,7 @@ async function purchaseHandler(req: NextRequest) {
   const cellId = y * 100 + x
 
   // Extract payer address from x402 payment header
-  let owner = '0xx402'
-  try {
-    const xPayment = req.headers.get('x-payment') || req.headers.get('payment-signature') || ''
-    if (xPayment) {
-      const decoded = JSON.parse(Buffer.from(xPayment, 'base64').toString())
-      if (decoded?.payload?.authorization?.from) owner = decoded.payload.authorization.from
-      else if (decoded?.from) owner = decoded.from
-      else if (decoded?.payer) owner = decoded.payer
-    }
-  } catch { /* fallback to 0xx402 */ }
-  if (owner === '0xx402') {
-    owner = req.headers.get('x-payment-from') || '0xx402'
-  }
+  const owner = parsePayerAddress(req.headers, OWNER_X402)
   const receiptId = `x402_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const blockId = `blk_${x}_${y}_1x1`
 

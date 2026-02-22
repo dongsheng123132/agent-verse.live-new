@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../lib/db.js'
+import { OWNER_X402 } from '../../../lib/constants'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
     // Top holders by cell count (exclude system addresses)
+    const excludeAddrs = ['0xRESERVED', OWNER_X402]
     const holdersRes = await dbQuery(
       `SELECT owner_address as owner, COUNT(*) as cell_count,
               MIN(x) as x, MIN(y) as y
        FROM grid_cells
        WHERE owner_address IS NOT NULL
-         AND owner_address NOT IN ('0xRESERVED', '0xx402')
+         AND owner_address NOT IN ($1, $2)
        GROUP BY owner_address
        ORDER BY cell_count DESC
        LIMIT 10`,
-      []
+      excludeAddrs
     )
 
     // Recently active (most recently updated cells)
@@ -36,12 +38,12 @@ export async function GET() {
       `SELECT x, y, title, image_url, hit_count, owner_address as owner
        FROM grid_cells
        WHERE owner_address IS NOT NULL
-         AND owner_address NOT IN ('0xRESERVED', '0xx402')
+         AND owner_address NOT IN ($1, $2)
          AND hit_count > 0
          AND (block_origin_x IS NULL OR (block_origin_x = x AND block_origin_y = y))
        ORDER BY hit_count DESC
        LIMIT 10`,
-      []
+      excludeAddrs
     )
 
     return NextResponse.json({

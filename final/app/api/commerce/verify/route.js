@@ -4,6 +4,7 @@ import { generateApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
 import { getBlockLabel, getBlockPrice } from '../../../../lib/pricing.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
+import { OWNER_COMMERCE } from '../../../../lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,7 +53,7 @@ export async function GET(req) {
 
     if (completed && process.env.DATABASE_URL) {
       const firstPayment = charge?.payments?.[0]
-      const owner = firstPayment?.payer_addresses?.[0] || firstPayment?.value?.address || '0xCommerce'
+      const owner = firstPayment?.payer_addresses?.[0] || firstPayment?.value?.address || OWNER_COMMERCE
 
       // Resale: metadata.resale true → transfer ownership, new API key
       if (charge?.metadata?.resale) {
