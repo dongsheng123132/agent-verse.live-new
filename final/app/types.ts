@@ -67,15 +67,8 @@ export const PRICE_PER_CELL = 1.0
 /** Single-cell option for legacy purchase flow (1×1 at PRICE_PER_CELL). */
 export const SINGLE_CELL_OPTION = { w: 1, h: 1, label: '1×1', price: PRICE_PER_CELL }
 
-export const RESERVED_DIAGONALS = new Set([
-  '20,20','25,25','30,30','33,33','35,35','40,40','44,44','45,45',
-  '50,50','55,55','60,60','66,66','70,70','75,75','77,77','80,80',
-  '85,85','88,88','90,90','95,95','99,99'
-])
-
 export function isReserved(x: number, y: number) {
-  if (x < 16 && y < 16) return true
-  return RESERVED_DIAGONALS.has(`${x},${y}`)
+  return x < 16 && y < 16
 }
 
 export function truncAddr(addr: string) {
