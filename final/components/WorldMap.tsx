@@ -13,7 +13,6 @@ interface WorldMapProps {
     onSelectCells: (cells: Cell[]) => void;
     onPan: (dx: number, dy: number) => void;
     onZoom: (delta: number, clientX: number, clientY: number) => void;
-    mode?: 'pan' | 'select';
 }
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -26,8 +25,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     onSelectCells,
     onPan,
     onZoom,
-    mode = 'pan'
 }) => {
+    // Desktop: default select (drag=box-select), Mobile: default pan (drag=move)
+    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const mode: 'pan' | 'select' = isTouchDevice ? 'pan' : 'select';
     const { t } = useLang();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [hoveredCell, setHoveredCell] = useState<Cell | null>(null);

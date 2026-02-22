@@ -38,7 +38,7 @@ function PageInner() {
 
   // Selection & Modals
   const [selectedCells, setSelectedCells] = useState<Cell[]>([])
-  const [mapMode, setMapMode] = useState<'pan' | 'select'>('pan')
+  // mapMode removed — WorldMap auto-detects: desktop=select, mobile=pan
   const [detailCell, setDetailCell] = useState<Cell | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
@@ -228,7 +228,6 @@ function PageInner() {
       setSelectedCells(valid);
       setShowPurchaseModal(true);
       setPayError(null);
-      setMapMode('pan');
     }
   };
 
@@ -501,15 +500,12 @@ function PageInner() {
                   setZoom(newZoom);
                   setPan(p => clampPan(p, newZoom, containerSize));
                 }}
-                mode={mapMode}
               />
             )}
 
             {/* Controls: bottom-right — Minimap + Toolbar stacked */}
             <div className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-20 flex items-end gap-2">
               <MapToolbar
-                mode={mapMode}
-                onModeChange={setMapMode}
                 onZoomIn={() => setZoom(z => Math.min(6, z + 0.5))}
                 onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
                 onFitScreen={() => {
