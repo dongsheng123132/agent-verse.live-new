@@ -1,5 +1,5 @@
-// Fixed 1 USDC per cell (legacy getBlockPrice/getBlockLabel kept for verify)
-export const PRICE_PER_CELL = 1.0
+// Fixed 0.1 USDC per cell (legacy getBlockPrice/getBlockLabel kept for verify)
+export const PRICE_PER_CELL = 0.1
 
 export function calcTotalPrice(cellCount) {
   return cellCount * PRICE_PER_CELL

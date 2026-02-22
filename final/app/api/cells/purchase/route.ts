@@ -5,7 +5,7 @@ import { logEvent } from '../../../../lib/events.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 
 const payTo = process.env.TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
-const priceUsd = process.env.PURCHASE_PRICE_USD || '1.00'
+const priceUsd = process.env.PURCHASE_PRICE_USD || '0.10'
 const priceStr = `$${priceUsd}`
 
 // Lazy-init x402 to avoid module-level crashes on Vercel

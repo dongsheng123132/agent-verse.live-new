@@ -62,7 +62,7 @@ export const COLS = 100
 export const ROWS = 100
 export const CELL_PX = 8
 
-export const PRICE_PER_CELL = 1.0
+export const PRICE_PER_CELL = 0.1
 
 /** Single-cell option for legacy purchase flow (1×1 at PRICE_PER_CELL). */
 export const SINGLE_CELL_OPTION = { w: 1, h: 1, label: '1×1', price: PRICE_PER_CELL }

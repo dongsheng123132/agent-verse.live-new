@@ -68,7 +68,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                         <span className="text-white text-xl font-bold font-mono">${totalPrice.toFixed(2)} USDC</span>
                     </div>
                     <div className="flex justify-between items-end">
-                        <span className="text-gray-500 text-[10px] font-mono">$1 × {count}</span>
+                        <span className="text-gray-500 text-[10px] font-mono">${PRICE_PER_CELL} × {count}</span>
                         <span className="text-green-500 text-xs font-mono">{count} {t('units')}</span>
                     </div>
                 </div>
