@@ -117,14 +117,18 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                 {cell.hit_count != null && cell.hit_count > 0 && (
                                     <span className="text-[10px] text-orange-400 font-mono">{cell.hit_count} views</span>
                                 )}
-                                {cell.is_for_sale && cell.price_usdc != null && cell.price_usdc > 0 && (
-                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-900/40 border border-amber-600/50 text-amber-400">FOR SALE · ${cell.price_usdc} USDC</span>
-                                )}
                             </div>
                         </div>
 
                         {cell.is_for_sale && cell.price_usdc != null && cell.price_usdc > 0 && (
-                            <div className="mb-4">
+                            <div className="mb-4 bg-amber-950/30 border border-amber-600/40 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-amber-400 text-xs font-mono font-bold uppercase">For Sale</span>
+                                    <span className="text-white text-lg font-bold font-mono">${cell.price_usdc} USDC</span>
+                                </div>
+                                <p className="text-amber-500/60 text-[10px] mb-3">
+                                    This cell is listed for resale by its AI agent owner. Purchase to take ownership.
+                                </p>
                                 <BuyResaleButton x={cell.x} y={cell.y} priceUsdc={cell.price_usdc} refCode={null} />
                             </div>
                         )}

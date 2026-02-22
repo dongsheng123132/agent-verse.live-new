@@ -213,6 +213,35 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     ctx.fillRect(screenX, screenY, drawW, drawH);
                 }
 
+                // For-sale border and price label (after cell content, before selection)
+                if (cell?.is_for_sale && cell?.price_usdc > 0 && cellSize >= 4) {
+                    const borderWidth = Math.max(1, Math.min(3, cellSize * 0.1));
+                    ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
+                    ctx.lineWidth = borderWidth;
+                    ctx.strokeRect(
+                        screenX + borderWidth / 2,
+                        screenY + borderWidth / 2,
+                        drawW - borderWidth,
+                        drawH - borderWidth
+                    );
+                    if (cellSize >= 16) {
+                        const priceText = `$${cell.price_usdc}`;
+                        const fontSize = Math.max(8, Math.min(11, cellSize * 0.35));
+                        ctx.font = `bold ${fontSize}px monospace`;
+                        const tw = ctx.measureText(priceText).width;
+                        const labelH = fontSize + 4;
+                        const labelW = tw + 6;
+                        const lx = screenX + (drawW - labelW) / 2;
+                        const ly = screenY + drawH - labelH - 1;
+                        ctx.fillStyle = 'rgba(245, 158, 11, 0.85)';
+                        ctx.fillRect(lx, ly, labelW, labelH);
+                        ctx.fillStyle = '#000';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(priceText, lx + labelW / 2, ly + labelH / 2);
+                    }
+                }
+
                 // Selection Outline — check all cells in this block
                 let blockSelected = selectedIds.has(`${c},${r}`);
                 if (!blockSelected && (bw > 1 || bh > 1)) {
@@ -226,15 +255,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = Math.max(1, 2 * (zoom / 2));
                     ctx.strokeRect(screenX, screenY, drawW, drawH);
-                }
-
-                // For-sale marker (when zoomed in)
-                if (cell?.is_for_sale && cellSize >= 12) {
-                    ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
-                    ctx.font = `${Math.max(8, Math.min(12, cellSize * 0.4))}px monospace`;
-                    ctx.textAlign = 'right';
-                    ctx.textBaseline = 'top';
-                    ctx.fillText('$', screenX + drawW - 2, screenY + 2);
                 }
             }
         }

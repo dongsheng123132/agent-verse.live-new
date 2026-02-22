@@ -10,7 +10,8 @@ import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { BotConnect } from '../components/BotConnect'
 import { Minimap } from '../components/Minimap'
-import { Globe, Plus, Minus, Maximize, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X, Hand, SquareDashedMousePointer } from 'lucide-react'
+import { MapToolbar } from '../components/MapToolbar'
+import { Globe, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 
 export default function Page() {
@@ -504,47 +505,32 @@ function PageInner() {
               />
             )}
 
-            {/* Map Mode Toolbar */}
-            <div className="absolute top-3 left-3 z-20 flex gap-1 bg-black/70 backdrop-blur-sm rounded-lg p-1 border border-[#333]">
-              <button
-                onClick={() => setMapMode('pan')}
-                className={`px-3 py-2 md:py-1.5 rounded text-xs font-mono font-medium transition-all flex items-center gap-1.5 ${mapMode === 'pan' ? 'bg-white text-black shadow' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-              >
-                <Hand size={14} /> {lang === 'zh' ? '拖动' : 'Pan'}
-              </button>
-              <button
-                onClick={() => setMapMode('select')}
-                className={`px-3 py-2 md:py-1.5 rounded text-xs font-mono font-medium transition-all flex items-center gap-1.5 ${mapMode === 'select' ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-              >
-                <SquareDashedMousePointer size={14} /> {lang === 'zh' ? '框选' : 'Select'}
-              </button>
-            </div>
+            <MapToolbar
+              mode={mapMode}
+              onModeChange={setMapMode}
+              onZoomIn={() => setZoom(z => Math.min(6, z + 0.5))}
+              onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
+              onFitScreen={() => {
+                const cellSize = CELL_PX * 1;
+                const targetX = 16 * cellSize;
+                const targetY = 16 * cellSize;
+                const cx = (containerSize.width / 2) - targetX;
+                const cy = (containerSize.height / 2) - targetY;
+                setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
+                setZoom(1);
+              }}
+            />
 
-            {/* Map Controls */}
-            <div className="absolute bottom-4 md:bottom-6 right-3 md:right-6 flex flex-col gap-2 z-20 items-end">
-              <div className="hidden lg:block">
-                <Minimap
-                  grid={cells}
-                  pan={pan}
-                  zoom={zoom}
-                  viewport={containerSize}
-                  onNavigate={handleNavigate}
-                  onPanTo={handlePanTo}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 md:gap-2">
-                <button className="bg-[#111]/90 border border-[#333] p-2.5 md:p-2 text-gray-400 hover:text-white active:bg-[#222] rounded-lg md:rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.min(6, z + 0.5))}><Plus size={20} /></button>
-                <button className="bg-[#111]/90 border border-[#333] p-2.5 md:p-2 text-gray-400 hover:text-white active:bg-[#222] rounded-lg md:rounded shadow-lg backdrop-blur-sm" onClick={() => setZoom(z => Math.max(0.1, z - 0.5))}><Minus size={20} /></button>
-                <button className="bg-[#111]/90 border border-[#333] p-2.5 md:p-2 text-gray-400 hover:text-white active:bg-[#222] rounded-lg md:rounded shadow-lg backdrop-blur-sm" onClick={() => {
-                  const cellSize = CELL_PX * 1;
-                  const targetX = 16 * cellSize;
-                  const targetY = 16 * cellSize;
-                  const cx = (containerSize.width / 2) - targetX;
-                  const cy = (containerSize.height / 2) - targetY;
-                  setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
-                  setZoom(1);
-                }}><Maximize size={20} /></button>
-              </div>
+            {/* Minimap: desktop only, bottom-right */}
+            <div className="hidden lg:block absolute bottom-6 right-6 z-20">
+              <Minimap
+                grid={cells}
+                pan={pan}
+                zoom={zoom}
+                viewport={containerSize}
+                onNavigate={handleNavigate}
+                onPanTo={handlePanTo}
+              />
             </div>
           </div>
 
