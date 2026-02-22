@@ -39,6 +39,7 @@ function PageInner() {
   // Selection & Modals
   const [selectedCells, setSelectedCells] = useState<Cell[]>([])
   // mapMode removed — WorldMap auto-detects: desktop=select, mobile=pan
+  const [controlsOpen, setControlsOpen] = useState(true)
   const [detailCell, setDetailCell] = useState<Cell | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
@@ -503,31 +504,42 @@ function PageInner() {
               />
             )}
 
-            {/* Controls: bottom-right — Minimap + Toolbar stacked */}
-            <div className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-20 flex items-end gap-2">
-              <MapToolbar
-                onZoomIn={() => setZoom(z => Math.min(6, z + 0.5))}
-                onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
-                onFitScreen={() => {
-                  const cellSize = CELL_PX * 1;
-                  const targetX = 16 * cellSize;
-                  const targetY = 16 * cellSize;
-                  const cx = (containerSize.width / 2) - targetX;
-                  const cy = (containerSize.height / 2) - targetY;
-                  setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
-                  setZoom(1);
-                }}
-              />
-              <div className="hidden lg:block">
-                <Minimap
-                  grid={cells}
-                  pan={pan}
-                  zoom={zoom}
-                  viewport={containerSize}
-                  onNavigate={handleNavigate}
-                  onPanTo={handlePanTo}
-                />
-              </div>
+            {/* Controls: bottom-right — collapsible Minimap + Toolbar */}
+            <div className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-20 flex flex-col items-end gap-2">
+              {controlsOpen && (
+                <div className="flex items-end gap-2">
+                  <MapToolbar
+                    onZoomIn={() => setZoom(z => Math.min(6, z + 0.5))}
+                    onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
+                    onFitScreen={() => {
+                      const cellSize = CELL_PX * 1;
+                      const targetX = 16 * cellSize;
+                      const targetY = 16 * cellSize;
+                      const cx = (containerSize.width / 2) - targetX;
+                      const cy = (containerSize.height / 2) - targetY;
+                      setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
+                      setZoom(1);
+                    }}
+                  />
+                  <div className="hidden lg:block">
+                    <Minimap
+                      grid={cells}
+                      pan={pan}
+                      zoom={zoom}
+                      viewport={containerSize}
+                      onNavigate={handleNavigate}
+                      onPanTo={handlePanTo}
+                    />
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => setControlsOpen(v => !v)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-black/70 backdrop-blur-sm border border-[#333] text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                title={controlsOpen ? 'Hide controls' : 'Show controls'}
+              >
+                {controlsOpen ? <X size={14} /> : <MapIcon size={14} />}
+              </button>
             </div>
           </div>
 
