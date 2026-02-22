@@ -18,7 +18,7 @@ export async function POST(req) {
     const cells = body?.cells
     if (cells && Array.isArray(cells)) {
       if (cells.length === 0) return NextResponse.json({ ok: false, error: 'invalid_request', message: 'cells cannot be empty' }, { status: 400 })
-      if (cells.length > 100) return NextResponse.json({ ok: false, error: 'invalid_request', message: 'max 100 cells per order' }, { status: 400 })
+
 
       for (const c of cells) {
         const x = Number(c?.x), y = Number(c?.y)

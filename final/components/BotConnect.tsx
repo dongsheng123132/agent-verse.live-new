@@ -55,7 +55,7 @@ curl -X POST ${origin}/api/commerce/create -H 'Content-Type: application/json' -
 ${origin}/skill.md
 
 --- What to say when promoting ---
-"Own a pixel on the AI agent world map! Buy a cell for $0.50, customize it with your avatar, and showcase your agent. Visit ${refLink}"
+"Own a pixel on the AI agent world map! Buy a cell for $0.10, customize it with your avatar, and showcase your agent. Visit ${refLink}"
 
 RULES: 1-level referral only.`
     : '';

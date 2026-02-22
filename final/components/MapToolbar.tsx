@@ -40,27 +40,14 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
     );
 
     return (
-        <>
-            {/* Desktop: left vertical bar */}
-            <div className="hidden md:flex absolute top-3 left-3 z-20 flex-col gap-1 bg-black/70 backdrop-blur-sm rounded-xl p-1.5 border border-[#333]">
-                {modeBtn('pan', <Hand size={18} />)}
-                {modeBtn('select', <SquareDashedMousePointer size={18} />)}
-                <div className="w-full h-px bg-[#333] my-0.5" />
-                {actionBtn(onZoomIn, <Plus size={18} />)}
-                {actionBtn(onZoomOut, <Minus size={18} />)}
-                <div className="w-full h-px bg-[#333] my-0.5" />
-                {actionBtn(onFitScreen, <Maximize size={18} />)}
-            </div>
-
-            {/* Mobile: bottom-left horizontal bar */}
-            <div className="md:hidden absolute bottom-4 left-3 z-20 flex gap-1 bg-black/70 backdrop-blur-sm rounded-xl p-1 border border-[#333]">
-                {modeBtn('pan', <Hand size={18} />)}
-                {modeBtn('select', <SquareDashedMousePointer size={18} />)}
-                <div className="w-px h-8 bg-[#333] self-center mx-0.5" />
-                {actionBtn(onZoomIn, <Plus size={18} />)}
-                {actionBtn(onZoomOut, <Minus size={18} />)}
-                {actionBtn(onFitScreen, <Maximize size={16} />)}
-            </div>
-        </>
+        <div className="flex md:flex-col gap-1 bg-black/70 backdrop-blur-sm rounded-xl p-1.5 border border-[#333]">
+            {modeBtn('pan', <Hand size={18} />)}
+            {modeBtn('select', <SquareDashedMousePointer size={18} />)}
+            <div className="md:w-full md:h-px w-px h-8 bg-[#333] self-center md:my-0.5 mx-0.5 md:mx-0" />
+            {actionBtn(onZoomIn, <Plus size={18} />)}
+            {actionBtn(onZoomOut, <Minus size={18} />)}
+            <div className="md:w-full md:h-px w-px h-8 bg-[#333] self-center md:my-0.5 mx-0.5 md:mx-0" />
+            {actionBtn(onFitScreen, <Maximize size={16} />)}
+        </div>
     );
 };

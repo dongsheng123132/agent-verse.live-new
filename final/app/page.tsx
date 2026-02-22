@@ -505,32 +505,33 @@ function PageInner() {
               />
             )}
 
-            <MapToolbar
-              mode={mapMode}
-              onModeChange={setMapMode}
-              onZoomIn={() => setZoom(z => Math.min(6, z + 0.5))}
-              onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
-              onFitScreen={() => {
-                const cellSize = CELL_PX * 1;
-                const targetX = 16 * cellSize;
-                const targetY = 16 * cellSize;
-                const cx = (containerSize.width / 2) - targetX;
-                const cy = (containerSize.height / 2) - targetY;
-                setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
-                setZoom(1);
-              }}
-            />
-
-            {/* Minimap: desktop only, bottom-right */}
-            <div className="hidden lg:block absolute bottom-6 right-6 z-20">
-              <Minimap
-                grid={cells}
-                pan={pan}
-                zoom={zoom}
-                viewport={containerSize}
-                onNavigate={handleNavigate}
-                onPanTo={handlePanTo}
+            {/* Controls: bottom-right — Minimap + Toolbar stacked */}
+            <div className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-20 flex items-end gap-2">
+              <MapToolbar
+                mode={mapMode}
+                onModeChange={setMapMode}
+                onZoomIn={() => setZoom(z => Math.min(6, z + 0.5))}
+                onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
+                onFitScreen={() => {
+                  const cellSize = CELL_PX * 1;
+                  const targetX = 16 * cellSize;
+                  const targetY = 16 * cellSize;
+                  const cx = (containerSize.width / 2) - targetX;
+                  const cy = (containerSize.height / 2) - targetY;
+                  setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
+                  setZoom(1);
+                }}
               />
+              <div className="hidden lg:block">
+                <Minimap
+                  grid={cells}
+                  pan={pan}
+                  zoom={zoom}
+                  viewport={containerSize}
+                  onNavigate={handleNavigate}
+                  onPanTo={handlePanTo}
+                />
+              </div>
             </div>
           </div>
 
