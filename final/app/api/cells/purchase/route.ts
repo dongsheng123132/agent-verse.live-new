@@ -5,10 +5,10 @@ import { logEvent } from '../../../../lib/events.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 import { parsePayerAddress } from '../../../../lib/parse-payment'
 import { OWNER_X402, NULL_ADDRESS } from '../../../../lib/constants'
+import { PRICE_PER_CELL } from '../../../../lib/pricing.js'
 
 const payTo = process.env.TREASURY_ADDRESS || NULL_ADDRESS
-const priceUsd = process.env.PURCHASE_PRICE_USD || '0.10'
-const priceStr = `$${priceUsd}`
+const priceStr = `$${PRICE_PER_CELL}`
 
 // Lazy-init x402 to avoid module-level crashes on Vercel
 let x402Handler: ((req: NextRequest) => Promise<Response>) | null = null
@@ -88,7 +88,7 @@ async function purchaseHandler(req: NextRequest) {
   try {
     await dbQuery(
       `INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, treasury_address) VALUES ($1,$2,$3,$4,$4,'x402','paid',$5)`,
-      [receiptId, x, y, priceUsd, payTo]
+      [receiptId, x, y, PRICE_PER_CELL, payTo]
     )
   } catch (e) {
     console.error('[cells/purchase] grid_orders insert failed:', (e as Error)?.message)
@@ -109,7 +109,7 @@ async function purchaseHandler(req: NextRequest) {
     await trackReferral(refParam, {
       receiptId,
       buyerX: x, buyerY: y,
-      purchaseAmount: Number(priceUsd),
+      purchaseAmount: PRICE_PER_CELL,
     })
   }
 
