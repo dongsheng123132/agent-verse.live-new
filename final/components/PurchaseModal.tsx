@@ -93,24 +93,23 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 </button>
 
                 <div className="border-t border-[#222] pt-4">
-                    {count === 1 ? (
-                        <>
-                            <p className="text-green-500 text-[10px] font-bold font-mono mb-2">{t('ai_payment')}</p>
-                            <pre className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors mb-2">
-                                {x402Cmds[0]}
-                            </pre>
-                            <button
-                                onClick={handleCopyForAI}
-                                className={`w-full py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${copied ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-green-500 hover:text-green-400'}`}
-                            >
-                                {copied ? <><Check size={10} /> {t('copied')}</> : <><Copy size={10} /> {t('copy_for_ai')}</>}
-                            </button>
-                        </>
-                    ) : (
-                        <p className="text-gray-500 text-[10px] font-mono text-center">
-                            {t('ai_payment')}: x402 only supports 1 cell per request. Use the button above for multi-cell purchase.
-                        </p>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-green-500 text-[10px] font-bold font-mono">{t('ai_payment')}</p>
+                    </div>
+                    {count > 1 && (
+                        <div className="bg-yellow-900/20 border border-yellow-800/40 rounded px-2 py-1.5 mb-2">
+                            <p className="text-yellow-500 text-[10px] font-mono">x402 only supports 1 cell per request. For {count} cells, use the Coinbase Commerce button above.</p>
+                        </div>
                     )}
+                    <pre className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors mb-2 max-h-36 overflow-y-auto">
+                        {count === 1 ? x402Cmds[0] : x402Cmds.join('\n\n')}
+                    </pre>
+                    <button
+                        onClick={handleCopyForAI}
+                        className={`w-full py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${copied ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-green-500 hover:text-green-400'}`}
+                    >
+                        {copied ? <><Check size={10} /> {t('copied')}</> : <><Copy size={10} /> {t('copy_for_ai')}</>}
+                    </button>
                 </div>
             </div>
         </div>

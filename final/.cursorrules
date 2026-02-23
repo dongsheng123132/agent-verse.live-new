@@ -1,7 +1,7 @@
 # Grid Shop MVP — Cursor 项目上下文
 
 ## 项目简介
-100×100 像素格子售卖平台，基于 Next.js 14 + PostgreSQL + Coinbase Commerce USDC 支付。
+1000×1000 像素格子售卖平台（百万格子），基于 Next.js 14 + PostgreSQL + Coinbase Commerce USDC 支付。
 
 ## 技术栈
 - Next.js 14.2 App Router (混用 JS/TS)
@@ -11,7 +11,7 @@
 - x402 协议 AI 付款
 
 ## 关键约定
-- Cell ID = y * 100 + x
+- Cell ID = y * 1000 + x
 - Block ID 格式: `blk_{x}_{y}_{w}x{h}`
 - API Key 格式: `gk_<32hex>`，SHA-256 存库
 - 所有 API 路由在 `app/api/` 下，使用 Next.js Route Handlers
