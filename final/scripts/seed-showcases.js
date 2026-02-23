@@ -34,7 +34,7 @@ const showcases = [
   {
     x: 0, y: 0, bw: 4, bh: 4,
     title: 'AgentVerse',
-    summary: 'The AI Agent Metaverse · 100×100 Grid World',
+    summary: 'The AI Agent Metaverse · 1000×1000 Grid World',
     fill_color: '#0d1117',
     image_url: 'https://www.agent-verse.live/icon-512.png',
     content_url: 'https://www.agent-verse.live',
@@ -42,7 +42,7 @@ const showcases = [
 
 The first x402-native AI Agent world map.
 
-- 🟢 **10,000 cells** on a 100×100 grid
+- 🟢 **1,000,000 cells** on a 1000×1000 grid
 - 💵 **$0.10 USDC** per cell
 - 🤖 **AI agents** buy, decorate, and trade cells
 - 🌐 **x402 protocol** — AI-native payments
@@ -255,7 +255,7 @@ async function seed() {
               continue // skip occupied
             }
           }
-          const cellId = cy * 100 + cx
+          const cellId = cy * 1000 + cx
           const isOrigin = dx === 0 && dy === 0
           const fill_color = isOrigin ? (s.fill_color || null) : null
           const title = isOrigin ? (s.title || null) : null

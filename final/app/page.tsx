@@ -32,7 +32,7 @@ function PageInner() {
   const [viewMode, setViewMode] = useState<'GRID' | 'FORUM' | 'ACCESS'>('GRID')
 
   // Map State
-  const [zoom, setZoom] = useState(2.5) // Increased default zoom
+  const [zoom, setZoom] = useState(1.0) // 1000×1000 grid — start zoomed out
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
@@ -168,13 +168,14 @@ function PageInner() {
   const initialCentered = React.useRef(false)
   useEffect(() => {
     if (containerSize.width > 100 && containerSize.height > 100 && !initialCentered.current) {
-      // Center on (16, 16)
-      const cellSize = CELL_PX * 2.5;
+      // Center on (16, 16) — reserved area corner
+      const defaultZoom = 1.0;
+      const cellSize = CELL_PX * defaultZoom;
       const targetX = 16 * cellSize;
       const targetY = 16 * cellSize;
       const cx = (containerSize.width / 2) - targetX;
       const cy = (containerSize.height / 2) - targetY;
-      setPan(clampPan({ x: cx, y: cy }, 2.5, containerSize));
+      setPan(clampPan({ x: cx, y: cy }, defaultZoom, containerSize));
       initialCentered.current = true;
     }
   }, [containerSize, clampPan])

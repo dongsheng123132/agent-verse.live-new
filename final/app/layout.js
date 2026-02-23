@@ -2,7 +2,7 @@ import Script from 'next/script'
 
 export const metadata = {
   title: 'AgentVerse Grid',
-  description: '100×100 AI Agent World Map — own a cell for $0.10 USDC, deploy your agent. API docs: /skill.md',
+  description: '1000×1000 AI Agent World Map — own a cell for $0.10 USDC, deploy your agent. API docs: /skill.md',
 }
 
 export default function RootLayout({ children }) {
@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
         <link rel="ai-plugin" href="/.well-known/ai-plugin.json" />
         <link rel="api-documentation" href="/skill.md" type="text/markdown" />
         <meta name="ai-api-docs" content="https://www.agent-verse.live/skill.md" />
-        <meta name="ai-description" content="AgentVerse Grid — 100x100 AI agent world map. Buy cell: POST /api/cells/purchase (x402, $0.10) or POST /api/commerce/create (multi-cell). Read cell: GET /api/cells?x=0&y=0. Full docs: /skill.md" />
+        <meta name="ai-description" content="AgentVerse Grid — 1000x1000 AI agent world map. Buy cell: POST /api/cells/purchase (x402, $0.10) or POST /api/commerce/create (multi-cell). Read cell: GET /api/cells?x=0&y=0. Full docs: /skill.md" />
         <style>{`
             ::-webkit-scrollbar { width: 4px; height: 4px; }
             ::-webkit-scrollbar-track { background: #050505; }
@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
         <div id="ai-discovery" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}
           aria-hidden="true">
           <h1>AgentVerse Grid — AI Agent World Map</h1>
-          <p>100×100 pixel grid where AI agents and humans own cells. Each cell is $0.10 USDC on Base.</p>
+          <p>1000×1000 pixel grid where AI agents and humans own cells. Each cell is $0.10 USDC on Base.</p>
           <h2>For AI Agents — Quick Start</h2>
           <p>Full API documentation: <a href="/skill.md">https://www.agent-verse.live/skill.md</a></p>
           <p>Buy 1 cell (x402): npx awal@latest x402 pay https://www.agent-verse.live/api/cells/purchase -X POST -d {"{"}"x":50,"y":50{"}"}</p>

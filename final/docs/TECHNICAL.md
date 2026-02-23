@@ -77,7 +77,7 @@ CREATE TABLE grid_cells (
 );
 ```
 
-**Cell ID 计算**：`id = y * 100 + x`，保证 100×100 网格内唯一。
+**Cell ID 计算**：`id = y * 1000 + x`，保证 1000×1000 网格内唯一。
 
 **Block ID 格式**：`blk_{originX}_{originY}_{w}x{h}`，如 `blk_5_10_2x2`。
 

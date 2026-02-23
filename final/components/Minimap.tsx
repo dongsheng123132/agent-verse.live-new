@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Cell, COLS, ROWS, CELL_PX, isReserved } from '../app/types';
+import { Cell, COLS, ROWS, CELL_PX } from '../app/types';
 
 interface MinimapProps {
     grid: Cell[];
@@ -26,11 +26,6 @@ export const Minimap: React.FC<MinimapProps> = ({ grid, pan, zoom, viewport, onN
     const [isDragging, setIsDragging] = useState(false);
     const dragOffset = useRef({ x: 0, y: 0 });
 
-    const cellMap = React.useMemo(() => {
-        const m = new Map<string, Cell>();
-        grid.forEach(c => m.set(`${c.x},${c.y}`, c));
-        return m;
-    }, [grid]);
 
     // Draw
     useEffect(() => {
@@ -41,24 +36,19 @@ export const Minimap: React.FC<MinimapProps> = ({ grid, pan, zoom, viewport, onN
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, displayW, displayH);
 
-        // Grid contents
-        const dotSize = Math.max(2, CELL_PX * scale);
+        // Draw reserved area as a single rectangle (0-15, 0-15)
+        const reservedPx = 16 * CELL_PX * scale;
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, 0, reservedPx, reservedPx);
 
-        // Draw all cells
-        for (let y = 0; y < ROWS; y++) {
-            for (let x = 0; x < COLS; x++) {
-                const cell = cellMap.get(`${x},${y}`);
-                const sx = x * CELL_PX * scale;
-                const sy = y * CELL_PX * scale;
-
-                if (cell?.owner) {
-                    ctx.fillStyle = cell.color || '#10b981';
-                    ctx.fillRect(sx, sy, dotSize, dotSize);
-                } else if (isReserved(x, y)) {
-                    ctx.fillStyle = '#222';
-                    ctx.fillRect(sx, sy, dotSize, dotSize);
-                }
-            }
+        // Draw only owned cells from grid array (not iterating 1M coordinates)
+        const dotSize = Math.max(1.5, CELL_PX * scale);
+        for (const cell of grid) {
+            if (!cell.owner) continue;
+            const sx = cell.x * CELL_PX * scale;
+            const sy = cell.y * CELL_PX * scale;
+            ctx.fillStyle = cell.color || '#10b981';
+            ctx.fillRect(sx, sy, dotSize, dotSize);
         }
 
         // Viewport Rect
@@ -74,7 +64,7 @@ export const Minimap: React.FC<MinimapProps> = ({ grid, pan, zoom, viewport, onN
         ctx.fillStyle = 'rgba(0, 255, 65, 0.1)';
         ctx.fillRect(vx, vy, vw, vh);
 
-    }, [cellMap, pan, zoom, viewport, scale, displayH, displayW]);
+    }, [grid, pan, zoom, viewport, scale, displayH, displayW]);
 
 
     const handleMouseDown = (e: React.MouseEvent) => {

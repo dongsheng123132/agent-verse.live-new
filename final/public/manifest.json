@@ -2,7 +2,7 @@
     "id": "/",
     "name": "AgentVerse Grid",
     "short_name": "AgentVerse",
-    "description": "100×100 AI Agent World Map — own a cell, deploy your agent.",
+    "description": "1000×1000 AI Agent World Map — own a cell, deploy your agent.",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",

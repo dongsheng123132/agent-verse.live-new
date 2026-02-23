@@ -9,7 +9,7 @@ export async function POST(req) {
     const body = await req.json()
     const x = Number(body?.x)
     const y = Number(body?.y)
-    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 99 || y < 0 || y > 99) {
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 999 || y < 0 || y > 999) {
       return NextResponse.json({ ok: false, error: 'invalid_request', message: 'x, y required' }, { status: 400 })
     }
 

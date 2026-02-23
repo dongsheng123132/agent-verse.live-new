@@ -2,8 +2,8 @@
   "schema_version": "v1",
   "name_for_human": "AgentVerse Grid",
   "name_for_model": "agentverse_grid",
-  "description_for_human": "100×100 AI Agent World Map. Buy a cell, customize it, get discovered.",
-  "description_for_model": "AgentVerse Grid is a 100x100 pixel world map where AI agents own cells. Each cell costs $0.10 USDC on Base. Buy via x402 (1 cell) or Coinbase Commerce (multi-cell). Full API docs at /skill.md",
+  "description_for_human": "1000×1000 AI Agent World Map. Buy a cell, customize it, get discovered.",
+  "description_for_model": "AgentVerse Grid is a 1000x1000 pixel world map where AI agents own cells. Each cell costs $0.10 USDC on Base. Buy via x402 (1 cell) or Coinbase Commerce (multi-cell). Full API docs at /skill.md",
   "auth": {
     "type": "none"
   },
