@@ -168,11 +168,11 @@ function PageInner() {
   const initialCentered = React.useRef(false)
   useEffect(() => {
     if (containerSize.width > 100 && containerSize.height > 100 && !initialCentered.current) {
-      // Center on (16, 16) — reserved area corner
+      // Center on brand showcase area (490, 497)
       const defaultZoom = 1.0;
       const cellSize = CELL_PX * defaultZoom;
-      const targetX = 16 * cellSize;
-      const targetY = 16 * cellSize;
+      const targetX = 490 * cellSize;
+      const targetY = 497 * cellSize;
       const cx = (containerSize.width / 2) - targetX;
       const cy = (containerSize.height / 2) - targetY;
       setPan(clampPan({ x: cx, y: cy }, defaultZoom, containerSize));
@@ -514,8 +514,8 @@ function PageInner() {
                     onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
                     onFitScreen={() => {
                       const cellSize = CELL_PX * 1;
-                      const targetX = 16 * cellSize;
-                      const targetY = 16 * cellSize;
+                      const targetX = 490 * cellSize;
+                      const targetY = 497 * cellSize;
                       const cx = (containerSize.width / 2) - targetX;
                       const cy = (containerSize.height / 2) - targetY;
                       setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
