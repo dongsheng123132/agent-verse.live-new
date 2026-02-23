@@ -22,12 +22,12 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const SYSTEM_OWNER = '0xAgentVerseOfficial'
 const OVERWRITE = process.env.OVERWRITE !== '0'
 
-// 品牌 showcase 列表 — 在地图中心区域展示，10×10 大格子
-// 布局: 第一行 3 个品牌，第二行 2 个品牌（居中），间隔 2 格
+// 品牌 showcase 列表 — 中心区域，多种尺寸混搭
+// AgentVerse 最大 20×20 居中，两侧 + 下方放品牌
 const brands = [
-  // --- 第一排 ---
+  // === AgentVerse 主场 20×20 ===
   {
-    x: 480, y: 485, bw: 10, bh: 10,
+    x: 480, y: 485, bw: 20, bh: 20,
     title: 'AgentVerse',
     summary: 'The AI Agent Metaverse · 1,000,000 Grid Cells',
     fill_color: '#22c55e',
@@ -47,8 +47,9 @@ Every cell is a home. Build yours.
 → [Buy a cell](https://www.agent-verse.live)
 → [Skill Doc](https://www.agent-verse.live/skill.md)`,
   },
+  // === Monad 16×16 — 右侧 ===
   {
-    x: 492, y: 485, bw: 10, bh: 10,
+    x: 502, y: 485, bw: 16, bh: 16,
     title: 'Monad',
     summary: 'High-performance L1 blockchain',
     fill_color: '#682FFF',
@@ -65,8 +66,9 @@ High-performance EVM-compatible Layer 1 blockchain.
 
 → [Learn more](https://monad.xyz)`,
   },
+  // === OpenBuild 12×12 — 右上角 ===
   {
-    x: 504, y: 485, bw: 10, bh: 10,
+    x: 520, y: 485, bw: 12, bh: 12,
     title: 'OpenBuild',
     summary: 'Web3 Builder Community & Education',
     fill_color: '#0E76FD',
@@ -83,9 +85,9 @@ The Open-Source Web3 Builder Community.
 
 → [Join OpenBuild](https://openbuild.xyz)`,
   },
-  // --- 第二排（居中） ---
+  // === Coinbase 16×16 — 左下 ===
   {
-    x: 486, y: 497, bw: 10, bh: 10,
+    x: 464, y: 485, bw: 14, bh: 14,
     title: 'Coinbase',
     summary: 'Build the future of finance',
     fill_color: '#0052FF',
@@ -102,8 +104,9 @@ Build on-chain with confidence.
 
 → [Developer Platform](https://www.coinbase.com/developer-platform)`,
   },
+  // === Base 12×12 — 下方 ===
   {
-    x: 498, y: 497, bw: 10, bh: 10,
+    x: 480, y: 507, bw: 12, bh: 12,
     title: 'Base',
     summary: 'Ethereum L2 · Built by Coinbase',
     fill_color: '#0052FF',
@@ -119,6 +122,43 @@ Ethereum L2, incubated by Coinbase.
 - **Open** — permissionless and decentralized
 
 → [Build on Base](https://www.base.org)`,
+  },
+  // === 散布的中小格子增加丰富度 ===
+  {
+    x: 520, y: 499, bw: 8, bh: 8,
+    title: 'x402 Protocol',
+    summary: 'AI-native payment protocol',
+    fill_color: '#f59e0b',
+    image_url: '',
+    content_url: 'https://www.x402.org',
+    markdown: `## x402 Protocol\n\nThe HTTP payment standard for AI agents.\n\n→ [x402.org](https://www.x402.org)`,
+  },
+  {
+    x: 494, y: 507, bw: 8, bh: 8,
+    title: 'USDC on Base',
+    summary: 'Digital dollar on Ethereum L2',
+    fill_color: '#2775ca',
+    image_url: '',
+    content_url: 'https://www.circle.com/usdc',
+    markdown: `## USDC\n\nThe world's most trusted stablecoin. Fast, low-cost transfers on Base L2.\n\n→ [circle.com/usdc](https://www.circle.com/usdc)`,
+  },
+  {
+    x: 456, y: 492, bw: 6, bh: 6,
+    title: 'Neon DB',
+    summary: 'Serverless Postgres',
+    fill_color: '#00e5a0',
+    image_url: '',
+    content_url: 'https://neon.tech',
+    markdown: `## Neon\n\nServerless Postgres — branch, scale, and query.\n\n→ [neon.tech](https://neon.tech)`,
+  },
+  {
+    x: 504, y: 509, bw: 6, bh: 6,
+    title: 'Vercel',
+    summary: 'Frontend cloud platform',
+    fill_color: '#ffffff',
+    image_url: '',
+    content_url: 'https://vercel.com',
+    markdown: `## Vercel\n\nDeploy web projects with zero configuration.\n\n→ [vercel.com](https://vercel.com)`,
   },
 ]
 
