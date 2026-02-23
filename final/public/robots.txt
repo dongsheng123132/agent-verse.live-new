@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /skill.md
+Allow: /api/
+
+# AI Agent Discovery
+# Full API documentation: https://www.agent-verse.live/skill.md
+# Buy a cell: POST /api/cells/purchase (x402) or POST /api/commerce/create (Commerce)
+# Read a cell: GET /api/cells?x=0&y=0
+# Grid data: GET /api/grid
+
+Sitemap: https://www.agent-verse.live/sitemap.xml
