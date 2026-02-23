@@ -22,13 +22,15 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const SYSTEM_OWNER = '0xAgentVerseOfficial'
 const OVERWRITE = process.env.OVERWRITE !== '0'
 
-// 品牌 showcase 列表 — 在地图中心附近排列
+// 品牌 showcase 列表 — 在地图中心区域展示，10×10 大格子
+// 布局: 第一行 3 个品牌，第二行 2 个品牌（居中），间隔 2 格
 const brands = [
+  // --- 第一排 ---
   {
-    x: 490, y: 490, bw: 4, bh: 4,
+    x: 480, y: 485, bw: 10, bh: 10,
     title: 'AgentVerse',
     summary: 'The AI Agent Metaverse · 1,000,000 Grid Cells',
-    fill_color: '#0d1117',
+    fill_color: '#22c55e',
     image_url: 'https://www.agent-verse.live/icon-512.png',
     content_url: 'https://www.agent-verse.live',
     markdown: `## Welcome to AgentVerse
@@ -46,7 +48,7 @@ Every cell is a home. Build yours.
 → [Skill Doc](https://www.agent-verse.live/skill.md)`,
   },
   {
-    x: 496, y: 490, bw: 4, bh: 4,
+    x: 492, y: 485, bw: 10, bh: 10,
     title: 'Monad',
     summary: 'High-performance L1 blockchain',
     fill_color: '#682FFF',
@@ -64,7 +66,7 @@ High-performance EVM-compatible Layer 1 blockchain.
 → [Learn more](https://monad.xyz)`,
   },
   {
-    x: 502, y: 490, bw: 4, bh: 4,
+    x: 504, y: 485, bw: 10, bh: 10,
     title: 'OpenBuild',
     summary: 'Web3 Builder Community & Education',
     fill_color: '#0E76FD',
@@ -81,8 +83,9 @@ The Open-Source Web3 Builder Community.
 
 → [Join OpenBuild](https://openbuild.xyz)`,
   },
+  // --- 第二排（居中） ---
   {
-    x: 490, y: 496, bw: 4, bh: 4,
+    x: 486, y: 497, bw: 10, bh: 10,
     title: 'Coinbase',
     summary: 'Build the future of finance',
     fill_color: '#0052FF',
@@ -100,7 +103,7 @@ Build on-chain with confidence.
 → [Developer Platform](https://www.coinbase.com/developer-platform)`,
   },
   {
-    x: 496, y: 496, bw: 4, bh: 4,
+    x: 498, y: 497, bw: 10, bh: 10,
     title: 'Base',
     summary: 'Ethereum L2 · Built by Coinbase',
     fill_color: '#0052FF',
@@ -122,6 +125,14 @@ Ethereum L2, incubated by Coinbase.
 async function main() {
   const client = await pool.connect()
   try {
+    // Clean up old 4×4 brand data from previous run
+    console.log('Cleaning up old brand cells...')
+    await client.query(
+      "DELETE FROM grid_cells WHERE owner_address = $1 AND block_id LIKE 'brand_%'",
+      [SYSTEM_OWNER]
+    )
+    console.log('✓ Old brand cells removed\n')
+
     for (const brand of brands) {
       const { x, y, bw, bh } = brand
       const blockId = `brand_${x}_${y}_${bw}x${bh}`

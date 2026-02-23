@@ -94,8 +94,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) return;
 
-        // 1. Fill Background
-        ctx.fillStyle = '#050505';
+        // 1. Fill Background — dark with subtle gradient
+        const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.7);
+        bgGrad.addColorStop(0, '#0a0a12');
+        bgGrad.addColorStop(1, '#030308');
+        ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, width, height);
 
         // 2. Draw Grid & Content
@@ -113,6 +116,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         const selectedIds = new Set(selectedCells.map(c => `${c.x},${c.y}`));
 
+        // Collect large blocks for glow pass (drawn after grid lines)
+        const glowBlocks: { x: number; y: number; w: number; h: number; color: string }[] = [];
+
         for (let r = renderStartRow; r < renderEndRow; r++) {
             for (let c = renderStartCol; c < renderEndCol; c++) {
                 const cell = cellMap.get(`${c},${r}`);
@@ -128,6 +134,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 const bh = cell?.block_h || 1;
                 const drawW = Math.ceil(cellSize * bw);
                 const drawH = Math.ceil(cellSize * bh);
+                const isLargeBlock = bw >= 3 || bh >= 3;
 
                 let isSold = !!cell?.owner;
                 let isReservedCell = isReserved(c, r);
@@ -136,10 +143,47 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     const imgUrl = cell.image_url;
                     const imgFailed = imgUrl ? failedImages.current.has(imgUrl) : true;
 
+                    // Large blocks: dark bg + border frame first
+                    if (isLargeBlock) {
+                        const blockColor = cell.color || '#10b981';
+                        // Dark fill
+                        ctx.fillStyle = '#0a0a0f';
+                        ctx.fillRect(screenX, screenY, drawW, drawH);
+                        // Colored inner border
+                        const bdr = Math.max(1, cellSize * 0.15);
+                        ctx.strokeStyle = blockColor;
+                        ctx.lineWidth = bdr;
+                        ctx.strokeRect(screenX + bdr / 2, screenY + bdr / 2, drawW - bdr, drawH - bdr);
+                        // Corner accents
+                        const corner = Math.min(drawW, drawH) * 0.12;
+                        ctx.strokeStyle = blockColor;
+                        ctx.lineWidth = Math.max(2, bdr * 0.8);
+                        // Top-left
+                        ctx.beginPath(); ctx.moveTo(screenX, screenY + corner); ctx.lineTo(screenX, screenY); ctx.lineTo(screenX + corner, screenY); ctx.stroke();
+                        // Top-right
+                        ctx.beginPath(); ctx.moveTo(screenX + drawW - corner, screenY); ctx.lineTo(screenX + drawW, screenY); ctx.lineTo(screenX + drawW, screenY + corner); ctx.stroke();
+                        // Bottom-left
+                        ctx.beginPath(); ctx.moveTo(screenX, screenY + drawH - corner); ctx.lineTo(screenX, screenY + drawH); ctx.lineTo(screenX + corner, screenY + drawH); ctx.stroke();
+                        // Bottom-right
+                        ctx.beginPath(); ctx.moveTo(screenX + drawW - corner, screenY + drawH); ctx.lineTo(screenX + drawW, screenY + drawH); ctx.lineTo(screenX + drawW, screenY + drawH - corner); ctx.stroke();
+
+                        // Collect for glow effect
+                        glowBlocks.push({ x: screenX, y: screenY, w: drawW, h: drawH, color: blockColor });
+                    }
+
                     if (imgUrl && !imgFailed) {
                         const img = imageCache.current[imgUrl];
                         if (img && img.complete && img.naturalWidth > 0) {
-                            ctx.drawImage(img, screenX, screenY, drawW, drawH);
+                            if (isLargeBlock) {
+                                // Center image with padding inside the frame
+                                const pad = Math.max(4, drawW * 0.15);
+                                const imgArea = Math.min(drawW - pad * 2, drawH - pad * 2.5);
+                                const imgX = screenX + (drawW - imgArea) / 2;
+                                const imgY = screenY + pad;
+                                ctx.drawImage(img, imgX, imgY, imgArea, imgArea);
+                            } else {
+                                ctx.drawImage(img, screenX, screenY, drawW, drawH);
+                            }
                         } else {
                             if (!img && cellSize > 5) {
                                 const newImg = new Image();
@@ -152,18 +196,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                                 };
                                 imageCache.current[imgUrl] = newImg;
                             }
-                            ctx.fillStyle = cell.color || '#10b981';
-                            ctx.fillRect(screenX, screenY, drawW, drawH);
+                            if (!isLargeBlock) {
+                                ctx.fillStyle = cell.color || '#10b981';
+                                ctx.fillRect(screenX, screenY, drawW, drawH);
+                            }
                             if (cellSize > 10) {
-                                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                                ctx.fillStyle = 'rgba(255,255,255,0.4)';
                                 ctx.font = `${Math.max(8, cellSize / 3)}px monospace`;
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
                                 ctx.fillText('...', screenX + drawW / 2, screenY + drawH / 2);
                             }
                         }
-                    } else {
-                        // No image or failed → pixel avatar
+                    } else if (!isLargeBlock) {
+                        // No image or failed → pixel avatar (only for small cells)
                         const avatar = getPixelAvatar(cell.owner || cell.id.toString());
                         ctx.fillStyle = cell.color ? cell.color : avatar.colors.bg;
                         ctx.fillRect(screenX, screenY, drawW, drawH);
@@ -182,8 +228,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                         }
                     }
 
-                    // Title overlay for blocks when zoomed in
-                    if (bw > 1 && cell.title && cellSize >= 12) {
+                    // Title overlay — enhanced for large blocks
+                    if (isLargeBlock && cell.title && cellSize >= 4) {
+                        const fontSize = Math.max(6, Math.min(cellSize * 0.45, 18));
+                        const textH = fontSize + 8;
+                        // Gradient title bar at bottom
+                        const titleGrad = ctx.createLinearGradient(screenX, screenY + drawH - textH, screenX, screenY + drawH);
+                        titleGrad.addColorStop(0, 'rgba(0,0,0,0.9)');
+                        titleGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
+                        ctx.fillStyle = titleGrad;
+                        ctx.fillRect(screenX, screenY + drawH - textH, drawW, textH);
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(cell.title.slice(0, 24), screenX + drawW / 2, screenY + drawH - textH / 2);
+                    } else if (bw > 1 && cell.title && cellSize >= 12) {
                         const fontSize = Math.min(cellSize * 0.35, 14);
                         const textH = fontSize + 6;
                         ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -194,15 +254,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                         ctx.textBaseline = 'middle';
                         ctx.fillText(cell.title.slice(0, 20), screenX + drawW / 2, screenY + drawH - textH / 2);
                     }
+
+                    // Subtle glow border for small owned cells
+                    if (!isLargeBlock && cellSize >= 4) {
+                        ctx.strokeStyle = cell.color ? cell.color + '60' : 'rgba(16, 185, 129, 0.3)';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(screenX, screenY, drawW, drawH);
+                    }
                 } else if (isReservedCell) {
-                    ctx.fillStyle = '#111118';
+                    ctx.fillStyle = '#0c0c14';
                     ctx.fillRect(screenX, screenY, drawW, drawH);
                     if (cellSize > 4) {
-                        ctx.strokeStyle = '#222';
+                        ctx.strokeStyle = '#1a1a2e';
                         ctx.lineWidth = 1;
-                        ctx.strokeRect(screenX + 2, screenY + 2, drawW - 4, drawH - 4);
+                        ctx.strokeRect(screenX + 1, screenY + 1, drawW - 2, drawH - 2);
                         if (cellSize > 10) {
-                            ctx.fillStyle = '#333';
+                            ctx.fillStyle = '#2a2a3a';
                             ctx.font = `${cellSize * 0.3}px monospace`;
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
@@ -210,21 +277,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                         }
                     }
                 } else {
-                    ctx.fillStyle = '#161616';
+                    // Empty cells — subtle dark with micro-border
+                    ctx.fillStyle = '#0d0d12';
                     ctx.fillRect(screenX, screenY, drawW, drawH);
+                    if (cellSize >= 6) {
+                        ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+                        ctx.lineWidth = 0.5;
+                        ctx.strokeRect(screenX, screenY, drawW, drawH);
+                    }
                 }
 
-                // For-sale border and price label (after cell content, before selection)
+                // For-sale border and price label
                 if (cell?.is_for_sale && cell?.price_usdc > 0 && cellSize >= 4) {
-                    const borderWidth = Math.max(1, Math.min(3, cellSize * 0.1));
+                    const borderWidth = Math.max(1, Math.min(3, cellSize * 0.12));
                     ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
                     ctx.lineWidth = borderWidth;
-                    ctx.strokeRect(
-                        screenX + borderWidth / 2,
-                        screenY + borderWidth / 2,
-                        drawW - borderWidth,
-                        drawH - borderWidth
-                    );
+                    ctx.strokeRect(screenX + borderWidth / 2, screenY + borderWidth / 2, drawW - borderWidth, drawH - borderWidth);
                     if (cellSize >= 16) {
                         const priceText = `$${cell.price_usdc}`;
                         const fontSize = Math.max(8, Math.min(11, cellSize * 0.35));
@@ -243,7 +311,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     }
                 }
 
-                // Selection Outline — check all cells in this block
+                // Selection Outline
                 let blockSelected = selectedIds.has(`${c},${r}`);
                 if (!blockSelected && (bw > 1 || bh > 1)) {
                     for (let dy = 0; dy < bh && !blockSelected; dy++) {
@@ -260,11 +328,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             }
         }
 
-        // 2.5 Draw Grid Lines
-        if (cellSize >= 3) {
+        // 2.5 Draw Grid Lines — subtle dotted style
+        if (cellSize >= 6) {
             ctx.beginPath();
-            ctx.strokeStyle = cellSize >= 12 ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = cellSize >= 14 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 0.5;
             const gridStartX = Math.round(renderStartCol * cellSize + pan.x);
             const gridEndX = Math.round(renderEndCol * cellSize + pan.x);
             const gridStartY = Math.round(renderStartRow * cellSize + pan.y);
@@ -282,7 +350,21 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             ctx.stroke();
         }
 
-        // 3. Draw Hover Highlight (snap to block origin if block cell)
+        // 2.6 Draw glow effects for large brand blocks (after grid lines, so glow is on top)
+        ctx.save();
+        for (const block of glowBlocks) {
+            const glowSize = Math.max(6, Math.min(20, block.w * 0.08));
+            ctx.shadowColor = block.color;
+            ctx.shadowBlur = glowSize;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = block.color + '80';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(block.x, block.y, block.w, block.h);
+        }
+        ctx.restore();
+
+        // 3. Draw Hover Highlight
         if (hoveredCell && !isSelecting) {
             const ox = hoveredCell.block_origin_x ?? hoveredCell.x;
             const oy = hoveredCell.block_origin_y ?? hoveredCell.y;
@@ -293,11 +375,16 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             const hW = Math.ceil(cellSize * bw);
             const hH = Math.ceil(cellSize * bh);
 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
             ctx.fillRect(hX, hY, hW, hH);
-            ctx.strokeStyle = 'rgba(0, 255, 65, 0.8)';
+            // Glow border on hover
+            ctx.save();
+            ctx.shadowColor = '#00ff41';
+            ctx.shadowBlur = 8;
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.9)';
             ctx.lineWidth = 2;
             ctx.strokeRect(hX, hY, hW, hH);
+            ctx.restore();
         }
 
         // 4. Draw box-select overlay (grid-based)
