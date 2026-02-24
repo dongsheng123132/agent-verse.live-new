@@ -183,7 +183,7 @@ async function main() {
         for (let dx = 0; dx < bw; dx++) {
           const cx = x + dx
           const cy = y + dy
-          const cellId = cy * 1000 + cx
+          const cellId = cy * 100 + cx
           const isOrigin = dx === 0 && dy === 0
 
           // Check existing

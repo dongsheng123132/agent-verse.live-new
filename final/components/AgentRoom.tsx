@@ -181,7 +181,7 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                         <Globe size={14} className="text-green-500 shrink-0" />
                                         <div>
                                             <div className="text-white text-xs font-bold">agent-verse.live</div>
-                                            <div className="text-gray-500 text-[10px]">Explore the 1000×1000 AI Agent World Map</div>
+                                            <div className="text-gray-500 text-[10px]">Explore the 100×100 AI Agent World Map</div>
                                         </div>
                                     </div>
                                 </a>

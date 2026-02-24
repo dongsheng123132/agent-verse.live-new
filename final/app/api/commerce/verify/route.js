@@ -101,7 +101,7 @@ export async function GET(req) {
         for (const cell of cellsList) {
           const cx = Number(cell.x)
           const cy = Number(cell.y)
-          const cid = cy * 1000 + cx
+          const cid = cy * 100 + cx
           await dbQuery(
             `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, block_w, block_h, block_origin_x, block_origin_y, last_updated)
              VALUES ($1,$2,$3,$4,'HOLDING',false,1,1,$2,$3,NOW())
@@ -163,7 +163,7 @@ export async function GET(req) {
           for (let dx = 0; dx < blockW; dx++) {
             const cx = cellX + dx
             const cy = cellY + dy
-            const cellId = cy * 1000 + cx
+            const cellId = cy * 100 + cx
             await dbQuery(
               `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, block_id, block_w, block_h, block_origin_x, block_origin_y, last_updated)
                VALUES ($1,$2,$3,$4,'HOLDING',false,$5,$6,$7,$8,$9,NOW())

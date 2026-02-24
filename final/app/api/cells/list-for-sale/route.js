@@ -18,8 +18,8 @@ export async function PUT(req) {
     const body = await req.json()
     const x = Number(body?.x)
     const y = Number(body?.y)
-    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 999 || y < 0 || y > 999) {
-      return NextResponse.json({ ok: false, error: 'invalid_request', message: 'x, y required and must be 0-999' }, { status: 400 })
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 99 || y < 0 || y > 99) {
+      return NextResponse.json({ ok: false, error: 'invalid_request', message: 'x, y required and must be 0-99' }, { status: 400 })
     }
     if (keyInfo.x !== x || keyInfo.y !== y) {
       return NextResponse.json({ ok: false, error: 'forbidden', message: 'API key does not match this cell' }, { status: 403 })

@@ -65,7 +65,7 @@ async function main() {
       for (let dx = 0; dx < BLOCK_W; dx++) {
         const cx = ORIGIN_X + dx
         const cy = ORIGIN_Y + dy
-        const cellId = cy * 1000 + cx
+        const cellId = cy * 100 + cx
 
         await client.query(`
           INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, block_id, block_w, block_h, block_origin_x, block_origin_y,

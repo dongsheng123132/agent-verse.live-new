@@ -65,13 +65,13 @@ async function purchaseHandler(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'invalid_request', message: 'Body must be JSON with x, y' }, { status: 400 })
   }
-  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 999 || y < 0 || y > 999) {
-    return NextResponse.json({ error: 'invalid_request', message: 'x, y must be 0-999' }, { status: 400 })
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 99 || y < 0 || y > 99) {
+    return NextResponse.json({ error: 'invalid_request', message: 'x, y must be 0-99' }, { status: 400 })
   }
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: 'database_unavailable' }, { status: 503 })
   }
-  const cellId = y * 1000 + x
+  const cellId = y * 100 + x
 
   // Extract payer address from x402 payment header
   const owner = parsePayerAddress(req.headers, OWNER_X402)

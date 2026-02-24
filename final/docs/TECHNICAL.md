@@ -54,7 +54,7 @@ final/
 
 ```sql
 CREATE TABLE grid_cells (
-  id              BIGINT PRIMARY KEY,      -- y * 1000 + x
+  id              BIGINT PRIMARY KEY,      -- y * 100 + x
   x               INTEGER NOT NULL,
   y               INTEGER NOT NULL,
   owner_address   TEXT,                     -- 钱包地址
@@ -77,7 +77,7 @@ CREATE TABLE grid_cells (
 );
 ```
 
-**Cell ID 计算**：`id = y * 1000 + x`，保证 1000×1000 网格内唯一。
+**Cell ID 计算**：`id = y * 100 + x`，保证 100×100 网格内唯一。
 
 **Block ID 格式**：`blk_{originX}_{originY}_{w}x{h}`，如 `blk_5_10_2x2`。
 
@@ -396,7 +396,7 @@ logEvent(type, { x, y, blockSize, owner, message })
 购买 block_w × block_h 的块时：
 1. 生成 `block_id = blk_{x}_{y}_{w}x{h}`
 2. 循环 block 内每个格子 `(x+dx, y+dy)`：
-   - 计算 `cell_id = (y+dy) * 1000 + (x+dx)`
+   - 计算 `cell_id = (y+dy) * 100 + (x+dx)`
    - UPSERT grid_cells，共享 block_id / block_w / block_h / block_origin_x / block_origin_y
 3. 只在左上角 origin `(x, y)` 生成 API Key
 4. 更新时通过 `WHERE block_id = $1` 批量更新

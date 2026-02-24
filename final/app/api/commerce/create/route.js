@@ -22,7 +22,7 @@ export async function POST(req) {
 
       for (const c of cells) {
         const x = Number(c?.x), y = Number(c?.y)
-        if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 999 || y < 0 || y > 999) {
+        if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 99 || y < 0 || y > 99) {
           return NextResponse.json({ ok: false, error: 'invalid_request', message: `invalid cell (${c?.x},${c?.y})` }, { status: 400 })
         }
         if (isReserved(x, y)) {
@@ -95,7 +95,7 @@ export async function POST(req) {
     const blockW = Number(body?.block_w) || 1
     const blockH = Number(body?.block_h) || 1
 
-    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 999 || y < 0 || y > 999) {
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 99 || y < 0 || y > 99) {
       return NextResponse.json({ ok: false, error: 'invalid_request' }, { status: 400 })
     }
 
@@ -104,7 +104,7 @@ export async function POST(req) {
       return NextResponse.json({ ok: false, error: 'invalid_block_size', message: `不支持的尺寸 ${blockW}×${blockH}` }, { status: 400 })
     }
 
-    if (x + blockW > 1000 || y + blockH > 1000) {
+    if (x + blockW > 100 || y + blockH > 100) {
       return NextResponse.json({ ok: false, error: 'out_of_bounds', message: '块超出网格范围' }, { status: 400 })
     }
 

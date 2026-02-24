@@ -32,7 +32,7 @@ function PageInner() {
   const [viewMode, setViewMode] = useState<'GRID' | 'FORUM' | 'ACCESS'>('GRID')
 
   // Map State
-  const [zoom, setZoom] = useState(1.0) // 1000×1000 grid — start zoomed out
+  const [zoom, setZoom] = useState(2.5)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
@@ -168,11 +168,11 @@ function PageInner() {
   const initialCentered = React.useRef(false)
   useEffect(() => {
     if (containerSize.width > 100 && containerSize.height > 100 && !initialCentered.current) {
-      // Center on brand showcase area (490, 497)
-      const defaultZoom = 1.0;
+      // Center on showcase area (16, 16)
+      const defaultZoom = 2.5;
       const cellSize = CELL_PX * defaultZoom;
-      const targetX = 490 * cellSize;
-      const targetY = 497 * cellSize;
+      const targetX = 16 * cellSize;
+      const targetY = 16 * cellSize;
       const cx = (containerSize.width / 2) - targetX;
       const cy = (containerSize.height / 2) - targetY;
       setPan(clampPan({ x: cx, y: cy }, defaultZoom, containerSize));
@@ -513,13 +513,13 @@ function PageInner() {
                     onZoomIn={() => setZoom(z => Math.min(6, z + 0.5))}
                     onZoomOut={() => setZoom(z => Math.max(0.1, z - 0.5))}
                     onFitScreen={() => {
-                      const cellSize = CELL_PX * 1;
-                      const targetX = 490 * cellSize;
-                      const targetY = 497 * cellSize;
+                      const cellSize = CELL_PX * 2.5;
+                      const targetX = 16 * cellSize;
+                      const targetY = 16 * cellSize;
                       const cx = (containerSize.width / 2) - targetX;
                       const cy = (containerSize.height / 2) - targetY;
-                      setPan(clampPan({ x: cx, y: cy }, 1, containerSize));
-                      setZoom(1);
+                      setPan(clampPan({ x: cx, y: cy }, 2.5, containerSize));
+                      setZoom(2.5);
                     }}
                   />
                   <div className="hidden lg:block">

@@ -58,8 +58,8 @@ export type Ranking = {
   last_updated?: string 
 }
 
-export const COLS = 1000
-export const ROWS = 1000
+export const COLS = 100
+export const ROWS = 100
 export const CELL_PX = 8
 
 export const PRICE_PER_CELL = 0.1
