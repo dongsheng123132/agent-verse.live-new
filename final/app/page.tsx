@@ -168,11 +168,11 @@ function PageInner() {
   const initialCentered = React.useRef(false)
   useEffect(() => {
     if (containerSize.width > 100 && containerSize.height > 100 && !initialCentered.current) {
-      // Center on showcase area (16, 16)
+      // Center on brand area (38, 24)
       const defaultZoom = 2.5;
       const cellSize = CELL_PX * defaultZoom;
-      const targetX = 16 * cellSize;
-      const targetY = 16 * cellSize;
+      const targetX = 38 * cellSize;
+      const targetY = 24 * cellSize;
       const cx = (containerSize.width / 2) - targetX;
       const cy = (containerSize.height / 2) - targetY;
       setPan(clampPan({ x: cx, y: cy }, defaultZoom, containerSize));

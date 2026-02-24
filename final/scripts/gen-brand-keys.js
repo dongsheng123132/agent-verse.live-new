@@ -1,5 +1,6 @@
 /**
  * gen-brand-keys.js — 为品牌 showcase 格子生成 API Key
+ * 用法: node scripts/gen-brand-keys.js
  */
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -27,15 +28,15 @@ function hashKey(key) {
 }
 
 const origins = [
-  { name: 'AgentVerse (20×20)', x: 480, y: 485 },
-  { name: 'Monad (16×16)', x: 502, y: 485 },
-  { name: 'OpenBuild (12×12)', x: 520, y: 485 },
-  { name: 'Coinbase (14×14)', x: 464, y: 485 },
-  { name: 'Base (12×12)', x: 480, y: 507 },
-  { name: 'x402 Protocol (8×8)', x: 520, y: 499 },
-  { name: 'USDC on Base (8×8)', x: 494, y: 507 },
-  { name: 'Neon DB (6×6)', x: 456, y: 492 },
-  { name: 'Vercel (6×6)', x: 504, y: 509 },
+  { name: 'AgentVerse (8×8)',      x: 30, y: 20 },
+  { name: 'Monad (6×6)',           x: 40, y: 20 },
+  { name: 'Coinbase (6×6)',        x: 22, y: 20 },
+  { name: 'OpenBuild (4×4)',       x: 48, y: 20 },
+  { name: 'Base (4×4)',            x: 48, y: 26 },
+  { name: 'x402 Protocol (4×4)',   x: 22, y: 28 },
+  { name: 'USDC on Base (3×3)',    x: 54, y: 20 },
+  { name: 'Neon DB (3×3)',         x: 54, y: 24 },
+  { name: 'Vercel (3×3)',          x: 54, y: 28 },
 ]
 
 const client = await pool.connect()
