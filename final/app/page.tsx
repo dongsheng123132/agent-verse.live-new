@@ -91,7 +91,20 @@ function PageInner() {
       if (!isNaN(cx) && !isNaN(cy) && cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) {
         setDetailLoading(true)
         fetch(`/api/cells?x=${cx}&y=${cy}`).then(r => r.json()).then(d => {
-          if (d?.ok && d?.cell) setDetailCell(d.cell)
+          if (d?.ok && d?.cell) {
+            const cell = d.cell;
+            // If this is a sub-cell of a block, fetch the origin which has all content
+            const ox = cell.block_origin_x ?? cell.x;
+            const oy = cell.block_origin_y ?? cell.y;
+            if (ox !== cell.x || oy !== cell.y) {
+              fetch(`/api/cells?x=${ox}&y=${oy}`).then(r2 => r2.json()).then(d2 => {
+                if (d2?.ok && d2?.cell) setDetailCell(d2.cell);
+                else setDetailCell(cell);
+              }).catch(() => setDetailCell(cell));
+            } else {
+              setDetailCell(cell);
+            }
+          }
         }).catch(() => {}).finally(() => setDetailLoading(false))
       }
     }
@@ -219,8 +232,12 @@ function PageInner() {
     }
     if (cells.length === 1 && cells[0].owner) {
       setDetailLoading(true);
-      setDetailCell(cells[0]);
-      fetch(`/api/cells?x=${cells[0].x}&y=${cells[0].y}`).then(r => r.json()).then(d => {
+      // For block cells, fetch the origin cell which has all content (iframe_url, markdown, etc.)
+      const c = cells[0];
+      const ox = c.block_origin_x ?? c.x;
+      const oy = c.block_origin_y ?? c.y;
+      setDetailCell(c);
+      fetch(`/api/cells?x=${ox}&y=${oy}`).then(r => r.json()).then(d => {
         if (d?.ok && d?.cell) setDetailCell(d.cell);
       }).catch(() => {}).finally(() => setDetailLoading(false));
       return;
