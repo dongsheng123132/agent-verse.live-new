@@ -421,6 +421,9 @@ function PageInner() {
             )}
           </div>
           <div className="hidden md:flex items-center gap-1">
+            <a href="https://agent-verse-live.vercel.app/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
+              <Globe size={10} /> 老版本
+            </a>
             <a href="/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
               <Globe size={10} /> DOCS
             </a>
