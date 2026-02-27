@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="abg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f13"/>
+      <stop offset="100%" style="stop-color:#1a1a23"/>
+    </linearGradient>
+    <linearGradient id="neonGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ff9d"/>
+      <stop offset="100%" style="stop-color:#00cc7d"/>
+    </linearGradient>
+    <linearGradient id="neonPurple" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#bd00ff"/>
+      <stop offset="100%" style="stop-color:#7b00cc"/>
+    </linearGradient>
+    <filter id="glow2">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="glow3">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="24" fill="url(#abg)"/>
+  <!-- Grid pattern -->
+  <g opacity="0.15" stroke="#00ff9d" stroke-width="0.5">
+    <line x1="0" y1="80" x2="400" y2="80"/><line x1="0" y1="160" x2="400" y2="160"/>
+    <line x1="0" y1="240" x2="400" y2="240"/><line x1="0" y1="320" x2="400" y2="320"/>
+    <line x1="80" y1="0" x2="80" y2="400"/><line x1="160" y1="0" x2="160" y2="400"/>
+    <line x1="240" y1="0" x2="240" y2="400"/><line x1="320" y1="0" x2="320" y2="400"/>
+  </g>
+  <!-- Animated grid cells -->
+  <rect x="80" y="80" width="80" height="80" fill="#00ff9d" opacity="0.08">
+    <animate attributeName="opacity" values="0.08;0.2;0.08" dur="3s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="240" y="160" width="80" height="80" fill="#bd00ff" opacity="0.08">
+    <animate attributeName="opacity" values="0.08;0.15;0.08" dur="4s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="160" y="240" width="80" height="80" fill="#00ff9d" opacity="0.06">
+    <animate attributeName="opacity" values="0.06;0.18;0.06" dur="3.5s" repeatCount="indefinite"/>
+  </rect>
+  <!-- Central icon — globe with grid -->
+  <circle cx="200" cy="140" r="55" fill="none" stroke="url(#neonGreen)" stroke-width="2.5" filter="url(#glow2)" opacity="0.9">
+    <animate attributeName="r" values="55;58;55" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="140" r="38" fill="none" stroke="#00ff9d" stroke-width="1" opacity="0.3"/>
+  <ellipse cx="200" cy="140" rx="55" ry="20" fill="none" stroke="#00ff9d" stroke-width="1" opacity="0.4"/>
+  <ellipse cx="200" cy="140" rx="20" ry="55" fill="none" stroke="#00ff9d" stroke-width="1" opacity="0.4"/>
+  <line x1="145" y1="140" x2="255" y2="140" stroke="#00ff9d" stroke-width="1" opacity="0.3"/>
+  <line x1="200" y1="85" x2="200" y2="195" stroke="#00ff9d" stroke-width="1" opacity="0.3"/>
+  <!-- Pulsing center dot -->
+  <circle cx="200" cy="140" r="6" fill="#00ff9d" filter="url(#glow3)">
+    <animate attributeName="r" values="4;8;4" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <!-- Agent text -->
+  <text x="200" y="240" text-anchor="middle" font-family="'SF Mono','Fira Code',monospace" font-size="40" font-weight="700" fill="#e0e0e0" letter-spacing="3" filter="url(#glow3)">AGENT</text>
+  <text x="200" y="280" text-anchor="middle" font-family="'SF Mono','Fira Code',monospace" font-size="40" font-weight="700" fill="url(#neonGreen)" letter-spacing="3" filter="url(#glow3)">VERSE</text>
+  <!-- Scanning line animation -->
+  <line x1="40" y1="0" x2="40" y2="400" stroke="#00ff9d" stroke-width="1" opacity="0.15">
+    <animate attributeName="x1" values="40;360;40" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="x2" values="40;360;40" dur="6s" repeatCount="indefinite"/>
+  </line>
+  <!-- Subtitle -->
+  <text x="200" y="320" text-anchor="middle" font-family="'SF Mono','Fira Code',monospace" font-size="14" fill="#bd00ff" opacity="0.8">AI Agent Metaverse</text>
+  <!-- Border glow -->
+  <rect x="4" y="4" width="392" height="392" rx="22" fill="none" stroke="#00ff9d" stroke-width="1" opacity="0.3">
+    <animate attributeName="opacity" values="0.3;0.6;0.3" dur="5s" repeatCount="indefinite"/>
+  </rect>
+  <!-- Corner accents -->
+  <path d="M4,30 L4,4 L30,4" fill="none" stroke="#00ff9d" stroke-width="2"/>
+  <path d="M370,4 L396,4 L396,30" fill="none" stroke="#00ff9d" stroke-width="2"/>
+  <path d="M396,370 L396,396 L370,396" fill="none" stroke="#bd00ff" stroke-width="2"/>
+  <path d="M30,396 L4,396 L4,370" fill="none" stroke="#bd00ff" stroke-width="2"/>
+</svg>
