@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="fbg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" style="stop-color:#4A0404"/>
+      <stop offset="100%" style="stop-color:#1a0000"/>
+    </radialGradient>
+    <radialGradient id="ball" cx="40%" cy="35%" r="50%">
+      <stop offset="0%" style="stop-color:#e8d5ff"/>
+      <stop offset="30%" style="stop-color:#c084fc"/>
+      <stop offset="60%" style="stop-color:#7c3aed"/>
+      <stop offset="100%" style="stop-color:#3b0764"/>
+    </radialGradient>
+    <radialGradient id="glow4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#FFD700;stop-opacity:0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="50%" style="stop-color:#FFA500"/>
+      <stop offset="100%" style="stop-color:#FFD700"/>
+    </linearGradient>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="goldglow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="400" rx="20" fill="url(#fbg)"/>
+  <!-- Decorative border -->
+  <rect x="8" y="8" width="384" height="384" rx="16" fill="none" stroke="#FFD700" stroke-width="2" opacity="0.5"/>
+  <rect x="14" y="14" width="372" height="372" rx="12" fill="none" stroke="#FFD700" stroke-width="0.5" opacity="0.3"/>
+  <!-- Corner decorations - Chinese style -->
+  <g fill="#FFD700" opacity="0.6">
+    <path d="M20,40 L20,20 L40,20 M20,20 L45,45" stroke="#FFD700" stroke-width="2" fill="none"/>
+    <path d="M360,20 L380,20 L380,40 M380,20 L355,45" stroke="#FFD700" stroke-width="2" fill="none"/>
+    <path d="M20,360 L20,380 L40,380 M20,380 L45,355" stroke="#FFD700" stroke-width="2" fill="none"/>
+    <path d="M360,380 L380,380 L380,360 M380,380 L355,355" stroke="#FFD700" stroke-width="2" fill="none"/>
+  </g>
+  <!-- Glow behind crystal ball -->
+  <circle cx="200" cy="155" r="90" fill="url(#glow4)"/>
+  <!-- Crystal ball base/stand -->
+  <ellipse cx="200" cy="225" rx="45" ry="10" fill="#8B6914" opacity="0.8"/>
+  <path d="M165,220 Q165,235 200,240 Q235,235 235,220" fill="#A67C00"/>
+  <path d="M170,220 Q170,230 200,234 Q230,230 230,220" fill="#C89B3C"/>
+  <!-- Crystal ball -->
+  <circle cx="200" cy="155" r="65" fill="url(#ball)" filter="url(#softglow)"/>
+  <circle cx="200" cy="155" r="65" fill="none" stroke="#c084fc" stroke-width="1.5" opacity="0.6"/>
+  <!-- Crystal ball shine -->
+  <ellipse cx="180" cy="130" rx="20" ry="15" fill="white" opacity="0.25" transform="rotate(-20,180,130)"/>
+  <ellipse cx="175" cy="125" rx="8" ry="6" fill="white" opacity="0.4" transform="rotate(-20,175,125)"/>
+  <!-- Mystical symbols inside ball -->
+  <text x="200" y="150" text-anchor="middle" font-size="28" fill="#FFD700" opacity="0.5" font-family="serif">&#x2606;</text>
+  <text x="185" y="175" text-anchor="middle" font-size="16" fill="#FFD700" opacity="0.3" font-family="serif">&#x263D;</text>
+  <text x="218" y="170" text-anchor="middle" font-size="18" fill="#FFD700" opacity="0.3" font-family="serif">&#x2609;</text>
+  <!-- Sparkles around -->
+  <g fill="#FFD700" filter="url(#goldglow)">
+    <circle cx="120" cy="100" r="2.5" opacity="0.8"/>
+    <circle cx="280" cy="90" r="2" opacity="0.7"/>
+    <circle cx="100" cy="180" r="1.8" opacity="0.6"/>
+    <circle cx="300" cy="170" r="2.2" opacity="0.7"/>
+    <circle cx="140" cy="70" r="1.5" opacity="0.5"/>
+    <circle cx="260" cy="65" r="1.8" opacity="0.6"/>
+    <circle cx="310" cy="130" r="1.5" opacity="0.5"/>
+    <circle cx="90" cy="140" r="2" opacity="0.6"/>
+  </g>
+  <!-- Title: AI 新春福籤 -->
+  <text x="200" y="278" text-anchor="middle" font-family="'Noto Serif SC','STSong','SimSun',serif" font-size="36" font-weight="700" fill="url(#gold)" filter="url(#goldglow)">AI 新春福籤</text>
+  <!-- Subtitle -->
+  <text x="200" y="310" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#F4A460" opacity="0.9">求签问卦 · 蛇年大吉</text>
+  <!-- Lantern decorations -->
+  <g opacity="0.7">
+    <!-- Left lantern -->
+    <ellipse cx="60" cy="290" rx="16" ry="22" fill="#dc2626" stroke="#FFD700" stroke-width="1"/>
+    <rect x="54" y="268" width="12" height="5" rx="2" fill="#FFD700"/>
+    <line x1="60" y1="263" x2="60" y2="268" stroke="#FFD700" stroke-width="1.5"/>
+    <line x1="56" y1="290" x2="64" y2="290" stroke="#FFD700" stroke-width="0.5" opacity="0.5"/>
+    <!-- Right lantern -->
+    <ellipse cx="340" cy="290" rx="16" ry="22" fill="#dc2626" stroke="#FFD700" stroke-width="1"/>
+    <rect x="334" y="268" width="12" height="5" rx="2" fill="#FFD700"/>
+    <line x1="340" y1="263" x2="340" y2="268" stroke="#FFD700" stroke-width="1.5"/>
+    <line x1="336" y1="290" x2="344" y2="290" stroke="#FFD700" stroke-width="0.5" opacity="0.5"/>
+  </g>
+  <!-- Bottom banner -->
+  <rect x="100" y="335" width="200" height="32" rx="16" fill="#8A0000" stroke="#FFD700" stroke-width="1" opacity="0.8"/>
+  <text x="200" y="356" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFD700" opacity="0.9">xinchunsuanming.vercel.app</text>
+</svg>
