@@ -47,6 +47,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const imageCache = useRef<{ [key: string]: HTMLImageElement }>({});
     const [frameCount, setFrameCount] = useState(0);
     const failedImages = useRef(new Set<string>());
+    const animTime = useRef(0);
+    const animRAF = useRef<number>(0);
+
+    // Animation loop — drives pulse/glow effects for large blocks
+    useEffect(() => {
+        let running = true;
+        const tick = (t: number) => {
+            if (!running) return;
+            animTime.current = t;
+            animRAF.current = requestAnimationFrame(tick);
+        };
+        animRAF.current = requestAnimationFrame(tick);
+        // Re-render at ~20fps for animation
+        const iv = setInterval(() => setFrameCount(f => f + 1), 50);
+        return () => { running = false; cancelAnimationFrame(animRAF.current); clearInterval(iv); };
+    }, []);
 
     // Helper: Screen to Grid
     const getGridCoord = (screenX: number, screenY: number) => {
@@ -350,17 +366,46 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             ctx.stroke();
         }
 
-        // 2.6 Draw glow effects for large brand blocks (after grid lines, so glow is on top)
+        // 2.6 Animated glow effects for large brand blocks
+        const t = animTime.current * 0.001; // seconds
         ctx.save();
         for (const block of glowBlocks) {
-            const glowSize = Math.max(6, Math.min(20, block.w * 0.08));
+            // Breathing glow — pulse between min and max
+            const pulse = 0.5 + 0.5 * Math.sin(t * 2 + block.x * 0.01);
+            const glowSize = Math.max(6, Math.min(20, block.w * 0.08)) * (0.8 + pulse * 0.6);
             ctx.shadowColor = block.color;
             ctx.shadowBlur = glowSize;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
-            ctx.strokeStyle = block.color + '80';
-            ctx.lineWidth = 2;
+            const alpha = Math.round(80 + pulse * 60).toString(16).padStart(2, '0');
+            ctx.strokeStyle = block.color + alpha;
+            ctx.lineWidth = 1.5 + pulse;
             ctx.strokeRect(block.x, block.y, block.w, block.h);
+
+            // Scan line effect — horizontal light sweep
+            ctx.shadowBlur = 0;
+            const scanY = block.y + ((t * 40 + block.x) % block.h);
+            const scanGrad = ctx.createLinearGradient(block.x, scanY - 3, block.x, scanY + 3);
+            scanGrad.addColorStop(0, 'rgba(255,255,255,0)');
+            scanGrad.addColorStop(0.5, `rgba(255,255,255,${0.06 + pulse * 0.04})`);
+            scanGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = scanGrad;
+            ctx.fillRect(block.x + 2, scanY - 3, block.w - 4, 6);
+
+            // Corner sparkle — rotating highlight on corners
+            const sparkleAlpha = 0.3 + 0.3 * Math.sin(t * 3 + block.y * 0.02);
+            const sparkleR = Math.max(3, block.w * 0.03);
+            ctx.fillStyle = `rgba(255,255,255,${sparkleAlpha})`;
+            const corners = [
+                [block.x + 4, block.y + 4],
+                [block.x + block.w - 4, block.y + 4],
+                [block.x + 4, block.y + block.h - 4],
+                [block.x + block.w - 4, block.y + block.h - 4],
+            ];
+            const activeCorner = Math.floor((t * 2) % 4);
+            ctx.beginPath();
+            ctx.arc(corners[activeCorner][0], corners[activeCorner][1], sparkleR, 0, Math.PI * 2);
+            ctx.fill();
         }
         ctx.restore();
 
