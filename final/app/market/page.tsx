@@ -13,6 +13,13 @@ interface MarketEvidence {
   window_blocks: number
 }
 
+interface MarketNetworkOffer {
+  network: string
+  price_usdc: string | null
+  payTo: string | null
+  asset: string | null
+}
+
 interface MarketEntry {
   name: string
   url: string
@@ -22,6 +29,8 @@ interface MarketEntry {
   network: string | null
   price_usdc: string | null
   pay_to: string | null
+  /** Every network this service accepts USDC on (Monad first). */
+  networks: MarketNetworkOffer[] | null
   status: 'verified' | 'candidate' | 'failed' | 'unprobed'
   evidence: MarketEvidence | null
   source: 'official' | 'listing'
@@ -208,7 +217,21 @@ export default function MarketPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-white font-mono text-sm font-bold">{e.price_usdc ? `$${e.price_usdc}` : '—'}</div>
-                  <div className="text-[10px] text-gray-500 font-mono">{e.network ? NETWORK_LABEL[e.network] || e.network : '—'}</div>
+                  <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
+                    {(e.networks && e.networks.length > 0
+                      ? e.networks.map((n) => n.network)
+                      : e.network
+                        ? [e.network]
+                        : []
+                    ).map((n) => (
+                      <span key={n} className="text-[10px] text-gray-500 font-mono px-1 py-0.5 rounded border border-[#333]">
+                        {NETWORK_LABEL[n] || n}
+                      </span>
+                    ))}
+                    {!e.network && (!e.networks || e.networks.length === 0) && (
+                      <span className="text-[10px] text-gray-500 font-mono">—</span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#1a1a1a]">

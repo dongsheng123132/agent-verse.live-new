@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // probeCellService() runs a real SSRF DNS check before fetching; mock node:dns
 // so the "candidate"/"failed" probe tests below are offline and deterministic
@@ -12,6 +12,7 @@ vi.mock('node:dns', () => ({
 import {
   parseX402Response,
   findSupportedUsdcAccept,
+  findAllSupportedUsdcAccepts,
   formatUsdcAmount,
   BASE_NETWORK,
   MONAD_NETWORK,
@@ -19,7 +20,8 @@ import {
   MONAD_USDC_ADDRESS,
 } from '../../lib/market/x402'
 import { probeCellService } from '../../lib/market/probe'
-import { summarizeTransfers, deriveStatusFromSummary, parseTransferLog, planLogChunks } from '../../lib/market/rpc'
+import { probeServiceAndEvidence } from '../../lib/market/service'
+import { summarizeTransfers, deriveStatusFromSummary, parseTransferLog, planLogChunks, NETWORK_RPC } from '../../lib/market/rpc'
 
 function v2Header(accepts: unknown[]): string {
   return Buffer.from(JSON.stringify({ x402Version: 2, accepts })).toString('base64')
@@ -65,6 +67,53 @@ describe('lib/market/x402 findSupportedUsdcAccept', () => {
   it('returns null when accepts has neither Base nor Monad USDC', () => {
     const accept = findSupportedUsdcAccept([{ scheme: 'exact', network: 'eip155:1', amount: '1', asset: '0xSomeOtherAsset', payTo: '0x1' }])
     expect(accept).toBeNull()
+  })
+
+  it('Monad wins over Base when a service accepts both (Monad-priority market)', () => {
+    const accept = findSupportedUsdcAccept([
+      { scheme: 'exact', network: BASE_NETWORK, amount: '1', asset: BASE_USDC_ADDRESS, payTo: '0xBase' },
+      { scheme: 'exact', network: MONAD_NETWORK, amount: '1', asset: MONAD_USDC_ADDRESS, payTo: '0xMonad' },
+    ])
+    expect(accept?.network).toBe(MONAD_NETWORK)
+    expect(accept?.payTo).toBe('0xMonad')
+  })
+})
+
+describe('lib/market/x402 findAllSupportedUsdcAccepts', () => {
+  // A 402 fixture with 12 chains in `accepts` (mirrors the real
+  // agent402.tools/api/uuid response shape this fix is for): Base and Monad
+  // USDC (both supported) plus 10 other unsupported chains.
+  const OTHER_CHAINS = Array.from({ length: 10 }, (_, i) => ({
+    scheme: 'exact',
+    network: `eip155:${1000 + i}`,
+    amount: '99999',
+    asset: `0xOtherChainAsset${i}`,
+    payTo: '0xOther',
+  }))
+
+  it('returns Monad first, then Base, ignoring the other 10 unsupported chains — regardless of accepts order', () => {
+    const accepts = [
+      ...OTHER_CHAINS.slice(0, 5),
+      { scheme: 'exact', network: BASE_NETWORK, amount: '200000', asset: BASE_USDC_ADDRESS, payTo: '0xBasePay' },
+      ...OTHER_CHAINS.slice(5),
+      { scheme: 'exact', network: MONAD_NETWORK, amount: '10000', asset: MONAD_USDC_ADDRESS, payTo: '0xMonadPay' },
+    ]
+    const matches = findAllSupportedUsdcAccepts(accepts)
+    expect(matches).toHaveLength(2)
+    expect(matches[0]).toMatchObject({ network: MONAD_NETWORK, amount: '10000', payTo: '0xMonadPay' })
+    expect(matches[1]).toMatchObject({ network: BASE_NETWORK, amount: '200000', payTo: '0xBasePay' })
+  })
+
+  it('returns just the one supported network when only Base is present', () => {
+    const matches = findAllSupportedUsdcAccepts([
+      ...OTHER_CHAINS,
+      { scheme: 'exact', network: BASE_NETWORK, amount: '5000', asset: BASE_USDC_ADDRESS, payTo: '0xBasePay' },
+    ])
+    expect(matches).toEqual([{ scheme: 'exact', network: BASE_NETWORK, amount: '5000', asset: BASE_USDC_ADDRESS, payTo: '0xBasePay' }])
+  })
+
+  it('returns an empty array when none of the 12 chains are supported', () => {
+    expect(findAllSupportedUsdcAccepts(OTHER_CHAINS)).toEqual([])
   })
 })
 
@@ -123,6 +172,47 @@ describe('lib/market/probe probeCellService', () => {
     expect(result.status).toBe('failed')
   })
 
+  it('picks Monad as the main network and lists both networks when a 402 accepts 12 chains including Monad + Base USDC', async () => {
+    // Mirrors the real https://agent402.tools/api/uuid 402 response shape:
+    // accepts lists many chains; the service happens to put Base BEFORE
+    // Monad in the array, and 10 other unrelated chains around them.
+    const otherChains = Array.from({ length: 10 }, (_, i) => ({
+      scheme: 'exact',
+      network: `eip155:${2000 + i}`,
+      amount: '1',
+      asset: `0xOther${i}`,
+      payTo: '0xOther',
+    }))
+    const header = v2Header([
+      ...otherChains.slice(0, 4),
+      { scheme: 'exact', network: BASE_NETWORK, amount: '200000', asset: BASE_USDC_ADDRESS, payTo: '0xBasePay' },
+      ...otherChains.slice(4),
+      { scheme: 'exact', network: MONAD_NETWORK, amount: '10000', asset: MONAD_USDC_ADDRESS, payTo: '0xMonadPay' },
+    ])
+    const fetchImpl = vi.fn(async () => ({
+      status: 402,
+      headers: { get: (name: string) => (name === 'payment-required' ? header : null) },
+      text: async () => '',
+      arrayBuffer: async () => new ArrayBuffer(0),
+    }))
+    const result = await probeCellService({ url: 'https://agent402.tools/api/uuid', method: 'GET' }, { fetchImpl: fetchImpl as any })
+
+    expect(result.status).toBe('candidate')
+    // Main display network is Monad (Monad-priority market), even though
+    // Base appeared first in accepts and Monad appeared last.
+    expect(result.network).toBe(MONAD_NETWORK)
+    expect(result.price_usdc).toBe('0.01')
+    expect(result.payTo).toBe('0xMonadPay')
+    expect(result.asset?.toLowerCase()).toBe(MONAD_USDC_ADDRESS.toLowerCase())
+
+    expect(result.networks).toEqual([
+      { network: MONAD_NETWORK, price_usdc: '0.01', payTo: '0xMonadPay', asset: MONAD_USDC_ADDRESS },
+      { network: BASE_NETWORK, price_usdc: '0.2', payTo: '0xBasePay', asset: BASE_USDC_ADDRESS },
+    ])
+    // The other 10 chains never show up.
+    expect(result.networks?.some((n) => n.network.startsWith('eip155:2'))).toBe(false)
+  })
+
   it('marks failed when the response is not a 402', async () => {
     const fetchImpl = vi.fn(async () => ({
       status: 200,
@@ -132,6 +222,98 @@ describe('lib/market/probe probeCellService', () => {
     }))
     const result = await probeCellService({ url: 'https://svc.example.com/api', method: 'GET' }, { fetchImpl: fetchImpl as any })
     expect(result.status).toBe('failed')
+  })
+})
+
+describe('lib/market/service probeServiceAndEvidence — evidence grouped per network, status takes the best', () => {
+  const BASE_RPC_URL = NETWORK_RPC[BASE_NETWORK].rpcUrl
+  const savedEnvioToken = process.env.ENVIO_API_TOKEN
+
+  beforeEach(() => {
+    // Force the RPC short-window path (not HyperSync) regardless of the
+    // ambient environment, so this test is deterministic.
+    delete process.env.ENVIO_API_TOKEN
+  })
+  afterEach(() => {
+    if (savedEnvioToken !== undefined) process.env.ENVIO_API_TOKEN = savedEnvioToken
+  })
+
+  function rpcJsonResponse(body: unknown) {
+    return { status: 200, json: async () => body, text: async () => JSON.stringify(body) } as any
+  }
+
+  /**
+   * Drives probeCellService's 402 GET plus the RPC short-window evidence
+   * calls (getLatestBlockNumber + scanPayToEvidence) for BOTH networks in one
+   * fetchImpl: Monad's eth_getLogs comes back empty (0 payers -> candidate
+   * on its own), Base's eth_getLogs comes back with one non-self transfer (1
+   * payer -> verified on its own) — proving the aggregate is 'verified'
+   * (best-of-both) even though Monad alone would only be 'candidate'.
+   */
+  function buildFetchImpl(header: string) {
+    return vi.fn(async (url: any, init?: any) => {
+      const urlStr = String(url)
+      if (urlStr === 'https://svc.example.com/multi-chain') {
+        return {
+          status: 402,
+          headers: { get: (name: string) => (name === 'payment-required' ? header : null) },
+          text: async () => '',
+          arrayBuffer: async () => new ArrayBuffer(0),
+        } as any
+      }
+      const body = JSON.parse(init.body)
+      if (body.method === 'eth_blockNumber') {
+        return rpcJsonResponse({ jsonrpc: '2.0', id: body.id, result: '0x64' })
+      }
+      if (body.method === 'eth_getLogs') {
+        if (urlStr === BASE_RPC_URL) {
+          return rpcJsonResponse({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: [
+              {
+                topics: ['0xTransfer', `0x${'0'.repeat(24)}${'a'.repeat(40)}`, `0x${'0'.repeat(24)}${'b'.repeat(40)}`],
+                data: '0x',
+                blockNumber: '0x10',
+                transactionHash: '0xbasetx',
+              },
+            ],
+          })
+        }
+        return rpcJsonResponse({ jsonrpc: '2.0', id: body.id, result: [] }) // Monad: 0 transfers
+      }
+      if (body.method === 'eth_getBlockByNumber') {
+        return rpcJsonResponse({ jsonrpc: '2.0', id: body.id, result: { timestamp: '0x67aaaaaa' } })
+      }
+      throw new Error(`unexpected RPC call: ${body.method} -> ${urlStr}`)
+    })
+  }
+
+  it('Base verified + Monad candidate -> overall verified, networks grouped, top-level evidence mirrors the best (Base) network', async () => {
+    const header = v2Header([
+      { scheme: 'exact', network: BASE_NETWORK, amount: '200000', asset: BASE_USDC_ADDRESS, payTo: '0xBasePay' },
+      { scheme: 'exact', network: MONAD_NETWORK, amount: '10000', asset: MONAD_USDC_ADDRESS, payTo: '0xMonadPay' },
+    ])
+    const fetchImpl = buildFetchImpl(header)
+    const result = await probeServiceAndEvidence('https://svc.example.com/multi-chain', 'GET', {
+      fetchImpl: fetchImpl as any,
+    })
+
+    expect(result.status).toBe('verified')
+    expect(result.network).toBe(MONAD_NETWORK) // main display network stays Monad regardless of which network verified
+    expect(result.price_usdc).toBe('0.01')
+    expect(result.pay_to).toBe('0xMonadPay')
+
+    expect(result.networks).toHaveLength(2)
+    const monadEntry = result.networks?.find((n) => n.network === MONAD_NETWORK)
+    const baseEntry = result.networks?.find((n) => n.network === BASE_NETWORK)
+    expect(monadEntry?.evidence?.payers_7d).toBe(0)
+    expect(baseEntry?.evidence?.payers_7d).toBe(1)
+
+    // Top-level evidence mirrors the best (Base) network, not Monad — so a
+    // VERIFIED badge is never paired with a "0 payers" evidence number.
+    expect(result.evidence?.payers_7d).toBe(1)
+    expect(result.evidence?.last_tx).toBe('0xbasetx')
   })
 })
 

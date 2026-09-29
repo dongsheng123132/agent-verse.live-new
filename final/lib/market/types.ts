@@ -22,15 +22,27 @@ export interface SeedEntry {
   note: string
 }
 
+/** One supported network's own price/payTo/asset — see lib/market/x402.ts findAllSupportedUsdcAccepts. */
+export interface MarketNetworkOffer {
+  network: string
+  price_usdc: string | null
+  payTo: string | null
+  asset: string | null
+}
+
 export interface MarketEntry {
   name: string
   url: string
   method: string
   description: string | null
   category: string | null
+  /** Main display network (Monad-priority; see NETWORK_PRIORITY) — kept for backward compat. */
   network: string | null
+  /** Main display network's price — kept for backward compat. */
   price_usdc: string | null
   pay_to: string | null
+  /** Every network this service accepts USDC on (Monad first), for network badges. Null when never probed/no match. */
+  networks: MarketNetworkOffer[] | null
   status: MarketStatus
   evidence: MarketEvidence | null
   source: MarketSource

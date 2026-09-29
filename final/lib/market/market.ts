@@ -10,7 +10,8 @@ import { ensureSchema } from '../schema'
 import { fetchBazaarResources } from './bazaar'
 import { dedupeByOriginPath, originPathKey } from './bazaar'
 import { probeServiceAndEvidence } from './service'
-import type { MarketEntry, MarketEvidence, MarketStatus, SeedEntry } from './types'
+import { findAllSupportedUsdcAccepts, formatUsdcAmount, type X402Accept } from './x402'
+import type { MarketEntry, MarketEvidence, MarketNetworkOffer, MarketStatus, SeedEntry } from './types'
 // @ts-ignore -- resolveJsonModule; seed.json is a flat array, see lib/market/seed.json's own provenance notes per entry.
 import seedData from './seed.json'
 
@@ -109,6 +110,20 @@ export async function refreshOfficialServices(opts: { onlyStale?: boolean } = {}
   return { probed, failed }
 }
 
+/**
+ * Every supported network's price/payTo/asset (Monad first) derived straight
+ * from a row's raw `probe_accepts` — no separate DB column needed since
+ * probe_accepts already stores the full, unfiltered accepts array (see
+ * lib/market/service.ts / app/api/cells/update/route.js, both of which store
+ * `result.accepts` verbatim).
+ */
+function networksFromAccepts(accepts: unknown): MarketNetworkOffer[] | null {
+  if (!Array.isArray(accepts)) return null
+  const matches = findAllSupportedUsdcAccepts(accepts as X402Accept[])
+  if (matches.length === 0) return null
+  return matches.map((a) => ({ network: a.network, price_usdc: formatUsdcAmount(a.amount), payTo: a.payTo, asset: a.asset }))
+}
+
 function mapOfficialRow(r: any): MarketEntry {
   const evidence: MarketEvidence | null = r.evidence
     ? {
@@ -129,6 +144,7 @@ function mapOfficialRow(r: any): MarketEntry {
     network: r.network,
     price_usdc: r.price_usdc,
     pay_to: r.pay_to,
+    networks: networksFromAccepts(r.probe_accepts),
     status: (r.status as MarketStatus) ?? 'unprobed',
     evidence,
     source: 'official',
@@ -150,17 +166,22 @@ function mapListingRow(r: any): MarketEntry {
         window_blocks: r.evidence.window_blocks ?? 0,
       }
     : null
-  const accepts = Array.isArray(r.probe_accepts) ? r.probe_accepts : null
-  const firstAccept = accepts && accepts[0]
+  // probe_accepts is the raw, unfiltered 402 accepts array — pick the
+  // Monad-priority primary via findAllSupportedUsdcAccepts rather than
+  // blindly trusting accepts[0] (which could be any network the origin
+  // server happened to list first, supported or not).
+  const networks = networksFromAccepts(r.probe_accepts)
+  const primary = networks?.[0] ?? null
   return {
     name: r.title || `Cell (${r.x},${r.y})`,
     url: r.service_url,
     method: r.service_method || 'GET',
     description: r.service_desc,
     category: r.service_category,
-    network: firstAccept?.network ?? null,
-    price_usdc: firstAccept ? formatFromAccept(firstAccept) : null,
-    pay_to: firstAccept?.payTo ?? null,
+    network: primary?.network ?? null,
+    price_usdc: primary?.price_usdc ?? null,
+    pay_to: primary?.payTo ?? null,
+    networks,
     status: (r.probe_status as MarketStatus) ?? 'unprobed',
     evidence,
     source: 'listing',
@@ -169,17 +190,6 @@ function mapListingRow(r: any): MarketEntry {
     probed_at: r.probed_at,
     note: '',
   }
-}
-
-function formatFromAccept(accept: any): string | null {
-  // probe_accepts stores the raw X402Accept[]; amount is base units (6dp USDC).
-  const amount = accept?.amount
-  if (typeof amount !== 'string' || !/^\d+$/.test(amount)) return null
-  const value = BigInt(amount)
-  const million = BigInt(1_000_000)
-  const whole = value / million
-  const frac = (value % million).toString().padStart(6, '0').replace(/0+$/, '')
-  return frac ? `${whole}.${frac}` : `${whole}`
 }
 
 export interface MarketFilters {
@@ -203,7 +213,10 @@ function applyFilters(entries: MarketEntry[], filters: MarketFilters): MarketEnt
     )
   }
   if (filters.network) {
-    out = out.filter((e) => e.network === filters.network)
+    // Match either the primary network field or any of the service's
+    // supported networks (a service accepting both Base and Monad USDC
+    // should show up when filtering by either).
+    out = out.filter((e) => e.network === filters.network || (e.networks ?? []).some((n) => n.network === filters.network))
   }
   if (filters.max_price !== undefined && Number.isFinite(filters.max_price)) {
     out = out.filter((e) => e.price_usdc !== null && Number(e.price_usdc) <= (filters.max_price as number))

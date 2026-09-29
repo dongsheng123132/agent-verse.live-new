@@ -8,20 +8,38 @@
  * 缓存，形状对不上这里「单个格子保存后立即探测一次」的需求，所以没有照抄
  * market.ts 本身，只复用了它拆出来的 probe/rpc/hypersync/bazaar/x402/
  * concurrency 几个模块）。
+ *
+ * 2026-09-29：本市场是 Monad 优先市场，一个服务可能两条链都能付
+ * （probe.networks，见 probe.ts）。证据查询对每个支持的网络分别查（Monad 走
+ * 现有 Monad 路径；Base 路径不变，继续标注未实测——见 rpc.ts/hypersync.ts 头
+ * 注释），`networks` 按网络分组保留每条链自己的证据；总体 status 取「最好的
+ * 那条」——任一网络有 ≥1 笔「付款人 ≠ 收款地址」的付款就是 verified。顶层
+ * `evidence` 字段（向后兼容旧的单网络展示）取 payers_7d 最高的那个网络的证据
+ * （Monad 优先网络打平时赢），使它和顶层 status 互相印证，不会出现「显示
+ * VERIFIED 但 evidence 却是 0 payers」的自相矛盾。
  */
 import { probeCellService } from './probe'
+import type { ProbeNetworkResult } from './probe'
 import { scanPayToEvidence, getLatestBlockNumber, NETWORK_RPC } from './rpc'
 import { scanPayToViaHyperSync } from './hypersync'
 import { installMarketOutboundProxyIfConfigured } from './net-proxy'
 import type { X402Accept } from './x402'
 import type { MarketEvidence, MarketStatus } from './types'
 
+/** 一个受支持网络的报价 + 该网络自己的链上证据（见文件头注释「evidence 按网络分组」）。 */
+export interface NetworkEvidenceResult extends ProbeNetworkResult {
+  evidence: MarketEvidence | null
+}
+
 export interface ServiceProbeResult {
   status: MarketStatus
   accepts: X402Accept[] | null
+  /** 主显示网络（Monad 优先）的字段——向后兼容旧的单网络展示。 */
   network: string | null
   price_usdc: string | null
   pay_to: string | null
+  /** 每个受支持网络各自的报价 + 证据；只有 candidate/verified 时非 null。 */
+  networks: NetworkEvidenceResult[] | null
   evidence: MarketEvidence | null
   probed_at: string | null
   note: string
@@ -105,21 +123,45 @@ export async function probeServiceAndEvidence(
   installMarketOutboundProxyIfConfigured()
   const probe = await probeCellService({ url, method }, { fetchImpl: opts.fetchImpl })
 
-  if (probe.status !== 'candidate' || !probe.network || !probe.payTo) {
+  if (probe.status !== 'candidate' || !probe.network || !probe.payTo || !probe.networks || probe.networks.length === 0) {
     return {
       status: probe.status,
       accepts: probe.accepts,
       network: probe.network,
       price_usdc: probe.price_usdc,
       pay_to: probe.payTo,
+      networks: null,
       evidence: null,
       probed_at: probe.probedAt,
       note: probe.note,
     }
   }
 
-  const { evidence, note: evNote } = await gatherEvidence(probe.network, probe.payTo, opts)
-  const status: MarketStatus = evidence && evidence.payers_7d >= 1 ? 'verified' : 'candidate'
+  // Query each supported network's own evidence separately (Monad via the
+  // existing Monad path, Base via the existing — still-unverified-in-real-
+  // traffic — Base path), keyed to that network's own payTo (accepts can, in
+  // principle, list a different payTo per network).
+  const perNetwork = await Promise.all(
+    probe.networks.map(async (net): Promise<{ result: NetworkEvidenceResult; note: string }> => {
+      if (!net.payTo) {
+        return { result: { ...net, evidence: null }, note: `${net.network}: 无 payTo，跳过证据查询` }
+      }
+      const { evidence, note } = await gatherEvidence(net.network, net.payTo, opts)
+      return { result: { ...net, evidence }, note: note ? `${net.network}: ${note}` : '' }
+    })
+  )
+
+  const networks = perNetwork.map((n) => n.result)
+  // "最好的那条"：任一网络有 >=1 个非自转付款人就整体 verified。
+  const status: MarketStatus = networks.some((n) => n.evidence && n.evidence.payers_7d >= 1) ? 'verified' : 'candidate'
+  // 顶层 evidence 字段取 payers_7d 最高的网络（Monad 优先网络打平时赢，因为
+  // probe.networks 本身已经是 Monad-优先排序，reduce 用 > 而非 >= 保留先出现
+  // 的那个），让它和上面算出的 status 互相印证。
+  const bestNetwork = networks.reduce<NetworkEvidenceResult | null>((best, cur) => {
+    const curPayers = cur.evidence?.payers_7d ?? -1
+    const bestPayers = best?.evidence?.payers_7d ?? -1
+    return curPayers > bestPayers ? cur : best
+  }, null)
 
   return {
     status,
@@ -127,8 +169,9 @@ export async function probeServiceAndEvidence(
     network: probe.network,
     price_usdc: probe.price_usdc,
     pay_to: probe.payTo,
-    evidence,
+    networks,
+    evidence: bestNetwork?.evidence ?? null,
     probed_at: probe.probedAt,
-    note: [probe.note, evNote].filter(Boolean).join(' '),
+    note: [probe.note, ...perNetwork.map((n) => n.note)].filter(Boolean).join(' '),
   }
 }

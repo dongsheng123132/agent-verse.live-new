@@ -11,14 +11,48 @@ const EXPLORER_TX_URL: Record<string, (tx: string) => string> = {
 }
 const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
 
+/**
+ * Same two networks/USDC addresses as lib/market/x402.ts's NETWORK_USDC /
+ * NETWORK_PRIORITY — duplicated here (not imported) because this is a
+ * `'use client'` component and lib/market/x402.ts pulls in server-only
+ * '../x402-flow' (next/server, @x402/core/server), which can't be bundled
+ * for the browser. Monad-first order mirrors the market's "Monad 优先"
+ * priority (2026-09-29).
+ */
+const MONAD_USDC_ADDRESS_CLIENT = '0x754704Bc059F8C67012fEd69BC8A327a5aafb603'
+const BASE_USDC_ADDRESS_CLIENT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+const NETWORK_USDC_CLIENT: Record<string, string> = { 'eip155:143': MONAD_USDC_ADDRESS_CLIENT, 'eip155:8453': BASE_USDC_ADDRESS_CLIENT }
+const NETWORK_PRIORITY_CLIENT = ['eip155:143', 'eip155:8453']
+
+type ProbeAcceptEntry = NonNullable<Cell['probe_accepts']>[number]
+
+/** Every network `accepts` supports USDC on (Monad first), matching lib/market/x402.ts's findAllSupportedUsdcAccepts logic. */
+function deriveNetworkOffers(accepts: Cell['probe_accepts']): ProbeAcceptEntry[] {
+  if (!accepts) return []
+  const byNetwork = new Map<string, ProbeAcceptEntry>()
+  for (const a of accepts) {
+    const usdc = NETWORK_USDC_CLIENT[a.network]
+    if (usdc && typeof a.asset === 'string' && a.asset.toLowerCase() === usdc.toLowerCase() && !byNetwork.has(a.network)) {
+      byNetwork.set(a.network, a)
+    }
+  }
+  const out: ProbeAcceptEntry[] = []
+  for (const network of NETWORK_PRIORITY_CLIENT) {
+    const a = byNetwork.get(network)
+    if (a) out.push(a)
+  }
+  return out
+}
+
 /** "服务卡": name/price/network/verified state/7d payers/last-tx link + "Copy for AI" (MoneySwitch paid_fetch prompt). */
 const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
   const [copied, setCopied] = useState(false)
   if (!cell.service_url) return null
 
-  const accept = cell.probe_accepts && cell.probe_accepts[0]
-  const priceUsdc = accept?.amount && /^\d+$/.test(accept.amount) ? (Number(accept.amount) / 1_000_000).toFixed(2) : null
-  const network = cell.probe_accepts?.[0]?.network || null
+  const offers = deriveNetworkOffers(cell.probe_accepts)
+  const primary = offers[0] ?? null
+  const priceUsdc = primary?.amount && /^\d+$/.test(primary.amount) ? (Number(primary.amount) / 1_000_000).toFixed(2) : null
+  const network = primary?.network || null
   const status = cell.probe_status || 'unprobed'
   const isVerified = status === 'verified'
   const explorerUrl = network && cell.evidence?.last_tx ? EXPLORER_TX_URL[network]?.(cell.evidence.last_tx) : null
@@ -48,8 +82,16 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
         {priceUsdc && <span className="text-white text-sm font-bold font-mono">${priceUsdc}</span>}
       </div>
       {cell.service_desc && <p className="text-gray-400 text-[11px] mb-2">{cell.service_desc}</p>}
-      <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500 font-mono mb-2">
-        <span>{network ? NETWORK_LABEL[network] || network : 'network unknown'}</span>
+      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500 font-mono mb-2">
+        {offers.length > 0 ? (
+          offers.map((o) => (
+            <span key={o.network} className="px-1 py-0.5 rounded border border-[#333]">
+              {NETWORK_LABEL[o.network] || o.network}
+            </span>
+          ))
+        ) : (
+          <span>network unknown</span>
+        )}
         {cell.evidence && <span>· {cell.evidence.payers_7d} payers / {cell.evidence.transfers_7d} tx</span>}
         {explorerUrl && (
           <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">

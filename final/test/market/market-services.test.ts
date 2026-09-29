@@ -1,5 +1,6 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestDb, type TestDb } from '../helpers/pglite-db'
+import { BASE_USDC_ADDRESS } from '../../lib/market/x402'
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
 vi.mock('../../lib/db.js', () => ({
@@ -142,7 +143,9 @@ describe('lib/market/market getMarketServices — cell listings', () => {
        VALUES (5050, 50, 50, '0xSeller', 'My Shop', 'https://myshop.example.com/api', 'GET', 'demo listing', 'data', 'verified',
                $1, $2, NOW(), 'blk_50_50_1x1', 50, 50)`,
       [
-        JSON.stringify([{ scheme: 'exact', network: 'eip155:8453', amount: '100000', asset: '0xUsdcBase', payTo: '0xSeller' }]),
+        // asset must be the real Base USDC contract address — networksFromAccepts()
+        // (see lib/market/market.ts) now validates it, not just accepts[0] blindly.
+        JSON.stringify([{ scheme: 'exact', network: 'eip155:8453', amount: '100000', asset: BASE_USDC_ADDRESS, payTo: '0xSeller' }]),
         JSON.stringify({ payers_7d: 1, transfers_7d: 1, last_tx: '0xshoptx', last_at: NOW, source: 'rpc-short-window', window_blocks: 6000 }),
       ]
     )
@@ -154,6 +157,7 @@ describe('lib/market/market getMarketServices — cell listings', () => {
     expect(listing?.status).toBe('verified')
     expect(listing?.network).toBe('eip155:8453')
     expect(listing?.price_usdc).toBe('0.1')
+    expect(listing?.networks).toEqual([{ network: 'eip155:8453', price_usdc: '0.1', payTo: '0xSeller', asset: BASE_USDC_ADDRESS }])
   })
 
   it('a cell listing is never re-probed by getMarketServices (owner controls when it re-probes, via PUT)', async () => {

@@ -10,8 +10,11 @@
  *    自己 seed.json 里手工维护的地址；这里的地址是格子主人自己填的，必须防
  *    SSRF（MONAD-MARKET-SPEC.md P2）。
  *  - `findMonadUsdcAccept` 换成 `findSupportedUsdcAccept`（Base 或 Monad 都算）。
+ *  - 2026-09-29：新增 `networks` 字段——一个服务可能两条链都能付，`network`/
+ *    `price_usdc`/`payTo`/`asset` 只是其中的「主显示网络」（Monad 优先），
+ *    `networks` 把 accepts 里每个受支持网络各一条的报价都保留下来。
  */
-import { findSupportedUsdcAccept, formatUsdcAmount, parseX402Response, type X402Accept } from './x402'
+import { findAllSupportedUsdcAccepts, formatUsdcAmount, parseX402Response, type X402Accept } from './x402'
 import { assertPublicHttpsUrl } from './ssrf'
 import { mapWithConcurrency } from './concurrency'
 
@@ -20,13 +23,24 @@ export interface ProbeTarget {
   method: string
 }
 
+/** 一个受支持网络的报价（見 findAllSupportedUsdcAccepts）。 */
+export interface ProbeNetworkResult {
+  network: string
+  price_usdc: string | null
+  payTo: string | null
+  asset: string | null
+}
+
 export interface ProbeResult {
   /** 'failed' 覆盖了原版的 ssrf/网络错误/非 402/无匹配 accept 等所有失败情况。 */
   status: 'candidate' | 'unprobed' | 'failed'
+  /** 主显示网络（networks[0]，Monad 优先）的价格/网络/资产/收款地址——向后兼容旧的单网络字段。 */
   price_usdc: string | null
   network: string | null
   asset: string | null
   payTo: string | null
+  /** accepts 中本市场支持的所有网络各一条报价，按 Monad 优先排序；只有 candidate 时非 null。 */
+  networks: ProbeNetworkResult[] | null
   accepts: X402Accept[] | null
   probedAt: string | null
   note: string
@@ -38,11 +52,11 @@ export interface ProbeOptions {
 }
 
 function unprobed(note: string, probedAt: string | null = null): ProbeResult {
-  return { status: 'unprobed', price_usdc: null, network: null, asset: null, payTo: null, accepts: null, probedAt, note }
+  return { status: 'unprobed', price_usdc: null, network: null, asset: null, payTo: null, networks: null, accepts: null, probedAt, note }
 }
 
 function failed(note: string, probedAt: string | null): ProbeResult {
-  return { status: 'failed', price_usdc: null, network: null, asset: null, payTo: null, accepts: null, probedAt, note }
+  return { status: 'failed', price_usdc: null, network: null, asset: null, payTo: null, networks: null, accepts: null, probedAt, note }
 }
 
 /** 探测单个 GET 目标。调用方负责先过滤掉非 GET 的条目——这个函数本身不检查 method，直接发 GET。 */
@@ -82,21 +96,30 @@ export async function probeGetTarget(url: string, opts: ProbeOptions = {}): Prom
     return failed('402 响应无法解析（既不是合法的 v2 PAYMENT-REQUIRED 头，也不是合法的 v1 body）', probedAt)
   }
 
-  const accept = findSupportedUsdcAccept(parsed.accepts)
-  if (!accept) {
-    const networks = parsed.accepts.map((a) => a.network).join(', ') || '(空)'
-    return failed(`402 accepts 里没有 eip155:143/8453 + 对应链 USDC 的组合（accepts 的 network 有：${networks}）`, probedAt)
+  const matches = findAllSupportedUsdcAccepts(parsed.accepts)
+  if (matches.length === 0) {
+    const seenNetworks = parsed.accepts.map((a) => a.network).join(', ') || '(空)'
+    return failed(`402 accepts 里没有 eip155:143/8453 + 对应链 USDC 的组合（accepts 的 network 有：${seenNetworks}）`, probedAt)
   }
+
+  const networks: ProbeNetworkResult[] = matches.map((a) => ({
+    network: a.network,
+    price_usdc: formatUsdcAmount(a.amount),
+    payTo: a.payTo,
+    asset: a.asset,
+  }))
+  const primary = networks[0]
 
   return {
     status: 'candidate',
-    price_usdc: formatUsdcAmount(accept.amount),
-    network: accept.network,
-    asset: accept.asset,
-    payTo: accept.payTo,
+    price_usdc: primary.price_usdc,
+    network: primary.network,
+    asset: primary.asset,
+    payTo: primary.payTo,
+    networks,
     accepts: parsed.accepts,
     probedAt,
-    note: `探测到 402，accepts 命中 ${accept.network} + USDC。`,
+    note: `探测到 402，accepts 命中 ${networks.map((n) => n.network).join(' + ')} + USDC（主网络 ${primary.network}）。`,
   }
 }
 
