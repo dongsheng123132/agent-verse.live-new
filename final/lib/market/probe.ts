@@ -1,0 +1,119 @@
+/**
+ * 只读 402 探测：对 method=GET 的条目发 GET（不带付款、不带任何签名头），
+ * 解析响应，判断是否 candidate。绝不发起付款，绝不对非 GET 条目发请求
+ * （POST/PUT 等一律跳过，标 unprobed）。
+ *
+ * 改写自 C:\1mineyswitch\repos\lantern-city\service\src\probe.ts（不跨仓库
+ * import）。区别：
+ *  - 发请求前先过 lib/market/ssrf.ts 的 SSRF 检查（拒绝私网/环回/链路本地/
+ *    元数据地址，解析 DNS 后检查）——原版没有这一步，因为 lantern-city 只探测
+ *    自己 seed.json 里手工维护的地址；这里的地址是格子主人自己填的，必须防
+ *    SSRF（MONAD-MARKET-SPEC.md P2）。
+ *  - `findMonadUsdcAccept` 换成 `findSupportedUsdcAccept`（Base 或 Monad 都算）。
+ */
+import { findSupportedUsdcAccept, formatUsdcAmount, parseX402Response, type X402Accept } from './x402'
+import { assertPublicHttpsUrl } from './ssrf'
+import { mapWithConcurrency } from './concurrency'
+
+export interface ProbeTarget {
+  url: string
+  method: string
+}
+
+export interface ProbeResult {
+  /** 'failed' 覆盖了原版的 ssrf/网络错误/非 402/无匹配 accept 等所有失败情况。 */
+  status: 'candidate' | 'unprobed' | 'failed'
+  price_usdc: string | null
+  network: string | null
+  asset: string | null
+  payTo: string | null
+  accepts: X402Accept[] | null
+  probedAt: string | null
+  note: string
+}
+
+export interface ProbeOptions {
+  timeoutMs?: number
+  fetchImpl?: typeof fetch
+}
+
+function unprobed(note: string, probedAt: string | null = null): ProbeResult {
+  return { status: 'unprobed', price_usdc: null, network: null, asset: null, payTo: null, accepts: null, probedAt, note }
+}
+
+function failed(note: string, probedAt: string | null): ProbeResult {
+  return { status: 'failed', price_usdc: null, network: null, asset: null, payTo: null, accepts: null, probedAt, note }
+}
+
+/** 探测单个 GET 目标。调用方负责先过滤掉非 GET 的条目——这个函数本身不检查 method，直接发 GET。 */
+export async function probeGetTarget(url: string, opts: ProbeOptions = {}): Promise<ProbeResult> {
+  const timeoutMs = opts.timeoutMs ?? 10_000
+  const fetchImpl = opts.fetchImpl ?? fetch
+  const probedAt = new Date().toISOString()
+
+  const ssrf = await assertPublicHttpsUrl(url)
+  if (!ssrf.ok) {
+    return failed(`SSRF 检查未通过：${ssrf.reason}`, probedAt)
+  }
+
+  let res: Response
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      res = await fetchImpl(url, { method: 'GET', signal: controller.signal, redirect: 'follow' })
+    } finally {
+      clearTimeout(timer)
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return failed(`探测失败（网络错误或超时 ${timeoutMs}ms）：${msg}`, probedAt)
+  }
+
+  if (res.status !== 402) {
+    await res.arrayBuffer().catch(() => undefined)
+    return failed(`GET 未返回 402（实际 status=${res.status}）`, probedAt)
+  }
+
+  const headerValue = res.headers.get('payment-required')
+  const bodyText = await res.text().catch(() => '')
+  const parsed = parseX402Response(headerValue, bodyText)
+  if (!parsed) {
+    return failed('402 响应无法解析（既不是合法的 v2 PAYMENT-REQUIRED 头，也不是合法的 v1 body）', probedAt)
+  }
+
+  const accept = findSupportedUsdcAccept(parsed.accepts)
+  if (!accept) {
+    const networks = parsed.accepts.map((a) => a.network).join(', ') || '(空)'
+    return failed(`402 accepts 里没有 eip155:143/8453 + 对应链 USDC 的组合（accepts 的 network 有：${networks}）`, probedAt)
+  }
+
+  return {
+    status: 'candidate',
+    price_usdc: formatUsdcAmount(accept.amount),
+    network: accept.network,
+    asset: accept.asset,
+    payTo: accept.payTo,
+    accepts: parsed.accepts,
+    probedAt,
+    note: `探测到 402，accepts 命中 ${accept.network} + USDC。`,
+  }
+}
+
+/** 探测单个格子服务：method !== 'GET' 直接标 unprobed（绝不对 POST 服务发请求）。 */
+export async function probeCellService(target: ProbeTarget, opts: ProbeOptions = {}): Promise<ProbeResult> {
+  if (target.method !== 'GET') {
+    return unprobed(`非 GET 方法（${target.method}），按规则不探测，绝不发起付款或 POST`)
+  }
+  return probeGetTarget(target.url, opts)
+}
+
+export interface ProbeAllOptions extends ProbeOptions {
+  concurrency?: number
+}
+
+/** 批量探测（P3 市场聚合用）：并发受 `concurrency` 限制（默认 4）。 */
+export async function probeAll(targets: ProbeTarget[], opts: ProbeAllOptions = {}): Promise<ProbeResult[]> {
+  const concurrency = opts.concurrency ?? 4
+  return mapWithConcurrency(targets, concurrency, (target) => probeCellService(target, opts))
+}
