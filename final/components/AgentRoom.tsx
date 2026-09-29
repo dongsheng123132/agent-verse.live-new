@@ -7,7 +7,7 @@ import { useLang } from '../lib/LangContext';
 /** Best-effort tx explorer links — not verified against a real tx at write time (see docs/MONAD-MARKET-SPEC.md P2 deviations). */
 const EXPLORER_TX_URL: Record<string, (tx: string) => string> = {
   'eip155:8453': (tx) => `https://basescan.org/tx/${tx}`,
-  'eip155:143': (tx) => `https://explorer.monad.xyz/tx/${tx}`,
+  'eip155:143': (tx) => `https://monadvision.com/tx/${tx}`,
 }
 const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
 
