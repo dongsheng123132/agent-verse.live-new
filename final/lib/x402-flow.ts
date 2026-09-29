@@ -16,7 +16,6 @@ import type {
   FacilitatorClient,
 } from '@x402/core/server'
 import { registerExactEvmScheme } from '@x402/evm/exact/server'
-import { NULL_ADDRESS } from './constants'
 import { payerFromPaymentPayload } from './parse-payment'
 
 /**
@@ -34,8 +33,11 @@ export const BASE_NETWORK = 'eip155:8453'
 export const MONAD_NETWORK = 'eip155:143'
 export const MONAD_USDC_ADDRESS = '0x754704Bc059F8C67012fEd69BC8A327a5aafb603'
 export const MONAD_FACILITATOR_URL = process.env.MONAD_FACILITATOR_URL || 'https://x402-facilitator.molandak.org'
-export const BASE_TREASURY_ADDRESS = process.env.TREASURY_ADDRESS || NULL_ADDRESS
-export const MONAD_TREASURY_ADDRESS = process.env.MONAD_TREASURY_ADDRESS || '0x4eCf92bAb524039Fc4027994b9D88C2DB2Ee05E6'
+// One receiving address for both chains (owner's decision 2026-09-29). The old
+// Base-only TREASURY_ADDRESS is intentionally no longer read.
+export const PAY_TO_ADDRESS = process.env.PAY_TO_ADDRESS || '0x4eCf92bAb524039Fc4027994b9D88C2DB2Ee05E6'
+export const BASE_TREASURY_ADDRESS = PAY_TO_ADDRESS
+export const MONAD_TREASURY_ADDRESS = PAY_TO_ADDRESS
 
 export type FacilitatorPair = { base: FacilitatorClient; monad: FacilitatorClient }
 export type FacilitatorClientFactory = () => Promise<FacilitatorPair>

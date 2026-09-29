@@ -81,6 +81,8 @@ describe('GET /api/cells/purchase — 402 accepts both networks', () => {
     const monad = decoded.accepts.find((a: any) => a.network === MONAD_NETWORK)
     expect(base.payTo).toBe(BASE_TREASURY_ADDRESS)
     expect(monad.payTo).toBe(MONAD_TREASURY_ADDRESS)
+    expect(base.payTo).toBe('0x4eCf92bAb524039Fc4027994b9D88C2DB2Ee05E6')
+    expect(monad.payTo).toBe('0x4eCf92bAb524039Fc4027994b9D88C2DB2Ee05E6')
   })
 })
 
