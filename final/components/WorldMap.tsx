@@ -327,6 +327,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     }
                 }
 
+                // x402 service market: verified cells get a lantern-style warm glow
+                // (reuses the same animated glowBlocks pass as brand blocks, just with
+                // an amber "lantern" color instead of the cell's own brand color);
+                // candidate cells get a small dim marker (MONAD-MARKET-SPEC.md P2).
+                if (cell?.service_url && cellSize >= 4) {
+                    if (cell.probe_status === 'verified') {
+                        glowBlocks.push({ x: screenX, y: screenY, w: drawW, h: drawH, color: '#fbbf24' });
+                    } else if (cell.probe_status === 'candidate') {
+                        const dotR = Math.max(1.5, Math.min(4, cellSize * 0.15));
+                        ctx.fillStyle = 'rgba(168, 85, 247, 0.5)';
+                        ctx.beginPath();
+                        ctx.arc(screenX + drawW - dotR - 1, screenY + dotR + 1, dotR, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
                 // Selection Outline
                 let blockSelected = selectedIds.has(`${c},${r}`);
                 if (!blockSelected && (bw > 1 || bh > 1)) {

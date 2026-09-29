@@ -1,8 +1,75 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
-import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers, Sparkles, Zap } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
+
+/** Best-effort tx explorer links — not verified against a real tx at write time (see docs/MONAD-MARKET-SPEC.md P2 deviations). */
+const EXPLORER_TX_URL: Record<string, (tx: string) => string> = {
+  'eip155:8453': (tx) => `https://basescan.org/tx/${tx}`,
+  'eip155:143': (tx) => `https://explorer.monad.xyz/tx/${tx}`,
+}
+const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
+
+/** "服务卡": name/price/network/verified state/7d payers/last-tx link + "Copy for AI" (MoneySwitch paid_fetch prompt). */
+const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
+  const [copied, setCopied] = useState(false)
+  if (!cell.service_url) return null
+
+  const accept = cell.probe_accepts && cell.probe_accepts[0]
+  const priceUsdc = accept?.amount && /^\d+$/.test(accept.amount) ? (Number(accept.amount) / 1_000_000).toFixed(2) : null
+  const network = cell.probe_accepts?.[0]?.network || null
+  const status = cell.probe_status || 'unprobed'
+  const isVerified = status === 'verified'
+  const explorerUrl = network && cell.evidence?.last_tx ? EXPLORER_TX_URL[network]?.(cell.evidence.last_tx) : null
+
+  const copyForAi = () => {
+    const maxPrice = priceUsdc ? `$${priceUsdc}` : '$0.10'
+    const prompt = [
+      `Use MoneySwitch to call this x402 service:`,
+      `  npx moneyswitch paid_fetch ${cell.service_url} --max-price ${maxPrice}`,
+      `Network: ${network ? NETWORK_LABEL[network] || network : 'see 402 response'}. Status: ${status}.`,
+    ].join('\n')
+    navigator.clipboard.writeText(prompt)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className={`mb-4 rounded-lg border p-3 ${isVerified ? 'border-purple-500/50 bg-purple-950/20' : 'border-[#333] bg-[#0a0a0a]'}`}>
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
+        <div className="flex items-center gap-1.5">
+          {isVerified ? <Sparkles size={13} className="text-purple-400" /> : <Zap size={13} className="text-amber-400" />}
+          <span className="text-xs font-mono font-bold text-white">{cell.title || 'x402 Service'}</span>
+          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${isVerified ? 'border-purple-500/50 text-purple-300 bg-purple-900/30' : status === 'candidate' ? 'border-amber-600/40 text-amber-400 bg-amber-900/20' : 'border-[#333] text-gray-500'}`}>
+            {status.toUpperCase()}
+          </span>
+        </div>
+        {priceUsdc && <span className="text-white text-sm font-bold font-mono">${priceUsdc}</span>}
+      </div>
+      {cell.service_desc && <p className="text-gray-400 text-[11px] mb-2">{cell.service_desc}</p>}
+      <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500 font-mono mb-2">
+        <span>{network ? NETWORK_LABEL[network] || network : 'network unknown'}</span>
+        {cell.evidence && <span>· {cell.evidence.payers_7d} payers / {cell.evidence.transfers_7d} tx</span>}
+        {explorerUrl && (
+          <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
+            <ExternalLink size={9} /> last tx
+          </a>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <a href={cell.service_url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 text-blue-400 text-[10px] font-mono hover:underline truncate">
+          {cell.service_url}
+        </a>
+        <button onClick={copyForAi}
+          className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono ${copied ? 'border-green-600 text-green-400 bg-green-900/20' : 'border-[#333] text-gray-300 hover:text-white hover:border-gray-500'}`}>
+          {copied ? <Check size={10} /> : <Copy size={10} />}
+          {copied ? 'Copied' : 'Copy for AI'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 /** Extract first YouTube or Bilibili embed URL from markdown (whole-line match). */
 function extractVideoEmbed(markdown?: string): string | null {
@@ -119,6 +186,8 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                 )}
                             </div>
                         </div>
+
+                        {cell.service_url && <ServiceCard cell={cell} />}
 
                         {cell.is_for_sale && cell.price_usdc != null && cell.price_usdc > 0 && (
                             <div className="mb-4 bg-amber-950/30 border border-amber-600/40 rounded-lg p-3">
