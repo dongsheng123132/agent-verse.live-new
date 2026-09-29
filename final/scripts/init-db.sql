@@ -117,3 +117,24 @@ ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS cells_json JSONB;
 
 -- Resale: index for listing cells for sale
 CREATE INDEX IF NOT EXISTS idx_grid_cells_for_sale ON grid_cells (is_for_sale) WHERE is_for_sale = true;
+
+-- x402 dual-chain settlement (Base + Monad): which network/payer actually settled an order
+ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS network TEXT;
+ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS payer_address TEXT;
+
+-- Payment-verified-but-not-yet-settled hold on a cell. Prevents two concurrent
+-- x402 payments from both being accepted for the same cell: the reservation
+-- INSERT (ON CONFLICT (x,y) DO NOTHING) is the single atomic point that decides
+-- who wins a race; the loser's payment is never settled. Rows are short-lived
+-- and opportunistically swept (expires_at < now()) by callers, not a cron job.
+CREATE TABLE IF NOT EXISTS cell_reservations (
+  x          INTEGER NOT NULL,
+  y          INTEGER NOT NULL,
+  nonce      TEXT,
+  payer      TEXT,
+  network    TEXT,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT cell_reservations_xy_unique UNIQUE (x, y)
+);
+CREATE INDEX IF NOT EXISTS idx_cell_reservations_expires ON cell_reservations (expires_at);

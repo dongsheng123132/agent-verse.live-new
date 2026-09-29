@@ -6,13 +6,13 @@
   "scripts": {
     "dev": "next dev -p 3005",
     "build": "next build",
-    "start": "next start -p 3005"
+    "start": "next start -p 3005",
+    "test": "vitest run"
   },
   "dependencies": {
     "@coinbase/x402": "^2.1.0",
-    "@x402/core": "^2.3.1",
-    "@x402/evm": "^2.3.1",
-    "@x402/next": "^2.3.0",
+    "@x402/core": "2.27.0",
+    "@x402/evm": "2.27.0",
     "lucide-react": "^0.469.0",
     "next": "14.2.15",
     "pg": "^8.12.0",
@@ -20,8 +20,11 @@
     "react-dom": "18.2.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^20",
     "@types/react": "^18",
-    "typescript": "~5.8"
+    "typescript": "~5.8",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
   }
 }

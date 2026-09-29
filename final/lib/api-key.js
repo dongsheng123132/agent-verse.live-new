@@ -6,9 +6,12 @@ export function generateApiKeyRaw() {
   return `gk_${raw}`
 }
 
-function hashKey(key) {
+export function hashApiKey(key) {
   return crypto.createHash('sha256').update(key).digest('hex')
 }
+
+// Back-compat local alias for the rest of this file.
+const hashKey = hashApiKey
 
 export async function generateApiKey(x, y) {
   const plaintext = generateApiKeyRaw()
