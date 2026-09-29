@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
 import { PRICE_PER_CELL } from '../../../../app/types'
+import { ensureSchema } from '../../../../lib/schema'
 import {
   getSharedX402Server,
   getSharedX402Error,
@@ -38,6 +39,11 @@ export async function regenHandler(req: NextRequest) {
   }
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: 'database_unavailable' }, { status: 503 })
+  }
+  try {
+    await ensureSchema()
+  } catch (e: any) {
+    return NextResponse.json({ error: 'schema_unavailable', message: e?.message }, { status: 503 })
   }
 
   // ---- Step 1: does this cell even have an owner? No payment ask otherwise. ----

@@ -5,7 +5,7 @@ import { PGlite } from '@electric-sql/pglite'
 import type { Transaction } from '@electric-sql/pglite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const SCHEMA_SQL = readFileSync(path.join(__dirname, '..', '..', 'scripts', 'init-db.sql'), 'utf8')
+export const SCHEMA_SQL = readFileSync(path.join(__dirname, '..', '..', 'scripts', 'init-db.sql'), 'utf8')
 
 export interface PgliteClientLike {
   query: (text: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount: number }>
@@ -17,10 +17,15 @@ export interface PgliteClientLike {
  * Used to replace lib/db.js wholesale via `vi.mock` in tests so every module
  * that imports it (routes, api-key.js, events.js, referral.js) transparently
  * runs against this instance without any production code changes.
+ *
+ * `schemaSql` defaults to the full current scripts/init-db.sql; pass an
+ * alternate schema (e.g. an older snapshot missing recently-added
+ * columns/tables) to test migration/backfill logic like lib/schema.ts's
+ * ensureSchema() against a database that doesn't have those objects yet.
  */
-export async function createTestDb() {
+export async function createTestDb(schemaSql: string = SCHEMA_SQL) {
   const pglite = new PGlite()
-  await pglite.exec(SCHEMA_SQL)
+  await pglite.exec(schemaSql)
 
   async function dbQuery(text: string, params?: unknown[]) {
     const res = await pglite.query<Record<string, any>>(text, params)

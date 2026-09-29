@@ -38,7 +38,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     );
     const aiPrompt = count === 1
         ? `Buy a grid cell on AgentVerse:\n\n${x402Cmds[0]}\n\nAfter purchase, customize your cell:\n${origin}/skill.md`
-        : `Buy ${count} grid cells on AgentVerse (use Coinbase Commerce on the site, or run x402 for each cell):\n\n${x402Cmds.join('\n\n')}\n\n${origin}/skill.md`;
+        : `Buy ${count} grid cells on AgentVerse. x402 now supports both single-cell and whole-block purchases (Base or Monad): pay per cell below, or POST all ${count} cells at once to ${origin}/api/cells/bulk-purchase in one x402 payment.\n\n${x402Cmds.join('\n\n')}\n\n${origin}/skill.md`;
 
     const handleCopyForAI = () => {
         navigator.clipboard.writeText(aiPrompt);
@@ -98,7 +98,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                     </div>
                     {count > 1 && (
                         <div className="bg-yellow-900/20 border border-yellow-800/40 rounded px-2 py-1.5 mb-2">
-                            <p className="text-yellow-500 text-[10px] font-mono">x402 only supports 1 cell per request. For {count} cells, use the Coinbase Commerce button above.</p>
+                            <p className="text-yellow-500 text-[10px] font-mono">x402 now supports both single-cell and whole-block purchases, on Base or Monad — POST all {count} cells at once to /api/cells/bulk-purchase for one payment (the example below shows per-cell commands).</p>
                         </div>
                     )}
                     <pre className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors mb-2 max-h-36 overflow-y-auto">

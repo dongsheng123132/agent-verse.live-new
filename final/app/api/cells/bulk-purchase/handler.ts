@@ -4,6 +4,7 @@ import { generateApiKeyRaw, hashApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
+import { ensureSchema } from '../../../../lib/schema'
 import {
   getSharedX402Server,
   getSharedX402Error,
@@ -143,6 +144,11 @@ export async function bulkPurchaseHandler(req: NextRequest) {
   }
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: 'database_unavailable' }, { status: 503 })
+  }
+  try {
+    await ensureSchema()
+  } catch (e: any) {
+    return NextResponse.json({ error: 'schema_unavailable', message: e?.message }, { status: 503 })
   }
 
   // ---- Step 1: reject before anyone is asked to pay. ----
