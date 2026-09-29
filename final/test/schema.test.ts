@@ -72,7 +72,14 @@ describe('lib/schema.ts ensureSchema() migrating a pre-migration database', () =
     await expect(ensureSchema()).resolves.toBeUndefined()
 
     const after = await testDb.dbQuery('SELECT * FROM grid_cells WHERE x=90 AND y=90')
-    expect(after.rows).toEqual(before.rows)
+    // Compare only the fields that existed BEFORE this migration ran, not the
+    // row's full shape: ensureSchema() is additive-only and grows over time
+    // (e.g. the P2/P3 x402 service market columns added in the same
+    // SCHEMA_STATEMENTS array as the objects this test exercises) — a new
+    // nullable column showing up is expected and is not a data mutation.
+    for (const key of Object.keys(before.rows[0])) {
+      expect(after.rows[0][key]).toEqual(before.rows[0][key])
+    }
 
     // The new objects are now real and usable.
     await expect(testDb.dbQuery(`SELECT network, payer_address FROM grid_orders LIMIT 0`)).resolves.toBeTruthy()

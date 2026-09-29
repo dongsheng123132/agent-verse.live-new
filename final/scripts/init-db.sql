@@ -138,3 +138,52 @@ CREATE TABLE IF NOT EXISTS cell_reservations (
   CONSTRAINT cell_reservations_xy_unique UNIQUE (x, y)
 );
 CREATE INDEX IF NOT EXISTS idx_cell_reservations_expires ON cell_reservations (expires_at);
+
+-- x402 service market (P2/P3, MONAD-MARKET-SPEC.md): a cell owner can attach a
+-- paid x402 service to their cell; we probe it (read-only GET, no payment) and
+-- later look for on-chain evidence of real payers before "lighting it up".
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS service_url TEXT;
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS service_method TEXT;
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS service_desc TEXT;
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS service_category TEXT;
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probe_status TEXT DEFAULT 'unprobed';
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probe_accepts JSONB;
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probed_at TIMESTAMPTZ;
+ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS evidence JSONB;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'grid_cells_probe_status_check'
+  ) THEN
+    ALTER TABLE grid_cells ADD CONSTRAINT grid_cells_probe_status_check
+      CHECK (probe_status IN ('verified', 'candidate', 'failed', 'unprobed'));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_grid_cells_service_url ON grid_cells (service_url) WHERE service_url IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_grid_cells_probe_status ON grid_cells (probe_status) WHERE service_url IS NOT NULL;
+
+-- Text-market cache (P3): officially-curated services (seed.json + Coinbase
+-- Bazaar sync) probed/evidenced the same way as cell listings, keyed by URL so
+-- a stale (>30min) row can be refreshed in the background without blocking
+-- GET /api/services. Cell listings themselves are NOT cached here — they live
+-- directly on grid_cells (service_* / probe_* / evidence columns above) and
+-- are only re-probed when their owner PUTs again.
+CREATE TABLE IF NOT EXISTS market_services (
+  url          TEXT PRIMARY KEY,
+  name         TEXT,
+  method       TEXT,
+  description  TEXT,
+  category     TEXT,
+  origin       TEXT,             -- 'seed' | 'bazaar'
+  network      TEXT,
+  price_usdc   TEXT,
+  pay_to       TEXT,
+  status       TEXT DEFAULT 'unprobed',
+  probe_accepts JSONB,
+  evidence     JSONB,
+  note         TEXT,
+  probed_at    TIMESTAMPTZ,
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_market_services_status ON market_services (status);
+CREATE INDEX IF NOT EXISTS idx_market_services_probed_at ON market_services (probed_at);
