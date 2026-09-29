@@ -2,22 +2,39 @@ import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { verifyApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
+import { ensureSchema } from '../../../../lib/schema'
+import { assertPublicHttpsUrl } from '../../../../lib/market/ssrf'
+import { probeServiceAndEvidence } from '../../../../lib/market/service'
+
+const SERVICE_FIELDS = ['service_url', 'service_method', 'service_desc', 'service_category']
 
 export async function PUT(req) {
   try {
     const auth = req.headers.get('authorization') || ''
     const token = auth.replace(/^Bearer\s+/i, '')
     if (!token) {
+      // No credentials presented at all — genuinely unauthenticated.
       return NextResponse.json({ ok: false, error: 'unauthorized', message: 'Missing Authorization: Bearer gk_xxx' }, { status: 401 })
+    }
+
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({ ok: false, error: 'database_unavailable' }, { status: 503 })
+    }
+    try {
+      await ensureSchema()
+    } catch (e) {
+      return NextResponse.json({ ok: false, error: 'schema_unavailable', message: e?.message }, { status: 503 })
     }
 
     const keyInfo = await verifyApiKey(token)
     if (!keyInfo) {
-      return NextResponse.json({ ok: false, error: 'unauthorized', message: 'Invalid API key' }, { status: 401 })
+      // A credential was presented but it doesn't own any cell — this is the
+      // "non-owner" case (MONAD-MARKET-SPEC.md P2): 403, not 401.
+      return NextResponse.json({ ok: false, error: 'not_owner', message: 'API key does not match any owned cell' }, { status: 403 })
     }
 
     const body = await req.json()
-    const allowedFields = ['fill_color', 'title', 'summary', 'image_url', 'content_url', 'markdown', 'iframe_url', 'scene_preset', 'scene_config']
+    const allowedFields = ['fill_color', 'title', 'summary', 'image_url', 'content_url', 'markdown', 'iframe_url', 'scene_preset', 'scene_config', ...SERVICE_FIELDS]
 
     // iframe_url must use HTTPS
     if (body.iframe_url && !body.iframe_url.startsWith('https://')) {
@@ -62,6 +79,26 @@ export async function PUT(req) {
       }
       if (config.avatarImage !== undefined && config.avatarImage !== '' && !config.avatarImage.startsWith('https://')) {
         return NextResponse.json({ ok: false, error: 'invalid_scene_config', message: 'scene_config.avatarImage must use https://' }, { status: 400 })
+      }
+    }
+
+    // service_method must be GET or POST when provided
+    if (body.service_method !== undefined && !['GET', 'POST'].includes(body.service_method)) {
+      return NextResponse.json({ ok: false, error: 'invalid_service_method', message: 'service_method must be GET or POST' }, { status: 400 })
+    }
+
+    // service_url: https-only, and SSRF-checked (reject private/loopback/link-local/metadata
+    // addresses — resolved via DNS, not just a literal-IP check). Empty string clears it.
+    if (body.service_url !== undefined && body.service_url !== '' && body.service_url !== null) {
+      if (typeof body.service_url !== 'string' || !body.service_url.startsWith('https://')) {
+        return NextResponse.json({ ok: false, error: 'invalid_service_url', message: 'service_url must use https://' }, { status: 400 })
+      }
+      const ssrf = await assertPublicHttpsUrl(body.service_url)
+      if (!ssrf.ok) {
+        return NextResponse.json(
+          { ok: false, error: 'service_url_rejected', message: `service_url failed the SSRF check: ${ssrf.reason}` },
+          { status: 400 }
+        )
       }
     }
 
@@ -110,7 +147,52 @@ export async function PUT(req) {
       message: `Cell (${keyInfo.x},${keyInfo.y}) content updated`
     })
 
-    return NextResponse.json({ ok: true, updated: rowCount })
+    // Saving a service field probes it right away (MONAD-MARKET-SPEC.md P2):
+    // only a read-only GET, never a payment, and never for POST services.
+    let service = null
+    if (SERVICE_FIELDS.some((f) => body[f] !== undefined)) {
+      const svcRes = await dbQuery('SELECT service_url, service_method FROM grid_cells WHERE x = $1 AND y = $2', [keyInfo.x, keyInfo.y])
+      const svcUrl = svcRes.rows?.[0]?.service_url || null
+      const svcMethod = (svcRes.rows?.[0]?.service_method || 'GET').toUpperCase()
+
+      let probeStatus = 'unprobed'
+      let probeAccepts = null
+      let probedAt = null
+      let evidence = null
+
+      // POST services are never probed — not even a call into the probe layer,
+      // let alone a network request. Only service_url + method === GET reaches
+      // probeServiceAndEvidence().
+      if (svcUrl && svcMethod === 'GET') {
+        try {
+          const result = await probeServiceAndEvidence(svcUrl, svcMethod)
+          probeStatus = result.status
+          probeAccepts = result.accepts
+          probedAt = result.probed_at
+          evidence = result.evidence
+        } catch (e) {
+          console.error('[cells/update] service probe threw:', e?.message)
+          probeStatus = 'failed'
+        }
+      }
+
+      const probeAcceptsJson = probeAccepts ? JSON.stringify(probeAccepts) : null
+      const evidenceJson = evidence ? JSON.stringify(evidence) : null
+      if (blockId) {
+        await dbQuery(
+          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4 WHERE block_id = $5`,
+          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, blockId]
+        )
+      } else {
+        await dbQuery(
+          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4 WHERE x = $5 AND y = $6`,
+          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, keyInfo.x, keyInfo.y]
+        )
+      }
+      service = { status: probeStatus, evidence }
+    }
+
+    return NextResponse.json({ ok: true, updated: rowCount, service })
   } catch (e) {
     console.error('[cells/update]', e)
     return NextResponse.json({ ok: false, error: 'server_error', message: e?.message }, { status: 500 })

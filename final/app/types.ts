@@ -36,6 +36,22 @@ export type Cell = {
   scene_config?: SceneConfig;
   is_for_sale?: boolean;
   price_usdc?: number;
+  // x402 service market (MONAD-MARKET-SPEC.md P2)
+  service_url?: string | null;
+  service_method?: 'GET' | 'POST' | string | null;
+  service_desc?: string | null;
+  service_category?: string | null;
+  probe_status?: 'verified' | 'candidate' | 'failed' | 'unprobed' | null;
+  probe_accepts?: Array<{ scheme: string; network: string; amount: string | null; asset: string | null; payTo: string | null }> | null;
+  probed_at?: string | null;
+  evidence?: {
+    payers_7d: number;
+    transfers_7d: number;
+    last_tx: string | null;
+    last_at: string | null;
+    source: 'hypersync' | 'rpc-short-window';
+    window_blocks: number;
+  } | null;
 }
 
 export type GridEvent = { 
