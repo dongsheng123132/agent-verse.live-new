@@ -159,6 +159,7 @@ export async function PUT(req) {
       let probeAccepts = null
       let probedAt = null
       let evidence = null
+      let evidenceByNetwork = null
 
       // POST services are never probed — not even a call into the probe layer,
       // let alone a network request. Only service_url + method === GET reaches
@@ -170,6 +171,7 @@ export async function PUT(req) {
           probeAccepts = result.accepts
           probedAt = result.probed_at
           evidence = result.evidence
+          evidenceByNetwork = result.evidence_by_network
         } catch (e) {
           console.error('[cells/update] service probe threw:', e?.message)
           probeStatus = 'failed'
@@ -178,15 +180,16 @@ export async function PUT(req) {
 
       const probeAcceptsJson = probeAccepts ? JSON.stringify(probeAccepts) : null
       const evidenceJson = evidence ? JSON.stringify(evidence) : null
+      const evidenceByNetworkJson = evidenceByNetwork ? JSON.stringify(evidenceByNetwork) : null
       if (blockId) {
         await dbQuery(
-          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4 WHERE block_id = $5`,
-          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, blockId]
+          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4, evidence_by_network = $5 WHERE block_id = $6`,
+          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, evidenceByNetworkJson, blockId]
         )
       } else {
         await dbQuery(
-          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4 WHERE x = $5 AND y = $6`,
-          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, keyInfo.x, keyInfo.y]
+          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4, evidence_by_network = $5 WHERE x = $6 AND y = $7`,
+          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, evidenceByNetworkJson, keyInfo.x, keyInfo.y]
         )
       }
       service = { status: probeStatus, evidence }

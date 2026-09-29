@@ -37,6 +37,10 @@ const SCHEMA_STATEMENTS: string[] = [
   `ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probe_accepts JSONB`,
   `ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probed_at TIMESTAMPTZ`,
   `ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS evidence JSONB`,
+  // 2026-09-30 诚实标注修复：按网络拆分的证据（见 lib/market/types.ts
+  // MarketEvidence 头注释、lib/market/evidence.ts）——`evidence` 列继续存
+  // "最好的那条"（向后兼容），这一列额外存每个受支持网络各自的证据。
+  `ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS evidence_by_network JSONB`,
   `DO $$
    BEGIN
      IF NOT EXISTS (
@@ -65,6 +69,8 @@ const SCHEMA_STATEMENTS: string[] = [
      probed_at    TIMESTAMPTZ,
      updated_at   TIMESTAMPTZ DEFAULT NOW()
    )`,
+  // 2026-09-30 诚实标注修复：同上，market_services 这张表也需要按网络拆分的证据。
+  `ALTER TABLE market_services ADD COLUMN IF NOT EXISTS evidence_by_network JSONB`,
   `CREATE INDEX IF NOT EXISTS idx_market_services_status ON market_services (status)`,
   `CREATE INDEX IF NOT EXISTS idx_market_services_probed_at ON market_services (probed_at)`,
 ]

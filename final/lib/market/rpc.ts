@@ -51,6 +51,26 @@ export const MEASURED_BLOCK_TIME_SECONDS: Record<string, number> = {
   [BASE_NETWORK]: 2,
 }
 
+/**
+ * 把「区块数」换算成人类可读的时长，用 `network` 自己的实测出块时间
+ * （MEASURED_BLOCK_TIME_SECONDS）；网络未知时退回 2 秒/块的保守假设。
+ * 2026-09-30 诚实标注修复的一部分——见 lib/market/types.ts MarketEvidence
+ * 头注释：光有 window_blocks 这个数字，人/AI 都无法一眼看出 Monad 的 606 块
+ * （约 3 分钟）和 Base 的 12006 块（约 6.7 小时）根本不是同一个量级的窗口。
+ */
+export function humanizeWindowBlocks(network: string, windowBlocks: number): string {
+  const blockTimeSeconds = MEASURED_BLOCK_TIME_SECONDS[network] ?? 2
+  const seconds = Math.max(0, windowBlocks) * blockTimeSeconds
+  const round1 = (n: number) => Math.round(n * 10) / 10
+  if (seconds < 90) return `约 ${Math.round(seconds)} 秒`
+  const minutes = seconds / 60
+  if (minutes < 90) return `约 ${Math.round(minutes)} 分钟`
+  const hours = minutes / 60
+  if (hours < 36) return `约 ${round1(hours)} 小时`
+  const days = hours / 24
+  return Number.isInteger(days) ? `${days} 天` : `约 ${round1(days)} 天`
+}
+
 export interface LogChunkPlan {
   fromBlock: number
   toBlock: number

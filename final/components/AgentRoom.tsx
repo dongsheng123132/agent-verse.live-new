@@ -55,7 +55,11 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
   const network = primary?.network || null
   const status = cell.probe_status || 'unprobed'
   const isVerified = status === 'verified'
-  const explorerUrl = network && cell.evidence?.last_tx ? EXPLORER_TX_URL[network]?.(cell.evidence.last_tx) : null
+  // 证据自己的 network 字段才是这条证据实际查的是哪条链——不能用 primary
+  // （Monad 优先的展示网络）替代，两者可能不是同一条链（2026-09-30 诚实标注
+  // 修复：这条证据是「收款钱包级」的，不是「本接口在 primary 网络上」的证据）。
+  const evidenceNetwork = cell.evidence?.network || null
+  const explorerUrl = evidenceNetwork && cell.evidence?.last_tx ? EXPLORER_TX_URL[evidenceNetwork]?.(cell.evidence.last_tx) : null
 
   const copyForAi = () => {
     const maxPrice = priceUsdc ? `$${priceUsdc}` : '$0.10'
@@ -92,7 +96,12 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
         ) : (
           <span>network unknown</span>
         )}
-        {cell.evidence && <span>· {cell.evidence.payers_7d} payers / {cell.evidence.transfers_7d} tx</span>}
+        {cell.evidence && (
+          <span title="同一收款地址下的所有接口共享这一证据">
+            · 收款方近{cell.evidence.window.human}内有 {cell.evidence.payers} 个付款人 / {cell.evidence.transfers} 笔转账
+            （网络：{NETWORK_LABEL[cell.evidence.network] || cell.evidence.network}，来源：{cell.evidence.source}）
+          </span>
+        )}
         {explorerUrl && (
           <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
             <ExternalLink size={9} /> last tx

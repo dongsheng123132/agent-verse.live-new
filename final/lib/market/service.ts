@@ -23,8 +23,9 @@ import type { ProbeNetworkResult } from './probe'
 import { scanPayToEvidence, getLatestBlockNumber, NETWORK_RPC } from './rpc'
 import { scanPayToViaHyperSync } from './hypersync'
 import { installMarketOutboundProxyIfConfigured } from './net-proxy'
+import { buildMarketEvidence, computeStatusByNetwork } from './evidence'
 import type { X402Accept } from './x402'
-import type { MarketEvidence, MarketStatus } from './types'
+import type { MarketEvidence, MarketNetworkOffer, MarketStatus } from './types'
 
 /** 一个受支持网络的报价 + 该网络自己的链上证据（见文件头注释「evidence 按网络分组」）。 */
 export interface NetworkEvidenceResult extends ProbeNetworkResult {
@@ -40,7 +41,12 @@ export interface ServiceProbeResult {
   pay_to: string | null
   /** 每个受支持网络各自的报价 + 证据；只有 candidate/verified 时非 null。 */
   networks: NetworkEvidenceResult[] | null
+  /** "任一网络最好的那条"证据——向后兼容旧的单网络展示（见 evidence_by_network 的诚实按网络拆分）。 */
   evidence: MarketEvidence | null
+  /** 每个受支持网络各自的证据，只包含真的查到证据的网络；只有 candidate/verified 时可能非 null。 */
+  evidence_by_network: Record<string, MarketEvidence> | null
+  /** 每个受支持网络各自的状态（只看该网络自己的证据）；只有 candidate/verified 时可能非 null。 */
+  status_by_network: Record<string, MarketStatus> | null
   probed_at: string | null
   note: string
 }
@@ -62,14 +68,15 @@ async function gatherEvidence(
     try {
       const hs = await scanPayToViaHyperSync(payTo, { network, apiToken, fetchImpl: evFetch })
       return {
-        evidence: {
-          payers_7d: hs.evidence.distinctPayers,
-          transfers_7d: hs.evidence.transfers,
-          last_tx: hs.evidence.lastTx,
-          last_at: hs.evidence.lastAt,
+        evidence: buildMarketEvidence({
+          network,
+          payers: hs.evidence.distinctPayers,
+          transfers: hs.evidence.transfers,
+          lastTx: hs.evidence.lastTx,
+          lastAt: hs.evidence.lastAt,
           source: 'hypersync',
-          window_blocks: hs.windowBlocks,
-        },
+          windowBlocks: hs.windowBlocks,
+        }),
         note: hs.warnings.length ? `HyperSync 警告：${hs.warnings.join('; ')}` : '',
       }
     } catch (err) {
@@ -95,14 +102,15 @@ async function gatherEvidenceViaRpc(
     const latestBlock = await getLatestBlockNumber({ rpcUrl: cfg.rpcUrl, fetchImpl: evFetch })
     const { evidence, warnings } = await scanPayToEvidence(payTo, { network, latestBlock, fetchImpl: evFetch })
     return {
-      evidence: {
-        payers_7d: evidence.distinctPayers,
-        transfers_7d: evidence.transfers,
-        last_tx: evidence.lastTx,
-        last_at: evidence.lastAt,
+      evidence: buildMarketEvidence({
+        network,
+        payers: evidence.distinctPayers,
+        transfers: evidence.transfers,
+        lastTx: evidence.lastTx,
+        lastAt: evidence.lastAt,
         source: 'rpc-short-window',
-        window_blocks: evidence.windowBlocks,
-      },
+        windowBlocks: evidence.windowBlocks,
+      }),
       note: warnings.length ? `RPC 警告：${warnings.join('; ')}` : '',
     }
   } catch (err) {
@@ -132,6 +140,8 @@ export async function probeServiceAndEvidence(
       pay_to: probe.payTo,
       networks: null,
       evidence: null,
+      evidence_by_network: null,
+      status_by_network: null,
       probed_at: probe.probedAt,
       note: probe.note,
     }
@@ -152,16 +162,30 @@ export async function probeServiceAndEvidence(
   )
 
   const networks = perNetwork.map((n) => n.result)
-  // "最好的那条"：任一网络有 >=1 个非自转付款人就整体 verified。
-  const status: MarketStatus = networks.some((n) => n.evidence && n.evidence.payers_7d >= 1) ? 'verified' : 'candidate'
-  // 顶层 evidence 字段取 payers_7d 最高的网络（Monad 优先网络打平时赢，因为
+  // "最好的那条"：任一网络有 >=1 个非自转付款人就整体 verified。这仍然是顶层
+  // `status`（向后兼容字段）的定义；每个网络自己算不算 verified 看
+  // status_by_network（下面），调用方筛某一条网络时应该用那个，不是这个。
+  const status: MarketStatus = networks.some((n) => n.evidence && n.evidence.payers >= 1) ? 'verified' : 'candidate'
+  // 顶层 evidence 字段取 payers 最高的网络（Monad 优先网络打平时赢，因为
   // probe.networks 本身已经是 Monad-优先排序，reduce 用 > 而非 >= 保留先出现
   // 的那个），让它和上面算出的 status 互相印证。
   const bestNetwork = networks.reduce<NetworkEvidenceResult | null>((best, cur) => {
-    const curPayers = cur.evidence?.payers_7d ?? -1
-    const bestPayers = best?.evidence?.payers_7d ?? -1
+    const curPayers = cur.evidence?.payers ?? -1
+    const bestPayers = best?.evidence?.payers ?? -1
     return curPayers > bestPayers ? cur : best
   }, null)
+
+  const evidence_by_network: Record<string, MarketEvidence> = {}
+  for (const n of networks) {
+    if (n.evidence) evidence_by_network[n.network] = n.evidence
+  }
+  const networkOffers: MarketNetworkOffer[] = networks.map((n) => ({
+    network: n.network,
+    price_usdc: n.price_usdc,
+    payTo: n.payTo,
+    asset: n.asset,
+  }))
+  const status_by_network = computeStatusByNetwork(networkOffers, evidence_by_network)
 
   return {
     status,
@@ -171,6 +195,8 @@ export async function probeServiceAndEvidence(
     pay_to: probe.payTo,
     networks,
     evidence: bestNetwork?.evidence ?? null,
+    evidence_by_network: Object.keys(evidence_by_network).length > 0 ? evidence_by_network : null,
+    status_by_network,
     probed_at: probe.probedAt,
     note: [probe.note, ...perNetwork.map((n) => n.note)].filter(Boolean).join(' '),
   }

@@ -21,7 +21,8 @@ import {
 } from '../../lib/market/x402'
 import { probeCellService } from '../../lib/market/probe'
 import { probeServiceAndEvidence } from '../../lib/market/service'
-import { summarizeTransfers, deriveStatusFromSummary, parseTransferLog, planLogChunks, NETWORK_RPC } from '../../lib/market/rpc'
+import { summarizeTransfers, deriveStatusFromSummary, parseTransferLog, planLogChunks, NETWORK_RPC, humanizeWindowBlocks } from '../../lib/market/rpc'
+import { buildMarketEvidence, normalizeStoredEvidence, computeStatusByNetwork } from '../../lib/market/evidence'
 
 function v2Header(accepts: unknown[]): string {
   return Buffer.from(JSON.stringify({ x402Version: 2, accepts })).toString('base64')
@@ -307,13 +308,137 @@ describe('lib/market/service probeServiceAndEvidence — evidence grouped per ne
     expect(result.networks).toHaveLength(2)
     const monadEntry = result.networks?.find((n) => n.network === MONAD_NETWORK)
     const baseEntry = result.networks?.find((n) => n.network === BASE_NETWORK)
+    expect(monadEntry?.evidence?.payers).toBe(0)
+    expect(baseEntry?.evidence?.payers).toBe(1)
+    // Deprecated field names still mirror the new ones for one version of back-compat.
     expect(monadEntry?.evidence?.payers_7d).toBe(0)
     expect(baseEntry?.evidence?.payers_7d).toBe(1)
 
     // Top-level evidence mirrors the best (Base) network, not Monad — so a
     // VERIFIED badge is never paired with a "0 payers" evidence number.
-    expect(result.evidence?.payers_7d).toBe(1)
+    expect(result.evidence?.payers).toBe(1)
     expect(result.evidence?.last_tx).toBe('0xbasetx')
+    expect(result.evidence?.network).toBe(BASE_NETWORK)
+
+    // 2026-09-30 诚实标注修复的核心断言：整体 status 是 'verified'（Base 撑起来
+    // 的），但 Base 自己的付款证据不能被当成 Monad 也 verified 的理由——
+    // status_by_network 必须把 Monad 单独算成 candidate（它自己 0 付款人）。
+    expect(result.status_by_network).toEqual({ [MONAD_NETWORK]: 'candidate', [BASE_NETWORK]: 'verified' })
+    expect(result.evidence_by_network?.[MONAD_NETWORK]?.payers).toBe(0)
+    expect(result.evidence_by_network?.[BASE_NETWORK]?.payers).toBe(1)
+    expect(result.evidence_by_network?.[BASE_NETWORK]?.network).toBe(BASE_NETWORK)
+    // Every per-network evidence object carries its own honest window (human-readable duration).
+    expect(result.evidence_by_network?.[MONAD_NETWORK]?.window.human).toEqual(expect.any(String))
+    expect(result.evidence_by_network?.[BASE_NETWORK]?.window.human).toEqual(expect.any(String))
+  })
+})
+
+describe('lib/market/rpc humanizeWindowBlocks — window duration honesty (2026-09-30 fix)', () => {
+  it('Base 12006 blocks (~2s/block) reads as "约 6.7 小时", matching the manually-verified agent402 bug report', () => {
+    expect(humanizeWindowBlocks(BASE_NETWORK, 12006)).toBe('约 6.7 小时')
+  })
+
+  it('a full 7-day Base window (302400 blocks at 2s/block) reads as a whole number of days', () => {
+    const sevenDayBlocks = Math.round((7 * 86400) / 2)
+    expect(humanizeWindowBlocks(BASE_NETWORK, sevenDayBlocks)).toBe('7 天')
+  })
+
+  it('Monad 606 blocks (~0.302s/block, the RPC short-window fixture value) reads as minutes, not hours', () => {
+    expect(humanizeWindowBlocks(MONAD_NETWORK, 606)).toBe('约 3 分钟')
+  })
+
+  it('falls back to a 2s/block assumption for an unknown network rather than throwing', () => {
+    expect(() => humanizeWindowBlocks('eip155:999999', 100)).not.toThrow()
+    expect(humanizeWindowBlocks('eip155:999999', 30)).toBe('约 60 秒')
+  })
+})
+
+describe('lib/market/evidence — buildMarketEvidence / normalizeStoredEvidence / computeStatusByNetwork', () => {
+  it('buildMarketEvidence fills network/window/new field names and mirrors the deprecated old field names', () => {
+    const ev = buildMarketEvidence({
+      network: BASE_NETWORK,
+      payers: 8,
+      transfers: 86,
+      lastTx: '0x985c4a',
+      lastAt: '2026-09-28T00:00:00.000Z',
+      source: 'rpc-short-window',
+      windowBlocks: 12006,
+    })
+    expect(ev.network).toBe(BASE_NETWORK)
+    expect(ev.payers).toBe(8)
+    expect(ev.transfers).toBe(86)
+    expect(ev.window).toEqual({ blocks: 12006, human: '约 6.7 小时' })
+    // 向后兼容：旧字段名同一份数据。
+    expect(ev.payers_7d).toBe(8)
+    expect(ev.transfers_7d).toBe(86)
+    expect(ev.window_blocks).toBe(12006)
+  })
+
+  it('normalizeStoredEvidence upgrades an OLD-shape stored record (payers_7d/transfers_7d/window_blocks only, no network/window/payers) using the fallback network', () => {
+    const oldShapeFromDb = {
+      payers_7d: 8,
+      transfers_7d: 86,
+      last_tx: '0x985c4a',
+      last_at: '2026-09-28T00:00:00.000Z',
+      source: 'rpc-short-window',
+      window_blocks: 12006,
+      // no `network`, no `window`, no `payers`/`transfers` — this is exactly
+      // the shape written by the pre-2026-09-30 code.
+    }
+    const ev = normalizeStoredEvidence(oldShapeFromDb, BASE_NETWORK)
+    expect(ev).not.toBeNull()
+    expect(ev?.network).toBe(BASE_NETWORK) // came from the fallback, not the (absent) stored field
+    expect(ev?.payers).toBe(8)
+    expect(ev?.transfers).toBe(86)
+    expect(ev?.window).toEqual({ blocks: 12006, human: '约 6.7 小时' })
+  })
+
+  it('normalizeStoredEvidence passes a NEW-shape stored record through unchanged (network/window already present)', () => {
+    const newShapeFromDb = {
+      network: MONAD_NETWORK,
+      payers: 2,
+      transfers: 4,
+      last_tx: '0xtx1',
+      last_at: '2026-09-28T00:00:00.000Z',
+      source: 'rpc-short-window',
+      window: { blocks: 606, human: '约 3 分钟' },
+      payers_7d: 2,
+      transfers_7d: 4,
+      window_blocks: 606,
+    }
+    const ev = normalizeStoredEvidence(newShapeFromDb, BASE_NETWORK /* fallback should NOT be used */)
+    expect(ev?.network).toBe(MONAD_NETWORK)
+    expect(ev?.window).toEqual({ blocks: 606, human: '约 3 分钟' })
+  })
+
+  it('normalizeStoredEvidence returns null for a null/missing raw value', () => {
+    expect(normalizeStoredEvidence(null, BASE_NETWORK)).toBeNull()
+    expect(normalizeStoredEvidence(undefined, BASE_NETWORK)).toBeNull()
+  })
+
+  it('computeStatusByNetwork: verified only for networks with >=1 payer in evidence_by_network, candidate for supported networks with 0 (or missing) evidence, null when no supported networks', () => {
+    const networks = [
+      { network: MONAD_NETWORK, price_usdc: '0.01', payTo: '0xMonadPay', asset: MONAD_USDC_ADDRESS },
+      { network: BASE_NETWORK, price_usdc: '0.2', payTo: '0xBasePay', asset: BASE_USDC_ADDRESS },
+    ]
+    const evidenceByNetwork = {
+      [BASE_NETWORK]: buildMarketEvidence({
+        network: BASE_NETWORK,
+        payers: 8,
+        transfers: 86,
+        lastTx: '0x985c4a',
+        lastAt: null,
+        source: 'rpc-short-window',
+        windowBlocks: 12006,
+      }),
+      // Monad missing entirely from evidence_by_network (e.g. RPC query failed).
+    }
+    expect(computeStatusByNetwork(networks, evidenceByNetwork)).toEqual({
+      [MONAD_NETWORK]: 'candidate',
+      [BASE_NETWORK]: 'verified',
+    })
+    expect(computeStatusByNetwork(null, evidenceByNetwork)).toBeNull()
+    expect(computeStatusByNetwork([], evidenceByNetwork)).toBeNull()
   })
 })
 

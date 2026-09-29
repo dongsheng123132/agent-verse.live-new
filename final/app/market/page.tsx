@@ -2,15 +2,28 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, Copy, Check, ExternalLink, Sparkles } from 'lucide-react'
+import { Search, Copy, Check, ExternalLink, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
 
+/** 区块数 + 换算成人类可读时长（如"约 6.7 小时"）——见 lib/market/rpc.ts humanizeWindowBlocks。 */
+interface EvidenceWindow {
+  blocks: number
+  human: string
+}
+
+/**
+ * 2026-09-30 诚实标注修复：证据现在带 network（在哪条链上查的）和 window
+ * （多长窗口，人类可读），字段也从 payers_7d/transfers_7d 改名成 payers/
+ * transfers——这是一条"收款钱包级"证据（同一收款地址下的所有接口共享这一份），
+ * 不是"这个接口自己的"证据，见下面 evidence 展示处的小字说明。
+ */
 interface MarketEvidence {
-  payers_7d: number
-  transfers_7d: number
+  network: string
+  payers: number
+  transfers: number
   last_tx: string | null
   last_at: string | null
   source: 'hypersync' | 'rpc-short-window'
-  window_blocks: number
+  window: EvidenceWindow
 }
 
 interface MarketNetworkOffer {
@@ -19,6 +32,8 @@ interface MarketNetworkOffer {
   payTo: string | null
   asset: string | null
 }
+
+type MarketStatus = 'verified' | 'candidate' | 'failed' | 'unprobed'
 
 interface MarketEntry {
   name: string
@@ -31,28 +46,55 @@ interface MarketEntry {
   pay_to: string | null
   /** Every network this service accepts USDC on (Monad first). */
   networks: MarketNetworkOffer[] | null
-  status: 'verified' | 'candidate' | 'failed' | 'unprobed'
+  /** "主状态"——筛了 network 时，这是那条网络自己的状态，不是"任一网络最好的那条"了。 */
+  status: MarketStatus
+  /** 每条受支持网络各自的状态。 */
+  status_by_network: Record<string, MarketStatus> | null
+  /** 筛了 network 且该网络状态不如整体最好状态时，人话解释是哪条网络撑起来的，如"Monad 候选 · Base 已验证"。 */
+  status_label: string | null
   evidence: MarketEvidence | null
+  /** 每条受支持网络各自的证据。 */
+  evidence_by_network: Record<string, MarketEvidence> | null
   source: 'official' | 'listing'
   origin: 'seed' | 'bazaar' | null
   cell: { x: number; y: number } | null
   probed_at: string | null
   note: string
+  /** 分组 key："network:payTo"（同一收款地址）或 "origin:host"。 */
+  seller_id: string
+}
+
+/** 一个卖家（收款方）+ 它挂的所有接口——见 lib/market/market.ts groupSellers()。 */
+interface MarketSellerGroup {
+  seller_id: string
+  network: string | null
+  pay_to: string | null
+  origin_host: string | null
+  service_count: number
+  status: MarketStatus
+  services: MarketEntry[]
 }
 
 const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
 
-function statusBadge(status: MarketEntry['status']) {
+function statusBadge(status: MarketStatus, label?: string | null) {
+  const text = label || status.toUpperCase()
   switch (status) {
     case 'verified':
-      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-900/40 border border-purple-500/50 text-purple-300">VERIFIED</span>
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-900/40 border border-purple-500/50 text-purple-300">{text}</span>
     case 'candidate':
-      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-900/30 border border-amber-600/40 text-amber-400">CANDIDATE</span>
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-900/30 border border-amber-600/40 text-amber-400">{text}</span>
     case 'failed':
-      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-red-950/40 border border-red-800/40 text-red-400">FAILED</span>
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-red-950/40 border border-red-800/40 text-red-400">{text}</span>
     default:
-      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#1a1a1a] border border-[#333] text-gray-500">UNPROBED</span>
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#1a1a1a] border border-[#333] text-gray-500">{text}</span>
   }
+}
+
+/** 收款方级证据说明的小字——「同一收款地址下的所有接口共享这一证据」。 */
+function evidenceLine(evidence: MarketEvidence): string {
+  const net = NETWORK_LABEL[evidence.network] || evidence.network
+  return `收款方近${evidence.window.human}内有 ${evidence.payers} 个付款人 / ${evidence.transfers} 笔转账（网络：${net}，来源：${evidence.source}）`
 }
 
 function buildPaidFetchPrompt(entry: MarketEntry, origin: string): string {
@@ -89,14 +131,116 @@ function CopyForAiButton({ entry }: { entry: MarketEntry }) {
   )
 }
 
+/**
+ * 一个接口的卡片。`network` 是当前筛选的网络（可能是 ''）：筛了网络时优先显示
+ * 那条网络自己的证据（evidence_by_network[network]），不是"任一网络最好的那条"
+ * （e.evidence）——否则 Monad 视图里还是会看到 Base 的付款人数字。
+ */
+function EntryCard({ e, network }: { e: MarketEntry; network: string }) {
+  const focusedEvidence = (network && e.evidence_by_network?.[network]) || e.evidence
+  return (
+    <div className="rounded border border-[#222] bg-[#0a0a0a] p-3">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-sm font-bold text-white">{e.name}</span>
+            {statusBadge(e.status, e.status_label)}
+            <span className="text-[10px] font-mono text-gray-500 px-1.5 py-0.5 rounded border border-[#333]">
+              {e.source === 'listing' ? `cell (${e.cell?.x},${e.cell?.y})` : e.origin || 'seed'}
+            </span>
+          </div>
+          {e.description && <p className="text-gray-400 text-xs mt-1">{e.description}</p>}
+          <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-[11px] font-mono hover:underline inline-flex items-center gap-1 mt-1 break-all">
+            <ExternalLink size={10} /> {e.url}
+          </a>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-white font-mono text-sm font-bold">{e.price_usdc ? `$${e.price_usdc}` : '—'}</div>
+          <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
+            {(e.networks && e.networks.length > 0
+              ? e.networks.map((n) => n.network)
+              : e.network
+                ? [e.network]
+                : []
+            ).map((n) => (
+              <span key={n} className="text-[10px] text-gray-500 font-mono px-1 py-0.5 rounded border border-[#333]">
+                {NETWORK_LABEL[n] || n}
+              </span>
+            ))}
+            {!e.network && (!e.networks || e.networks.length === 0) && (
+              <span className="text-[10px] text-gray-500 font-mono">—</span>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#1a1a1a]">
+        <div className="text-[10px] text-gray-500 font-mono" title="同一收款地址下的所有接口共享这一证据">
+          {focusedEvidence ? evidenceLine(focusedEvidence) : 'no on-chain evidence yet'}
+        </div>
+        <CopyForAiButton entry={e} />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 一个卖家（收款方）分组卡：只有一个接口时直接展开显示（没什么可折叠的）；
+ * 多个接口共享同一收款地址时（agent402 的 15 个工具是原型案例）先折叠成一行，
+ * 点开才看到各个接口——避免看起来像 15 份独立证据。
+ */
+function SellerGroupCard({
+  seller,
+  network,
+  isOpen,
+  onToggle,
+}: {
+  seller: MarketSellerGroup
+  network: string
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  if (seller.service_count === 1) {
+    return <EntryCard e={seller.services[0]} network={network} />
+  }
+  return (
+    <div className="rounded border border-[#222] bg-[#0a0a0a]">
+      <button type="button" onClick={onToggle} className="w-full flex items-center justify-between gap-2 p-3 text-left">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          {isOpen ? <ChevronDown size={12} className="text-gray-500 shrink-0" /> : <ChevronRight size={12} className="text-gray-500 shrink-0" />}
+          <span
+            className="font-mono text-sm font-bold text-white truncate"
+            title="同一收款地址下的所有接口共享这一证据"
+          >
+            {seller.pay_to ? `收款方 ${seller.pay_to.slice(0, 6)}…${seller.pay_to.slice(-4)}` : seller.origin_host || 'seller'}
+          </span>
+          {statusBadge(seller.status)}
+          <span className="text-[10px] font-mono text-gray-500 px-1.5 py-0.5 rounded border border-[#333]">{seller.service_count} 个接口共享这一证据</span>
+        </div>
+        {seller.network && <span className="text-[10px] text-gray-500 font-mono shrink-0">{NETWORK_LABEL[seller.network] || seller.network}</span>}
+      </button>
+      {isOpen && (
+        <div className="space-y-2 px-3 pb-3">
+          {seller.services.map((e) => (
+            <EntryCard key={e.url} e={e} network={network} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function MarketPage() {
   const [entries, setEntries] = useState<MarketEntry[]>([])
+  // 按收款方分组（lib/market/market.ts groupSellers()）——/market 列表按这个渲染，
+  // 而不是直接 entries.map，避免「同一个卖家的 15 个接口看起来像 15 份独立证据」。
+  const [sellers, setSellers] = useState<MarketSellerGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [network, setNetwork] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [category, setCategory] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -110,8 +254,12 @@ export default function MarketPage() {
       fetch(`/api/services?${params.toString()}`)
         .then((r) => r.json())
         .then((data) => {
-          if (data?.ok) setEntries(data.services || [])
-          else setError(data?.message || 'failed to load')
+          if (data?.ok) {
+            setEntries(data.services || [])
+            setSellers(data.sellers || [])
+          } else {
+            setError(data?.message || 'failed to load')
+          }
         })
         .catch((e) => setError(String(e?.message || e)))
         .finally(() => setLoading(false))
@@ -124,6 +272,15 @@ export default function MarketPage() {
     for (const e of entries) if (e.category) set.add(e.category)
     return Array.from(set)
   }, [entries])
+
+  const toggleExpanded = (sellerId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(sellerId)) next.delete(sellerId)
+      else next.add(sellerId)
+      return next
+    })
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans">
@@ -196,53 +353,17 @@ export default function MarketPage() {
 
         {loading && <p className="text-gray-500 text-xs font-mono">loading…</p>}
         {error && <p className="text-red-400 text-xs font-mono">error: {error}</p>}
-        {!loading && !error && entries.length === 0 && <p className="text-gray-500 text-xs font-mono">no services matched.</p>}
+        {!loading && !error && sellers.length === 0 && <p className="text-gray-500 text-xs font-mono">no services matched.</p>}
 
         <div className="space-y-2">
-          {entries.map((e) => (
-            <div key={e.url} className="rounded border border-[#222] bg-[#0a0a0a] p-3">
-              <div className="flex items-start justify-between gap-2 flex-wrap">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-bold text-white">{e.name}</span>
-                    {statusBadge(e.status)}
-                    <span className="text-[10px] font-mono text-gray-500 px-1.5 py-0.5 rounded border border-[#333]">
-                      {e.source === 'listing' ? `cell (${e.cell?.x},${e.cell?.y})` : e.origin || 'seed'}
-                    </span>
-                  </div>
-                  {e.description && <p className="text-gray-400 text-xs mt-1">{e.description}</p>}
-                  <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-[11px] font-mono hover:underline inline-flex items-center gap-1 mt-1 break-all">
-                    <ExternalLink size={10} /> {e.url}
-                  </a>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-white font-mono text-sm font-bold">{e.price_usdc ? `$${e.price_usdc}` : '—'}</div>
-                  <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
-                    {(e.networks && e.networks.length > 0
-                      ? e.networks.map((n) => n.network)
-                      : e.network
-                        ? [e.network]
-                        : []
-                    ).map((n) => (
-                      <span key={n} className="text-[10px] text-gray-500 font-mono px-1 py-0.5 rounded border border-[#333]">
-                        {NETWORK_LABEL[n] || n}
-                      </span>
-                    ))}
-                    {!e.network && (!e.networks || e.networks.length === 0) && (
-                      <span className="text-[10px] text-gray-500 font-mono">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#1a1a1a]">
-                <div className="text-[10px] text-gray-500 font-mono">
-                  {e.evidence
-                    ? `${e.evidence.payers_7d} payers · ${e.evidence.transfers_7d} tx (${e.evidence.source})`
-                    : 'no on-chain evidence yet'}
-                </div>
-                <CopyForAiButton entry={e} />
-              </div>
-            </div>
+          {sellers.map((s) => (
+            <SellerGroupCard
+              key={s.seller_id}
+              seller={s}
+              network={network}
+              isOpen={expanded.has(s.seller_id)}
+              onToggle={() => toggleExpanded(s.seller_id)}
+            />
           ))}
         </div>
       </div>

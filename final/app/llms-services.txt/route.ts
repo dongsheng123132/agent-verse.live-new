@@ -16,7 +16,12 @@ export const dynamic = 'force-dynamic'
 
 function formatEntry(e: Awaited<ReturnType<typeof getMarketServices>>[number]): string {
   const price = e.price_usdc ? `$${e.price_usdc}` : '?'
-  const evidence = e.evidence ? `${e.evidence.payers_7d} payers / ${e.evidence.transfers_7d} transfers (${e.evidence.source})` : 'no evidence yet'
+  // 2026-09-30 诚实标注修复: this evidence is wallet-level (the same payTo can
+  // front many interfaces, see MarketEntry.seller_id), and it's scoped to ONE
+  // network + ONE window — say which, don't let it look interface-specific.
+  const evidence = e.evidence
+    ? `${e.evidence.payers} payers / ${e.evidence.transfers} transfers, network ${e.evidence.network}, window ${e.evidence.window.human} (${e.evidence.source}) — evidence is per receiving wallet, shared by every interface using the same payTo`
+    : 'no evidence yet'
   const lines = [
     `- ${e.name}`,
     `  url: ${e.url}`,

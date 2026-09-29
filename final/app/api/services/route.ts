@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getMarketServices } from '../../../lib/market/market'
+import { getMarketServices, groupSellers } from '../../../lib/market/market'
 import { ensureSchema } from '../../../lib/schema'
 
 // GET /api/services?q=&network=&max_price=&category=&status=
@@ -28,7 +28,13 @@ export async function GET(req: NextRequest) {
     const max_price = maxPriceRaw !== null && maxPriceRaw !== '' ? Number(maxPriceRaw) : undefined
 
     const services = await getMarketServices({ q, network, category, status, max_price })
-    return NextResponse.json({ ok: true, count: services.length, services })
+    // Seller-grouped view (MONAD-MARKET-SPEC.md honesty fix, 2026-09-30): the
+    // same receiving wallet can front many interfaces (e.g. agent402's 15
+    // tools sharing one payTo) and evidence is wallet-level, not
+    // interface-level. `services` stays the flat list AI callers already
+    // depend on; `sellers` is additive grouping info for /market's UI.
+    const sellers = groupSellers(services, network)
+    return NextResponse.json({ ok: true, count: services.length, services, sellers })
   } catch (e: any) {
     console.error('[api/services]', e)
     return NextResponse.json({ ok: false, error: 'server_error', message: e?.message }, { status: 500 })
