@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../lib/db.js'
 import { ensureSchema } from '../../../lib/schema'
+import { applyShowcaseToGridRows } from '../../../lib/showcase/index'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,9 @@ export async function GET() {
        FROM grid_cells WHERE owner_address IS NOT NULL ORDER BY y, x`,
       []
     )
-    return NextResponse.json(res.rows)
+    // Monad Metropolis showcase: virtual blocks merged in; real users' cells always win
+    // (a block overlapping one is skipped and logged — lib/showcase/index.ts).
+    return NextResponse.json(applyShowcaseToGridRows(res.rows))
   } catch (e) {
     console.error('[api/grid]', e)
     return NextResponse.json([])

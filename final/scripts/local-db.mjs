@@ -45,7 +45,7 @@ const GRID_SOURCE_URL = process.env.GRID_SOURCE_URL || 'https://www.agent-verse.
 const args = process.argv.slice(2)
 const flag = (name) => args.includes(name)
 const portArg = args.find((a) => a.startsWith('--port='))
-const PORT = portArg ? Number(portArg.slice('--port='.length)) : DEFAULT_PORT
+const PORT = portArg ? Number(portArg.slice('--port='.length)) : Number(process.env.LOCAL_DB_PORT) || DEFAULT_PORT
 
 const log = (...m) => console.log('[local-db]', ...m)
 

@@ -5,12 +5,14 @@ import { logEvent } from '../../../../lib/events.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
+import { isShowcaseReserved } from '../../../../lib/showcase/index'
 import {
   getSharedX402Server,
   getSharedX402Error,
   buildDualNetworkAccepts,
   verifyPayment,
   settle,
+  settlementHeaders,
   cancel,
   unpaidOrErrorToResponse,
 } from '../../../../lib/x402-flow'
@@ -52,6 +54,9 @@ function parseCells(raw: unknown): { cells: CellCoord[] } | { error: string; mes
     }
     if (isReserved(x, y)) {
       return { error: 'reserved', message: `(${x},${y}) is in the reserved showcase zone` }
+    }
+    if (isShowcaseReserved(x, y)) {
+      return { error: 'reserved_showcase', message: `(${x},${y}) is part of the Monad Metropolis showcase and cannot be purchased` }
     }
     const key = `${x},${y}`
     if (!seen.has(key)) {
@@ -135,7 +140,7 @@ export async function bulkPurchaseHandler(req: NextRequest) {
     const b = body as { cells?: unknown; ref?: unknown }
     const parsed = parseCells(b?.cells)
     if ('error' in parsed) {
-      return NextResponse.json(parsed, { status: parsed.error === 'reserved' ? 403 : 400 })
+      return NextResponse.json(parsed, { status: parsed.error === 'reserved' || parsed.error === 'reserved_showcase' ? 403 : 400 })
     }
     cells = parsed.cells
     refParam = typeof b?.ref === 'string' ? b.ref : null
@@ -294,5 +299,5 @@ export async function bulkPurchaseHandler(req: NextRequest) {
     ref_code: refCode,
     network: outcome.network,
     tx_hash: settleResult.transaction,
-  })
+  }, { headers: settlementHeaders(settleResult) })
 }

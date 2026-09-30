@@ -5,12 +5,14 @@ import { logEvent } from '../../../../lib/events.js'
 import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
+import { isShowcaseReserved } from '../../../../lib/showcase/index'
 import {
   getSharedX402Server,
   getSharedX402Error,
   buildDualNetworkAccepts,
   verifyPayment,
   settle,
+  settlementHeaders,
   cancel,
   unpaidOrErrorToResponse,
   type VerifiedPayment,
@@ -72,6 +74,10 @@ export async function purchaseHandler(req: NextRequest) {
   }
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 99 || y < 0 || y > 99) {
     return NextResponse.json({ error: 'invalid_request', message: 'x, y must be integers 0-99' }, { status: 400 })
+  }
+  // Monad Metropolis showcase cells are display-only: refuse before anything else, 402 included.
+  if (isShowcaseReserved(x, y)) {
+    return NextResponse.json({ error: 'reserved_showcase', message: `(${x},${y}) is part of the Monad Metropolis showcase and cannot be purchased` }, { status: 403 })
   }
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: 'database_unavailable' }, { status: 503 })
@@ -214,5 +220,5 @@ export async function purchaseHandler(req: NextRequest) {
     ref_code: refCode,
     network: outcome.network,
     tx_hash: settleResult.transaction,
-  })
+  }, { headers: settlementHeaders(settleResult) })
 }

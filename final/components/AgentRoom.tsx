@@ -51,8 +51,13 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
 
   const offers = deriveNetworkOffers(cell.probe_accepts)
   const primary = offers[0] ?? null
-  const priceUsdc = primary?.amount && /^\d+$/.test(primary.amount) ? (Number(primary.amount) / 1_000_000).toFixed(2) : null
-  const network = primary?.network || null
+  // Showcase (service-street) slots have no probe result of their own: they carry the price /
+  // network they are listed with, plus how far to trust it (showcase_listing).
+  const listing = cell.showcase_listing ?? null
+  const priceUsdc = primary?.amount && /^\d+$/.test(primary.amount)
+    ? (Number(primary.amount) / 1_000_000).toFixed(2)
+    : listing?.price_usdc ?? null
+  const network = primary?.network || listing?.networks[0] || null
   const status = cell.probe_status || 'unprobed'
   const isVerified = status === 'verified'
   // 证据自己的 network 字段才是这条证据实际查的是哪条链——不能用 primary
@@ -93,6 +98,12 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
               {NETWORK_LABEL[o.network] || o.network}
             </span>
           ))
+        ) : listing && listing.networks.length > 0 ? (
+          listing.networks.map((n) => (
+            <span key={n} className="px-1 py-0.5 rounded border border-[#333]">
+              {NETWORK_LABEL[n] || n}
+            </span>
+          ))
         ) : (
           <span>network unknown</span>
         )}
@@ -108,10 +119,23 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
           </a>
         )}
       </div>
+      {listing && (
+        <p className="text-[10px] text-gray-500 mb-2">
+          {listing.basis === 'live-402'
+            ? `价格 / 网络：${listing.checked_at} 对该接口 GET 实测 402（不付款）。`
+            : '价格 / 网络：官方收录标注，本站未实测；以服务自己的 402 响应为准。'}
+        </p>
+      )}
       <div className="flex items-center gap-2">
         <a href={cell.service_url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 text-blue-400 text-[10px] font-mono hover:underline truncate">
           {cell.service_url}
         </a>
+        {cell.showcase && (
+          <a href="/market" target="_blank" rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded border border-[#333] text-[10px] font-mono text-gray-300 hover:text-white hover:border-gray-500">
+            <ExternalLink size={10} /> 在 /market 查看
+          </a>
+        )}
         <button onClick={copyForAi}
           className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono ${copied ? 'border-green-600 text-green-400 bg-green-900/20' : 'border-[#333] text-gray-300 hover:text-white hover:border-gray-500'}`}>
           {copied ? <Check size={10} /> : <Copy size={10} />}
@@ -192,6 +216,7 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
         `Cell Info: ${origin}/api/cells?x=${cell.x}&y=${cell.y}`,
         `Skill Doc: ${origin}/skill.md`,
         cell.markdown ? `\n--- README ---\n${cell.markdown}` : '',
+        cell.showcase_footnote ? `\nNote: ${cell.showcase_footnote}` : '',
     ].filter(Boolean).join('\n') : '';
 
     const handleCopy = (text: string, setter: (v: boolean) => void) => {
@@ -231,7 +256,7 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
                                 <span className="text-green-500 font-mono text-[11px]">({cell.x},{cell.y})</span>
                                 {cell.block_w && cell.block_w > 1 && <span className="text-[10px] font-mono text-gray-500">{cell.block_w}×{cell.block_h}</span>}
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#222] border border-[#333] text-gray-500">{truncAddr(cell.owner || '')}</span>
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#222] border border-[#333] text-gray-500">{cell.showcase ? '展示位 · Showcase' : truncAddr(cell.owner || '')}</span>
                                 {cell.hit_count != null && cell.hit_count > 0 && (
                                     <span className="text-[10px] text-orange-400 font-mono">{cell.hit_count} views</span>
                                 )}
@@ -335,8 +360,20 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                     </div>
                                 ) : null}
 
+                                {/* Showcase links (clickable; the markdown below is shown as plain text) */}
+                                {cell.showcase_links && cell.showcase_links.length > 0 && (
+                                    <div className="mb-4 flex flex-wrap gap-2">
+                                        {cell.showcase_links.map((l) => (
+                                            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded border border-[#333] text-blue-400 hover:border-blue-500 hover:underline">
+                                                <ExternalLink size={10} /> {l.label}
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* Service URL */}
-                                {cell.content_url && (
+                                {cell.content_url && !(cell.showcase_links && cell.showcase_links.length > 0) && (
                                     <a href={cell.content_url} target="_blank" rel="noopener noreferrer"
                                         className="flex items-center gap-2 text-blue-400 text-xs font-mono hover:underline mb-4 px-1">
                                         <ExternalLink size={12} /> {cell.content_url}
@@ -371,10 +408,15 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                                 {copiedMd ? 'Copied' : 'Copy'}
                                             </button>
                                         </div>
-                                        <pre className="text-xs text-gray-300 whitespace-pre-wrap break-all font-mono max-h-48 overflow-y-auto custom-scrollbar">
+                                        <pre className={`text-xs text-gray-300 whitespace-pre-wrap break-all font-mono overflow-y-auto custom-scrollbar ${cell.showcase ? 'max-h-80' : 'max-h-48'}`}>
                                             {cell.markdown}
                                         </pre>
                                     </div>
+                                )}
+
+                                {/* Showcase footnote (small print) */}
+                                {cell.showcase_footnote && (
+                                    <p className="mb-2 text-[10px] leading-relaxed text-gray-500">{cell.showcase_footnote}</p>
                                 )}
                             </>
                         )}

@@ -1,3 +1,5 @@
+import type { ShowcaseKind, ShowcaseLink, ShowcaseListing } from '../lib/showcase/metropolis'
+
 /** Built-in scene presets (no server needed). */
 export type ScenePreset = 'none' | 'room' | 'avatar' | 'booth'
 
@@ -61,6 +63,18 @@ export type Cell = {
     /** @deprecated 用 window.blocks。 */
     window_blocks: number;
   } | null;
+  // Monad Metropolis showcase (lib/showcase): virtual, display-only cells merged in by /api/grid and /api/cells.
+  showcase?: boolean;
+  showcase_kind?: ShowcaseKind;
+  /** Short map label (sponsor amount / service price). */
+  showcase_tag?: string;
+  /** Second colour (arena gold, service lamp amber). */
+  showcase_accent?: string;
+  showcase_links?: ShowcaseLink[];
+  /** Small print at the bottom of the detail view. */
+  showcase_footnote?: string;
+  /** Price / network a service-street slot is listed with, and how far to trust it. */
+  showcase_listing?: ShowcaseListing;
 }
 
 export type GridEvent = { 

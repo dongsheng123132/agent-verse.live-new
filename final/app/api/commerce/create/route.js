@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { calcTotalPrice, getBlockPrice, getBlockLabel } from '../../../../lib/pricing.js'
+import { isShowcaseReserved } from '../../../../lib/showcase/index'
 
 function isReserved(x, y) {
   return x < 16 && y < 16
@@ -27,6 +28,9 @@ export async function POST(req) {
         }
         if (isReserved(x, y)) {
           return NextResponse.json({ ok: false, error: 'reserved', message: `(${x},${y}) is reserved` }, { status: 403 })
+        }
+        if (isShowcaseReserved(x, y)) {
+          return NextResponse.json({ ok: false, error: 'reserved_showcase', message: `(${x},${y}) is part of the Monad Metropolis showcase` }, { status: 403 })
         }
       }
 
@@ -112,6 +116,9 @@ export async function POST(req) {
       for (let dx = 0; dx < blockW; dx++) {
         if (isReserved(x + dx, y + dy)) {
           return NextResponse.json({ ok: false, error: 'reserved', message: '该区域包含保留格子，不可购买' }, { status: 403 })
+        }
+        if (isShowcaseReserved(x + dx, y + dy)) {
+          return NextResponse.json({ ok: false, error: 'reserved_showcase', message: '该区域包含 Monad Metropolis 展示区，不可购买' }, { status: 403 })
         }
       }
     }

@@ -18,8 +18,10 @@ import { fileURLToPath } from 'node:url'
 
 const FINAL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DB_HOST = '127.0.0.1'
-const DB_PORT = 5433
-const APP_PORT = 3005
+// Ports default to 5433 / 3005; override with LOCAL_DB_PORT / LOCAL_APP_PORT when another checkout already uses them
+// (start the matching database with `npm run db:local -- --port=<LOCAL_DB_PORT>`).
+const DB_PORT = Number(process.env.LOCAL_DB_PORT) || 5433
+const APP_PORT = Number(process.env.LOCAL_APP_PORT) || 3005
 
 const args = process.argv.slice(2)
 const env = {

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../lib/db.js'
 import { ensureSchema } from '../../../lib/schema'
+import { findShowcaseBlockAt, isInShowcaseBounds, isRealUserOwner, virtualCellDetail } from '../../../lib/showcase/index'
+import { loadShowcase } from '../../../lib/showcase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +31,18 @@ export async function GET(req) {
        FROM grid_cells WHERE x = $1 AND y = $2`,
       [x, y]
     )
+
+    // Monad Metropolis showcase: a coordinate inside an active virtual block answers with the
+    // block — unless a real user owns this very cell (real users always win). "Active" means
+    // the block overlaps no real user's cell (lib/showcase/server.ts loadShowcase).
+    if (process.env.DATABASE_URL && Number.isInteger(x) && Number.isInteger(y) && isInShowcaseBounds(x, y) && findShowcaseBlockAt(x, y)) {
+      const dbRow = res.rows[0]
+      if (!(dbRow && isRealUserOwner(dbRow.owner))) {
+        const { active } = await loadShowcase()
+        const block = findShowcaseBlockAt(x, y, active)
+        if (block) return NextResponse.json({ ok: true, cell: virtualCellDetail(block, x, y) })
+      }
+    }
 
     if (!res.rowCount) {
       return NextResponse.json({ ok: true, cell: null })

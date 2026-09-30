@@ -351,6 +351,19 @@ export async function settle(
   })
 }
 
+/**
+ * Headers for the SUCCESS response after settle(): processSettlement() builds
+ * the x402 settlement receipt header (PAYMENT-RESPONSE for v2,
+ * X-PAYMENT-RESPONSE for v1) into `headers`. Clients such as MoneySwitch read
+ * it to record the payment as settled — without it they log NO_SETTLE_HEADER
+ * even though the payment did settle. Only success paths call this; 402 / 409 /
+ * settlement-failed responses never carry it. (No CORS is configured on these
+ * routes, so there is no Access-Control-Expose-Headers to extend.)
+ */
+export function settlementHeaders(r: ProcessSettleResultResponse): Record<string, string> {
+  return r.success ? { ...r.headers } : {}
+}
+
 /** Cancel a verified-but-not-settled payment (e.g. we lost a reservation race, or ownership check failed). */
 export async function cancel(
   v: VerifiedPayment,

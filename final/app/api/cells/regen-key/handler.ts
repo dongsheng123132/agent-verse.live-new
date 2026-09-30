@@ -3,12 +3,14 @@ import { dbQuery } from '../../../../lib/db.js'
 import { generateApiKey } from '../../../../lib/api-key.js'
 import { PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
+import { isShowcaseReserved } from '../../../../lib/showcase/index'
 import {
   getSharedX402Server,
   getSharedX402Error,
   buildDualNetworkAccepts,
   verifyPayment,
   settle,
+  settlementHeaders,
   cancel,
   unpaidOrErrorToResponse,
 } from '../../../../lib/x402-flow'
@@ -36,6 +38,10 @@ export async function regenHandler(req: NextRequest) {
   }
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 99 || y < 0 || y > 99) {
     return NextResponse.json({ error: 'invalid_request', message: 'x, y must be integers 0-99' }, { status: 400 })
+  }
+  // Monad Metropolis showcase cells are display-only (virtual, no owner, no key): refuse before any DB work or 402.
+  if (isShowcaseReserved(x, y)) {
+    return NextResponse.json({ error: 'reserved_showcase', message: `(${x},${y}) is part of the Monad Metropolis showcase; it has no API key to regenerate` }, { status: 403 })
   }
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: 'database_unavailable' }, { status: 503 })
@@ -105,5 +111,5 @@ export async function regenHandler(req: NextRequest) {
     network: outcome.network,
     tx_hash: settleResult.transaction,
     message: `API key regenerated for cell (${x},${y})`,
-  })
+  }, { headers: settlementHeaders(settleResult) })
 }

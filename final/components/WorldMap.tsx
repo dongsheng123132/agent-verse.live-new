@@ -1,7 +1,8 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Cell, COLS, ROWS, CELL_PX, PRICE_PER_CELL, isReserved } from '../app/types';
 import { useLang } from '../lib/LangContext';
 import { getPixelAvatar, drawPixelAvatar, drawPixelAvatarSmall } from '../lib/pixelAvatar';
+import { drawShowcaseBlock, paintGlow, type GlowItem } from '../lib/showcase/draw';
 
 interface WorldMapProps {
     grid: Cell[];
@@ -45,24 +46,53 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const [selectGridEnd, setSelectGridEnd] = useState<{ col: number; row: number } | null>(null);
 
     const imageCache = useRef<{ [key: string]: HTMLImageElement }>({});
+    // Bumped when an image finishes loading — the only reason (besides state/props) the map repaints.
     const [frameCount, setFrameCount] = useState(0);
     const failedImages = useRef(new Set<string>());
-    const animTime = useRef(0);
-    const animRAF = useRef<number>(0);
 
-    // Animation loop — drives pulse/glow effects for large blocks
+    // Backing-store scale = devicePixelRatio, capped at 2: crisp on hi-dpi screens without a 4x+ fill cost.
+    const [dpr, setDpr] = useState(1);
     useEffect(() => {
-        let running = true;
-        const tick = (t: number) => {
-            if (!running) return;
-            animTime.current = t;
-            animRAF.current = requestAnimationFrame(tick);
-        };
-        animRAF.current = requestAnimationFrame(tick);
-        // Re-render at ~20fps for animation
-        const iv = setInterval(() => setFrameCount(f => f + 1), 50);
-        return () => { running = false; cancelAnimationFrame(animRAF.current); clearInterval(iv); };
+        const update = () => setDpr(Math.min(2, Math.max(1, window.devicePixelRatio || 1)));
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
     }, []);
+
+    // Animation lives on a transparent overlay canvas: the base map repaints only when something
+    // changed (pan / zoom / hover / selection / data / image load); the overlay repaints the
+    // animated items (arena breathing outline, street-lamp halos, brand-block glow) via
+    // requestAnimationFrame at ~30fps, and only while there is something animated in view.
+    const overlayRef = useRef<HTMLCanvasElement>(null);
+    const glowItems = useRef<GlowItem[]>([]);
+    const overlayDirty = useRef(false);
+    const paintOverlay = useCallback((nowMs: number) => {
+        const canvas = overlayRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const items = glowItems.current;
+        if (items.length === 0 && !overlayDirty.current) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        overlayDirty.current = items.length > 0;
+        if (items.length > 0) paintGlow(ctx, items, nowMs * 0.001, dpr);
+    }, [dpr, width, height]);
+
+    useEffect(() => {
+        const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduceMotion) return; // static frame only (painted after each base repaint)
+        let raf = 0;
+        let last = 0;
+        const tick = (now: number) => {
+            raf = requestAnimationFrame(tick);
+            if (document.hidden || now - last < 33) return;
+            last = now;
+            paintOverlay(now);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [paintOverlay]);
 
     // Helper: Screen to Grid
     const getGridCoord = (screenX: number, screenY: number) => {
@@ -109,6 +139,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         if (!canvas) return;
         const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS px; the backing store is dpr× larger
 
         // 1. Fill Background — dark with subtle gradient
         const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.7);
@@ -132,8 +163,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         const selectedIds = new Set(selectedCells.map(c => `${c.x},${c.y}`));
 
-        // Collect large blocks for glow pass (drawn after grid lines)
-        const glowBlocks: { x: number; y: number; w: number; h: number; color: string }[] = [];
+        // Animated items (large-block glow, arena breathing outline, street lamps) — painted on the overlay canvas
+        const glowBlocks: GlowItem[] = [];
 
         for (let r = renderStartRow; r < renderEndRow; r++) {
             for (let c = renderStartCol; c < renderEndCol; c++) {
@@ -155,7 +186,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 let isSold = !!cell?.owner;
                 let isReservedCell = isReserved(c, r);
 
-                if (isSold && cell) {
+                if (cell?.showcase) {
+                    // Monad Metropolis showcase block (virtual cell merged in by the server)
+                    drawShowcaseBlock(ctx, cell, screenX, screenY, drawW, drawH, cellSize, glowBlocks);
+                } else if (isSold && cell) {
                     const imgUrl = cell.image_url;
                     const imgFailed = imgUrl ? failedImages.current.has(imgUrl) : true;
 
@@ -184,7 +218,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                         ctx.beginPath(); ctx.moveTo(screenX + drawW - corner, screenY + drawH); ctx.lineTo(screenX + drawW, screenY + drawH); ctx.lineTo(screenX + drawW, screenY + drawH - corner); ctx.stroke();
 
                         // Collect for glow effect
-                        glowBlocks.push({ x: screenX, y: screenY, w: drawW, h: drawH, color: blockColor });
+                        glowBlocks.push({ kind: 'brand', x: screenX, y: screenY, w: drawW, h: drawH, color: blockColor });
                     }
 
                     if (imgUrl && !imgFailed) {
@@ -333,7 +367,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 // candidate cells get a small dim marker (MONAD-MARKET-SPEC.md P2).
                 if (cell?.service_url && cellSize >= 4) {
                     if (cell.probe_status === 'verified') {
-                        glowBlocks.push({ x: screenX, y: screenY, w: drawW, h: drawH, color: '#fbbf24' });
+                        glowBlocks.push({ kind: 'brand', x: screenX, y: screenY, w: drawW, h: drawH, color: '#fbbf24' });
                     } else if (cell.probe_status === 'candidate') {
                         const dotR = Math.max(1.5, Math.min(4, cellSize * 0.15));
                         ctx.fillStyle = 'rgba(168, 85, 247, 0.5)';
@@ -382,48 +416,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             ctx.stroke();
         }
 
-        // 2.6 Animated glow effects for large brand blocks
-        const t = animTime.current * 0.001; // seconds
-        ctx.save();
-        for (const block of glowBlocks) {
-            // Breathing glow — pulse between min and max
-            const pulse = 0.5 + 0.5 * Math.sin(t * 2 + block.x * 0.01);
-            const glowSize = Math.max(6, Math.min(20, block.w * 0.08)) * (0.8 + pulse * 0.6);
-            ctx.shadowColor = block.color;
-            ctx.shadowBlur = glowSize;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-            const alpha = Math.round(80 + pulse * 60).toString(16).padStart(2, '0');
-            ctx.strokeStyle = block.color + alpha;
-            ctx.lineWidth = 1.5 + pulse;
-            ctx.strokeRect(block.x, block.y, block.w, block.h);
-
-            // Scan line effect — horizontal light sweep
-            ctx.shadowBlur = 0;
-            const scanY = block.y + ((t * 40 + block.x) % block.h);
-            const scanGrad = ctx.createLinearGradient(block.x, scanY - 3, block.x, scanY + 3);
-            scanGrad.addColorStop(0, 'rgba(255,255,255,0)');
-            scanGrad.addColorStop(0.5, `rgba(255,255,255,${0.06 + pulse * 0.04})`);
-            scanGrad.addColorStop(1, 'rgba(255,255,255,0)');
-            ctx.fillStyle = scanGrad;
-            ctx.fillRect(block.x + 2, scanY - 3, block.w - 4, 6);
-
-            // Corner sparkle — rotating highlight on corners
-            const sparkleAlpha = 0.3 + 0.3 * Math.sin(t * 3 + block.y * 0.02);
-            const sparkleR = Math.max(3, block.w * 0.03);
-            ctx.fillStyle = `rgba(255,255,255,${sparkleAlpha})`;
-            const corners = [
-                [block.x + 4, block.y + 4],
-                [block.x + block.w - 4, block.y + 4],
-                [block.x + 4, block.y + block.h - 4],
-                [block.x + block.w - 4, block.y + block.h - 4],
-            ];
-            const activeCorner = Math.floor((t * 2) % 4);
-            ctx.beginPath();
-            ctx.arc(corners[activeCorner][0], corners[activeCorner][1], sparkleR, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        ctx.restore();
+        // 2.6 Animated glow (large brand blocks, arena outline, street lamps) is painted on the
+        // overlay canvas by requestAnimationFrame — hand it this repaint's items and draw one frame now
+        // so the overlay never lags a pan/zoom.
+        glowItems.current = glowBlocks;
+        paintOverlay(performance.now());
 
         // 3. Draw Hover Highlight
         if (hoveredCell && !isSelecting) {
@@ -495,7 +492,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             }
         }
 
-    }, [grid, cellMap, pan, zoom, width, height, selectedCells, selectionInfo, isSelecting, frameCount, hoveredCell]);
+    }, [grid, cellMap, pan, zoom, width, height, dpr, paintOverlay, selectedCells, selectionInfo, isSelecting, frameCount, hoveredCell]);
 
     // --- Event Handlers ---
 
@@ -547,7 +544,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     y: coords.y,
                     owner: null
                 };
-                setHoveredCell(cell);
+                // keep the same object while the pointer stays on one cell, so the map only repaints when the hovered cell changes
+                setHoveredCell(prev => (prev && prev.x === cell.x && prev.y === cell.y ? prev : cell));
                 setHoverPos({ x: e.clientX, y: e.clientY });
             } else {
                 setHoveredCell(null);
@@ -732,8 +730,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         <div className="relative w-full h-full bg-[#050505] overflow-hidden select-none">
             <canvas
                 ref={canvasRef}
-                width={width}
-                height={height}
+                width={Math.round(width * dpr)}
+                height={Math.round(height * dpr)}
+                style={{ width, height }}
                 className={`block touch-none ${mode === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -748,6 +747,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+            />
+            {/* Animated glow layer (arena outline, street lamps, brand-block glow); never takes pointer events */}
+            <canvas
+                ref={overlayRef}
+                aria-hidden="true"
+                width={Math.round(width * dpr)}
+                height={Math.round(height * dpr)}
+                style={{ width, height }}
+                className="absolute left-0 top-0 pointer-events-none"
             />
 
             {/* Tooltip Overlay */}
@@ -766,7 +774,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     {hoveredCell.owner ? (
                         <>
                             <div className="text-gray-300 font-bold">{hoveredCell.title || 'Agent'}</div>
-                            <div className="text-[10px] text-gray-500 font-mono">{hoveredCell.owner.slice(0, 8)}...</div>
+                            {hoveredCell.showcase
+                                ? <div className="text-[10px] text-amber-400 font-mono">Monad Metropolis · showcase</div>
+                                : <div className="text-[10px] text-gray-500 font-mono">{hoveredCell.owner.slice(0, 8)}...</div>}
                         </>
                     ) : (
                         <div className="text-gray-500 italic">{t('click_select')}</div>
