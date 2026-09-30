@@ -13,6 +13,7 @@ import { Minimap } from '../components/Minimap'
 import { MapToolbar } from '../components/MapToolbar'
 import { Globe, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
+import { SHOWCASE_ORIGIN } from '../lib/showcase/metropolis'
 
 export default function Page() {
   return <LangProvider><PageInner /></LangProvider>
@@ -181,11 +182,12 @@ function PageInner() {
   const initialCentered = React.useRef(false)
   useEffect(() => {
     if (containerSize.width > 100 && containerSize.height > 100 && !initialCentered.current) {
-      // Center on brand area (38, 24)
+      // Open on the Monad Metropolis arena + sponsor row (the main ad space),
+      // not the old brand corner. Showcase block is 24x17 from SHOWCASE_ORIGIN.
       const defaultZoom = 2.5;
       const cellSize = CELL_PX * defaultZoom;
-      const targetX = 38 * cellSize;
-      const targetY = 24 * cellSize;
+      const targetX = (SHOWCASE_ORIGIN.x + 12) * cellSize;
+      const targetY = (SHOWCASE_ORIGIN.y + 8.5) * cellSize;
       const cx = (containerSize.width / 2) - targetX;
       const cy = (containerSize.height / 2) - targetY;
       setPan(clampPan({ x: cx, y: cy }, defaultZoom, containerSize));
