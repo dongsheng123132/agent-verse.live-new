@@ -7,7 +7,9 @@
     "dev": "next dev -p 3005",
     "build": "next build",
     "start": "next start -p 3005",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:local": "node scripts/local-db.mjs",
+    "dev:local": "node scripts/dev-local.mjs"
   },
   "dependencies": {
     "@coinbase/x402": "^2.1.0",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@types/node": "^20",
     "@types/react": "^18",
     "typescript": "~5.8",

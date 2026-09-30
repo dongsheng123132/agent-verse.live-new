@@ -15,7 +15,7 @@ import type {
   ProcessSettleResultResponse,
   FacilitatorClient,
 } from '@x402/core/server'
-import { registerExactEvmScheme } from '@x402/evm/exact/server'
+import { ExactEvmScheme, registerExactEvmScheme } from '@x402/evm/exact/server'
 import { payerFromPaymentPayload } from './parse-payment'
 
 /**
@@ -39,11 +39,94 @@ export const PAY_TO_ADDRESS = process.env.PAY_TO_ADDRESS || '0x4eCf92bAb524039Fc
 export const BASE_TREASURY_ADDRESS = PAY_TO_ADDRESS
 export const MONAD_TREASURY_ADDRESS = PAY_TO_ADDRESS
 
-export type FacilitatorPair = { base: FacilitatorClient; monad: FacilitatorClient }
+/**
+ * Testnet mode (X402_NETWORK_MODE=testnet): the same dual-chain shape, but the
+ * two accepts are Monad testnet (eip155:10143) and Base Sepolia (eip155:84532).
+ * Default (variable unset / anything other than "testnet") is mainnet,
+ * unchanged. The mode is read from the environment when a resource server /
+ * accepts list is BUILT (not at import time), and the shared resource server
+ * is built once per process, so it is effectively fixed for a process's life.
+ *
+ * Testnet USDC is not in @x402/evm 2.27's default asset table, so each testnet
+ * chain gets its own ExactEvmScheme with a registerMoneyParser that turns the
+ * decimal price into { amount, asset, extra: { name, version } } — the same
+ * approach as C:\1mineyswitch\packages\tollbooth\src\x402.ts:60-64 and
+ * C:\1mineyswitch\repos\monad-lingqian\src\x402-server.ts. `extra` carries
+ * the EIP-712 domain (name/version) the payer needs to sign the USDC
+ * transferWithAuthorization.
+ */
+export type X402NetworkMode = 'mainnet' | 'testnet'
+export function getNetworkMode(env: Record<string, string | undefined> = process.env): X402NetworkMode {
+  return String(env.X402_NETWORK_MODE ?? '').trim().toLowerCase() === 'testnet' ? 'testnet' : 'mainnet'
+}
+
+export const MONAD_TESTNET_NETWORK = 'eip155:10143'
+export const MONAD_TESTNET_USDC_ADDRESS = '0x534b2f3A21130d7a60830c2Df862319e593943A3'
+export const BASE_SEPOLIA_NETWORK = 'eip155:84532'
+export const BASE_SEPOLIA_USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+export const BASE_SEPOLIA_FACILITATOR_URL = process.env.BASE_SEPOLIA_FACILITATOR_URL || 'https://x402.org/facilitator'
+
+export interface TestnetChain {
+  network: `${string}:${string}`
+  usdcAddress: string
+  usdcDomainName: string
+  usdcDomainVersion: string
+}
+export const MONAD_TESTNET_CHAIN: TestnetChain = {
+  network: MONAD_TESTNET_NETWORK,
+  usdcAddress: MONAD_TESTNET_USDC_ADDRESS,
+  usdcDomainName: 'USDC',
+  usdcDomainVersion: '2',
+}
+export const BASE_SEPOLIA_CHAIN: TestnetChain = {
+  network: BASE_SEPOLIA_NETWORK,
+  usdcAddress: BASE_SEPOLIA_USDC_ADDRESS,
+  usdcDomainName: 'USDC',
+  usdcDomainVersion: '2',
+}
+
+/** The two CAIP-2 ids offered by 402 responses in the given mode. */
+export function getActiveNetworks(mode: X402NetworkMode = getNetworkMode()): { base: string; monad: string } {
+  return mode === 'testnet'
+    ? { base: BASE_SEPOLIA_NETWORK, monad: MONAD_TESTNET_NETWORK }
+    : { base: BASE_NETWORK, monad: MONAD_NETWORK }
+}
+
+/** Decimal USDC (6 decimals) -> atomic units, without floating-point drift. */
+export function usdcToAtomic(amount: number | string): string {
+  const [whole, frac = ''] = Number(amount).toFixed(6).split('.')
+  return BigInt(whole + frac).toString()
+}
+
+/** ExactEvmScheme for one testnet chain, with its USDC registered via registerMoneyParser. */
+export function createTestnetScheme(chain: TestnetChain): ExactEvmScheme {
+  const scheme = new ExactEvmScheme()
+  scheme.registerMoneyParser(async (amount, network) => {
+    if (network !== chain.network) return null
+    return {
+      amount: usdcToAtomic(amount),
+      asset: chain.usdcAddress,
+      extra: { name: chain.usdcDomainName, version: chain.usdcDomainVersion },
+    }
+  })
+  return scheme
+}
+
+export type FacilitatorPair ={ base: FacilitatorClient; monad: FacilitatorClient }
 export type FacilitatorClientFactory = () => Promise<FacilitatorPair>
 
-/** Real facilitators for production: CDP for Base, HTTPFacilitatorClient for Monad. */
-export async function defaultFacilitatorClients(): Promise<FacilitatorPair> {
+/**
+ * Real facilitators. Mainnet: CDP for Base, HTTPFacilitatorClient for Monad.
+ * Testnet: the public x402.org facilitator for Base Sepolia (no CDP keys) and
+ * the same molandak facilitator for Monad testnet.
+ */
+export async function defaultFacilitatorClients(mode: X402NetworkMode = getNetworkMode()): Promise<FacilitatorPair> {
+  if (mode === 'testnet') {
+    return {
+      base: new HTTPFacilitatorClient({ url: BASE_SEPOLIA_FACILITATOR_URL }),
+      monad: new HTTPFacilitatorClient({ url: MONAD_FACILITATOR_URL }),
+    }
+  }
   let baseFacilitatorConfig: any
   if (process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET) {
     const { createFacilitatorConfig } = await import('@coinbase/x402')
@@ -60,7 +143,12 @@ export async function defaultFacilitatorClients(): Promise<FacilitatorPair> {
 async function buildResourceServer(clientFactory: FacilitatorClientFactory): Promise<x402ResourceServer> {
   const { base, monad } = await clientFactory()
   const server = new x402ResourceServer([base, monad])
-  registerExactEvmScheme(server, { networks: [BASE_NETWORK, MONAD_NETWORK] })
+  if (getNetworkMode() === 'testnet') {
+    server.register(BASE_SEPOLIA_CHAIN.network, createTestnetScheme(BASE_SEPOLIA_CHAIN))
+    server.register(MONAD_TESTNET_CHAIN.network, createTestnetScheme(MONAD_TESTNET_CHAIN))
+  } else {
+    registerExactEvmScheme(server, { networks: [BASE_NETWORK, MONAD_NETWORK] })
+  }
   await server.initialize()
   return server
 }
@@ -105,11 +193,12 @@ export function resetSharedX402Server(): void {
   initPromise = null
 }
 
-export function buildDualNetworkAccepts(priceUsd: number) {
+export function buildDualNetworkAccepts(priceUsd: number, mode: X402NetworkMode = getNetworkMode()) {
   const priceStr = `$${priceUsd.toFixed(2)}`
+  const { base, monad } = getActiveNetworks(mode)
   return [
-    { scheme: 'exact' as const, price: priceStr, network: BASE_NETWORK as `${string}:${string}`, payTo: BASE_TREASURY_ADDRESS },
-    { scheme: 'exact' as const, price: priceStr, network: MONAD_NETWORK as `${string}:${string}`, payTo: MONAD_TREASURY_ADDRESS },
+    { scheme: 'exact' as const, price: priceStr, network: base as `${string}:${string}`, payTo: BASE_TREASURY_ADDRESS },
+    { scheme: 'exact' as const, price: priceStr, network: monad as `${string}:${string}`, payTo: MONAD_TREASURY_ADDRESS },
   ]
 }
 

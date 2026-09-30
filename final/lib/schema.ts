@@ -12,7 +12,9 @@ import { dbQuery } from './db.js'
 // has these objects (ADD COLUMN IF NOT EXISTS / CREATE TABLE IF NOT EXISTS /
 // CREATE INDEX IF NOT EXISTS) and MUST NOT touch existing rows — no DROP, no
 // ALTER COLUMN TYPE, no UPDATE/DELETE.
-const SCHEMA_STATEMENTS: string[] = [
+// Exported (read-only use) so scripts/local-db.mjs can apply the very same
+// statements to the local PGlite database instead of keeping a second copy.
+export const SCHEMA_STATEMENTS: string[] = [
   `ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS network TEXT`,
   `ALTER TABLE grid_orders ADD COLUMN IF NOT EXISTS payer_address TEXT`,
   `CREATE TABLE IF NOT EXISTS cell_reservations (

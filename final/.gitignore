@@ -1,0 +1,2 @@
+# Local PGlite database + local e2e artifacts (scripts/local-db.mjs, e2e key). Never commit.
+.local-db/
