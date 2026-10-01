@@ -30,6 +30,8 @@ import { createMockWallet } from '../test/helpers/mock-wallet.mjs'
 
 const FINAL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const BASE = (process.env.E2E_BASE_URL || 'http://localhost:3005').replace(/\/$/, '')
+// the colour the e2e paints the cell with: random per run (override with E2E_COLOR) so earlier runs' cells never count
+const COLOR = (process.env.E2E_COLOR || '#' + [0, 1, 2].map(() => (60 + Math.floor(Math.random() * 190)).toString(16).padStart(2, '0')).join('')).toLowerCase()
 const CELL = { x: Number(process.env.E2E_CELL_X ?? 61), y: Number(process.env.E2E_CELL_Y ?? 61) }
 const DB_PORT = Number(process.env.LOCAL_DB_PORT) || 5433
 const stamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -68,6 +70,27 @@ async function shot(page, name) {
   await page.screenshot({ path: file })
   shots.push(file)
   console.log(`      screenshot: ${file}`)
+}
+
+// Map helpers. At zoom 2.5 a 1x1 cell is a pixel avatar drawn over its colour, so the colour is only readable when
+// zoomed far out (cells <= 3px are plain tiles in the cell colour). Wheel zoom: zoom -= deltaY * 0.001.
+async function wheelZoom(page, deltaY) {
+  const box = await page.locator('main').boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.wheel(0, deltaY)
+  await page.waitForTimeout(600)
+}
+async function countColourPixels(page, hex, tol = 6) {
+  const want = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+  return page.evaluate(({ want, tol }) => {
+    const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data
+    let n = 0
+    for (let i = 0; i < d.length; i += 4) {
+      if (Math.abs(d[i] - want[0]) < tol && Math.abs(d[i + 1] - want[1]) < tol && Math.abs(d[i + 2] - want[2]) < tol) n++
+    }
+    return n
+  }, { want, tol })
 }
 
 // ---------- the fake wallet + the fake chain RPC ----------
@@ -144,6 +167,11 @@ try {
   await page.waitForSelector('header input[type=text]', { timeout: T })
   await page.waitForTimeout(1500)
   await shot(page, 'map-loaded')
+  await wheelZoom(page, 2200) // zoom out to 0.3
+  await page.mouse.move(700, 20)
+  await page.waitForTimeout(500)
+  const baseline = await countColourPixels(page, COLOR)
+  await wheelZoom(page, -2200) // back to 2.5
 
   // select the cell through the coordinate search (same path as clicking it on the map)
   const search = page.locator('header input[type=text]').first()
@@ -218,7 +246,6 @@ try {
   await shot(page, 'decorate-form-open')
 
   const TITLE = `E2E Wallet Cell ${CELL.x},${CELL.y}`
-  const COLOR = '#7c3aed'
   await page.getByTestId('decorate-title').fill(TITLE)
   await page.getByTestId('decorate-color').fill(COLOR)
   await page.getByTestId('decorate-summary').fill('Bought with a mock browser wallet on Monad testnet')
@@ -245,24 +272,16 @@ try {
   await page.waitForTimeout(600)
   const tip = await page.locator('main').innerText()
   check('map hover tooltip shows the new title', tip.includes(TITLE), tip.slice(0, 200).replace(/\s+/g, ' '))
-  // The 1x1 cell is drawn as a 20x20px tile (pixel avatar on top of a fill in the cell colour): count tile pixels close to the chosen colour.
-  const tile = await page.evaluate(({ left, top }) => {
-    const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]
-    const r = c.getBoundingClientRect()
-    const sx = c.width / r.width
-    const sy = c.height / r.height
-    const w = Math.round(20 * sx)
-    const h = Math.round(20 * sy)
-    const d = c.getContext('2d').getImageData(Math.round((left - r.left) * sx), Math.round((top - r.top) * sy), w, h).data
-    const want = [0x7c, 0x3a, 0xed]
-    let match = 0
-    for (let i = 0; i < d.length; i += 4) {
-      if (Math.abs(d[i] - want[0]) < 24 && Math.abs(d[i + 1] - want[1]) < 24 && Math.abs(d[i + 2] - want[2]) < 24) match++
-    }
-    return { match, total: w * h }
-  }, { left: mainBox.x + mainBox.width / 2, top: mainBox.y + mainBox.height / 2 })
-  check('map canvas: a large share of the cell tile is the chosen colour', tile.match >= tile.total * 0.25, `${tile.match}/${tile.total} pixels within tolerance of ${COLOR}`)
-  await shot(page, 'map-with-new-title-and-colour')
+  await shot(page, 'map-with-new-title')
+  await wheelZoom(page, 2200) // zoom out: cells become plain tiles in their own colour
+  await page.mouse.move(700, 20) // off the canvas, so no hover highlight sits on the tile
+  let painted = 0
+  for (let i = 0; i < 10 && painted - baseline < 3; i++) { // the canvas redraws on the next animation frames
+    await page.waitForTimeout(400)
+    painted = await countColourPixels(page, COLOR)
+  }
+  check(`map canvas (zoomed out): the cell now paints ${COLOR}`, painted - baseline >= 3, `${painted} pixels now vs ${baseline} before the purchase`)
+  await shot(page, 'map-zoomed-out-with-new-colour')
 
   // reload: the cell is still there, the saved key still offers 装修
   await page.goto(`${BASE}/?x=${CELL.x}&y=${CELL.y}`, { waitUntil: 'domcontentloaded', timeout: T })
