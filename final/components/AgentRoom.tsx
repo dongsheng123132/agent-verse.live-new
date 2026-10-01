@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
 import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers, Sparkles, Zap } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
+import { DecorateForm } from './DecorateForm';
 
 /** Best-effort tx explorer links — not verified against a real tx at write time (see docs/MONAD-MARKET-SPEC.md P2 deviations). */
 const EXPLORER_TX_URL: Record<string, (tx: string) => string> = {
@@ -166,6 +167,10 @@ interface DetailModalProps {
     cell: Cell | null;
     loading: boolean;
     onClose: () => void;
+    /** Cell whose 装修 (decorate) form should open by itself — set right after a purchase. */
+    openDecorateFor?: { x: number; y: number } | null;
+    /** Re-read the cell and the map after the owner saved a change; resolves with the fresh cell. */
+    onCellUpdated?: (x: number, y: number) => Promise<Cell | null>;
 }
 
 const BuyResaleButton: React.FC<{ x: number; y: number; priceUsdc: number; refCode?: string | null }> = ({ x, y, priceUsdc, refCode }) => {
@@ -194,7 +199,7 @@ const BuyResaleButton: React.FC<{ x: number; y: number; priceUsdc: number; refCo
     );
 };
 
-export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }) => {
+export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, openDecorateFor, onCellUpdated }) => {
     const { t } = useLang();
     const [copiedMd, setCopiedMd] = useState(false);
     const [copiedAll, setCopiedAll] = useState(false);
@@ -262,6 +267,15 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                                 )}
                             </div>
                         </div>
+
+                        {/* 装修: only for real (non-showcase) owned cells; needs the cell's API key */}
+                        {cell.owner && !cell.showcase && onCellUpdated && (
+                            <DecorateForm
+                                cell={cell}
+                                autoOpen={!!openDecorateFor && openDecorateFor.x === cell.x && openDecorateFor.y === cell.y}
+                                onUpdated={onCellUpdated}
+                            />
+                        )}
 
                         {cell.service_url && <ServiceCard cell={cell} />}
 
