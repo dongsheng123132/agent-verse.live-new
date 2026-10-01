@@ -25,6 +25,7 @@ export function createMockWallet({
   initialChainId = 1,
   knownChainIds = [1],
   usdcBalance = 5_000_000n,
+  signDelayMs = 0, // e2e uses this so the "waiting for the wallet" state is visible long enough to screenshot
 } = {}) {
   const account = privateKeyToAccount(privateKey)
   const state = {
@@ -75,6 +76,7 @@ export function createMockWallet({
         const [from, json] = params ?? []
         if (String(from).toLowerCase() !== account.address.toLowerCase()) throw rpcError(-32602, 'address mismatch')
         const typed = typeof json === 'string' ? JSON.parse(json) : json
+        if (signDelayMs) await new Promise((r) => setTimeout(r, signDelayMs))
         if (state.rejectNextSign) {
           state.rejectNextSign = false
           throw rpcError(4001, 'User rejected the request.')

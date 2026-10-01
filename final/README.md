@@ -121,3 +121,18 @@ npm run dev
 ## 四、后续修改
 
 只改 `final/` 内文件，保持极简；如需扩展功能，优先在现有 API 与表结构上增加字段或路由，避免引入多余依赖与页面。
+
+---
+
+## 五、浏览器钱包付款与装修（2026-10）
+
+- **付款**：购买弹窗主按钮「连接钱包付款」（有 `window.ethereum` 时显示），网络二选一 Monad（默认）/ Base。付款前用只读 RPC 查 USDC 余额，不够就提示、不发起签名；只需要 USDC，gas 由 facilitator 代付。底层是官方 `@x402/fetch` + `@x402/evm` exact 客户端，且只使用用户所选网络的那条 accepts（`lib/wallet-pay/`）。单格 `POST /api/cells/purchase`，多格 `POST /api/cells/bulk-purchase`。Commerce 已不可用，按钮置灰为「信用卡支付暂停」。
+- **测试网模式**：构建时 `NEXT_PUBLIC_X402_NETWORK_MODE=testnet`，或服务端下发的 402 accepts 里出现 10143 / 84532 即自动按测试网处理。
+- **key**：买完后页面显示一次 `gk_…`，并按坐标存在浏览器 localStorage（`agentverse.cellKeys.v1`），随后直接打开「装修」表单（`PUT /api/cells/update`，Bearer key）。没有本机 key 时点「我有 key」手动粘贴。多格购买时 key 只对应所选范围的左上角那一格（服务端 bulk-purchase 现状）。
+- **本地端到端（不碰生产）**：
+  ```bash
+  npm run db:local -- --no-sync                      # 本地 PGlite，不从线上同步
+  X402_NETWORK_MODE=testnet X402_FACILITATOR_MOCK=1 npm run dev:local
+  node scripts/e2e-wallet-buy.mjs                    # Playwright + mock 钱包，截图存系统临时目录
+  ```
+  `X402_FACILITATOR_MOCK=1` 只在 `NODE_ENV !== 'production'` 且测试网模式下生效（本地签名校验、不上链）；生产构建里整段代码被剔除，`npm run build && node scripts/check-no-mock-in-build.mjs` 可验证。
