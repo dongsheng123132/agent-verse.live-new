@@ -93,7 +93,7 @@ export async function payForCells(opts: PayForCellsOptions): Promise<PurchaseSuc
 
 async function run(opts: PayForCellsOptions): Promise<PurchaseSuccess> {
   const { provider, networkKey, onStatus } = opts
-  const doFetch: typeof fetch = opts.fetchImpl ?? ((...a) => fetch(...a))
+  const doFetch: typeof fetch = opts.fetchImpl ?? ((input, init) => fetch(input, init))
   if (opts.cells.length === 0) throw new PayError('bad_request', '请先选择格子')
 
   // Deterministic order: the API key belongs to the first cell, so make that the top-left one.

@@ -102,7 +102,7 @@ export async function readUsdcBalance(args: {
 }): Promise<bigint | null> {
   const { net, owner, provider } = args
   const data = balanceCallData(owner)
-  const fetchImpl = args.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a))
+  const fetchImpl: typeof fetch = args.fetchImpl ?? ((input, init) => fetch(input, init))
   try {
     return await rpcEthCall(net.rpcUrl, net.usdc.address, data, fetchImpl, args.timeoutMs ?? 8000)
   } catch {

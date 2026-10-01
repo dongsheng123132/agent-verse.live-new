@@ -121,6 +121,16 @@ export type FacilitatorClientFactory = () => Promise<FacilitatorPair>
  * the same molandak facilitator for Monad testnet.
  */
 export async function defaultFacilitatorClients(mode: X402NetworkMode = getNetworkMode()): Promise<FacilitatorPair> {
+  // DEV/TEST ONLY: a facilitator that signs nothing on-chain (lib/x402-mock-facilitator.ts).
+  // The three-part condition is written inline, with the literal `process.env.NODE_ENV`, on
+  // purpose: `next build` replaces it with "production", the branch becomes constant-false
+  // and webpack drops the dynamic import, so the mock is not even present in a production
+  // bundle (checked by scripts/check-no-mock-in-build.mjs and test/x402-mock-gate.test.ts).
+  if (process.env.NODE_ENV !== 'production' && process.env.X402_FACILITATOR_MOCK === '1' && mode === 'testnet') {
+    const { createMockFacilitatorPair } = await import('./x402-mock-facilitator')
+    console.warn('[x402] X402_FACILITATOR_MOCK=1: using the MOCK facilitator (testnet mode, non-production only) — no payment is settled on-chain')
+    return createMockFacilitatorPair(getActiveNetworks(mode))
+  }
   if (mode === 'testnet') {
     return {
       base: new HTTPFacilitatorClient({ url: BASE_SEPOLIA_FACILITATOR_URL }),
