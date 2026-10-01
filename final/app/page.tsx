@@ -14,6 +14,7 @@ import { MapToolbar } from '../components/MapToolbar'
 import { Globe, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 import { SHOWCASE_ORIGIN } from '../lib/showcase/metropolis'
+import type { PurchaseSuccess } from '../lib/wallet-pay/pay'
 
 export default function Page() {
   return <LangProvider><PageInner /></LangProvider>
@@ -45,11 +46,13 @@ function PageInner() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
 
-  // Purchase Flow
-  const [payLoading, setPayLoading] = useState(false)
-  const [payError, setPayError] = useState<string | null>(null)
+  // Purchase Flow (wallet payment lives inside PurchaseModal; the page handles the receipt)
   const [apiKeyResult, setApiKeyResult] = useState<string | null>(null)
   const [purchasedCell, setPurchasedCell] = useState<{ x: number, y: number } | null>(null)
+  const [receipt, setReceipt] = useState<{ txHash: string | null, txUrl: string | null, networkLabel: string, count: number, totalUsdc: string, keySaved: boolean } | null>(null)
+  const [keyCopied, setKeyCopied] = useState(false)
+  // Cell whose decorate form should open by itself (set right after a purchase)
+  const [decorateTarget, setDecorateTarget] = useState<{ x: number, y: number } | null>(null)
 
   // Referral
   const [refCode, setRefCode] = useState<string | null>(null)
@@ -248,7 +251,6 @@ function PageInner() {
     if (valid.length > 0) {
       setSelectedCells(valid);
       setShowPurchaseModal(true);
-      setPayError(null);
     }
   };
 
@@ -270,31 +272,35 @@ function PageInner() {
     setPan(clampPan({ x: cx, y: cy }, zoom, containerSize));
   };
 
-  const handlePay = async () => {
-    if (selectedCells.length === 0) return;
-    setPayError(null);
-    setPayLoading(true);
+  // Re-read one cell (detail view) and the whole map after the cell changed. Returns the fresh cell.
+  const refreshCell = useCallback(async (x: number, y: number): Promise<Cell | null> => {
+    fetchGrid()
     try {
-      const res = await fetch('/api/commerce/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cells: selectedCells.map(c => ({ x: c.x, y: c.y })),
-          ref: refCode || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (data?.hosted_url) {
-        window.location.href = data.hosted_url;
-        return;
+      const d = await fetch(`/api/cells?x=${x}&y=${y}`, { cache: 'no-store' }).then(r => r.json())
+      if (d?.ok && d?.cell) {
+        setDetailCell(prev => (prev && prev.x === d.cell.x && prev.y === d.cell.y) || !prev ? d.cell : prev)
+        return d.cell as Cell
       }
-      setPayError(data?.message || data?.error || 'Payment creation failed');
-    } catch (e: any) {
-      setPayError(e?.message || 'Request failed');
-    } finally {
-      setPayLoading(false);
-    }
-  };
+    } catch { /* keep the old detail */ }
+    return null
+  }, [fetchGrid])
+
+  // A wallet payment settled: show the receipt (key shown once), refresh the map and open the decorate form.
+  const handlePurchased = (r: PurchaseSuccess, keySaved: boolean) => {
+    setShowPurchaseModal(false)
+    setSelectedCells([])
+    setApiKeyResult(r.apiKey)
+    setPurchasedCell(r.keyCell)
+    setKeyCopied(false)
+    if (r.refCode) setBuyerRefCode(r.refCode)
+    setReceipt({ txHash: r.txHash, txUrl: r.txUrl, networkLabel: r.network.label + (r.mode === 'testnet' ? ' 测试网' : ''), count: r.cells.length, totalUsdc: r.totalUsdc, keySaved })
+    setDecorateTarget(r.keyCell)
+    fetchGrid()
+    setDetailLoading(true)
+    fetch(`/api/cells?x=${r.keyCell.x}&y=${r.keyCell.y}`, { cache: 'no-store' }).then(res => res.json()).then(d => {
+      if (d?.ok && d?.cell) setDetailCell(d.cell)
+    }).catch(() => {}).finally(() => setDetailLoading(false))
+  }
 
   // Container measurement — robust approach using getBoundingClientRect
   const containerNodeRef = React.useRef<HTMLDivElement | null>(null)
@@ -599,16 +605,16 @@ function PageInner() {
       <AgentRoom
         cell={detailCell}
         loading={detailLoading}
-        onClose={() => { setDetailCell(null); setSelectedCells([]); }}
+        onClose={() => { setDetailCell(null); setSelectedCells([]); setDecorateTarget(null); }}
+        openDecorateFor={decorateTarget}
+        onCellUpdated={refreshCell}
       />
 
       {showPurchaseModal && selectedCells.length > 0 && (
         <PurchaseModal
           selectedCells={selectedCells.map(c => ({ x: c.x, y: c.y }))}
-          onPay={handlePay}
           onClose={() => { setShowPurchaseModal(false); setSelectedCells([]); }}
-          loading={payLoading}
-          error={payError}
+          onPurchased={handlePurchased}
           refCode={refCode}
         />
       )}
@@ -620,19 +626,44 @@ function PageInner() {
         const refLine = buyerRefCode ? `\n\n--- Referral Link (earn 10% commission) ---\n\n${origin}/?ref=${buyerRefCode}` : ''
         const fullText = `=== AgentVerse Grid - Purchase Receipt ===\n\nCell: (${purchasedCell?.x ?? '?'}, ${purchasedCell?.y ?? '?'})\nAPI Key: ${apiKeyResult}\n\n--- Customize your cell ---\n\n${curlCmd}\n\n--- Documentation ---\n\n${origin}/skill.md${refLine}`
         return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setApiKeyResult(null)}>
+          <div data-testid="success-modal" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => { /* the key is shown once: only the explicit button closes this */ }}>
             <div className="bg-[#111] border border-green-500 rounded-lg p-5 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h2 className="text-green-500 font-mono font-bold mb-1">{t('payment_success')}</h2>
-              {purchasedCell && <p className="text-gray-400 text-xs font-mono mb-2">{t('acquired_node')} ({purchasedCell.x}, {purchasedCell.y})</p>}
+              {purchasedCell && <p className="text-gray-400 text-xs font-mono mb-2">{t('acquired_node')} ({purchasedCell.x}, {purchasedCell.y}){receipt && receipt.count > 1 ? ` · 共 ${receipt.count} 格，这把 key 对应左上角这一格` : ''}</p>}
 
-              <div className="bg-yellow-900/20 border border-yellow-700/50 p-3 rounded mb-4">
-                <p className="text-yellow-500 text-xs font-bold font-mono uppercase">{t('save_warning')}</p>
-                <p className="text-yellow-600/80 text-[10px] mt-1">{t('save_warning_desc')}</p>
+              {receipt && (
+                <div className="bg-[#0a0a0a] border border-[#333] rounded p-3 mb-2 text-xs font-mono">
+                  <div className="text-gray-500 text-[10px] mb-1">交易 · {receipt.networkLabel} · {receipt.totalUsdc} USDC</div>
+                  {receipt.txUrl && receipt.txHash ? (
+                    <a data-testid="tx-link" href={receipt.txUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline break-all">{receipt.txUrl}</a>
+                  ) : (
+                    <span className="text-gray-500">服务器没有返回交易哈希</span>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-red-900/30 border-2 border-red-500/70 p-3 rounded mb-3">
+                <p data-testid="key-warning" className="text-red-300 text-sm font-bold font-mono">⚠ 只显示这一次，请保存！</p>
+                <p className="text-red-200/80 text-[11px] mt-1">这把 API key 服务器不会再给你第二次——丢了就没法装修这个格子（只能付 0.1 USDC 重置）。请先点下面的「复制 Key」，存进密码管理器或笔记。</p>
+                {receipt && !receipt.keySaved && (
+                  <p className="text-yellow-300 text-[11px] mt-1.5">这个浏览器没能把 key 存在本机（可能开了无痕/禁用了存储），所以更要现在就复制。</p>
+                )}
+                {receipt && receipt.keySaved && (
+                  <p className="text-green-300/80 text-[11px] mt-1.5">已按坐标存在这个浏览器里，之后在同一台设备上可直接装修（换设备/清缓存会丢，仍请另存一份）。</p>
+                )}
               </div>
 
               <div className="bg-[#0a0a0a] border border-[#333] rounded p-3 mb-2">
                 <div className="text-[10px] text-gray-500 font-mono mb-1">{t('api_key_label')}</div>
-                <div className="font-mono text-sm text-green-400 break-all select-all">{apiKeyResult}</div>
+                <div data-testid="api-key" className="font-mono text-sm text-green-400 break-all select-all">{apiKeyResult}</div>
+                <button
+                  type="button"
+                  data-testid="copy-key"
+                  className={`mt-2 w-full py-2 text-xs font-mono font-bold rounded border ${keyCopied ? 'bg-green-900/30 border-green-600 text-green-300' : 'bg-green-700 hover:bg-green-600 border-green-500 text-white'}`}
+                  onClick={() => { navigator.clipboard.writeText(apiKeyResult); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000) }}
+                >
+                  {keyCopied ? '已复制 ✓' : '复制 Key'}
+                </button>
               </div>
 
               <div className="bg-[#0a0a0a] border border-[#333] rounded p-3 mb-2">
@@ -657,8 +688,8 @@ function PageInner() {
                 {t('copy_all')}
               </button>
 
-              <button type="button" className="w-full py-2 bg-[#222] border border-[#333] hover:border-green-500 text-white font-mono text-sm rounded font-bold" onClick={() => { setApiKeyResult(null); setPurchasedCell(null); }}>
-                {t('i_saved')}
+              <button type="button" className="w-full py-2 bg-[#222] border border-[#333] hover:border-green-500 text-white font-mono text-sm rounded font-bold" data-testid="key-saved" onClick={() => { setApiKeyResult(null); setPurchasedCell(null); setReceipt(null); }}>
+                {receipt ? '我已保存 Key，去装修' : t('i_saved')}
               </button>
             </div>
           </div>
