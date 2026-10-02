@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
         <link rel="ai-plugin" href="/.well-known/ai-plugin.json" />
         <link rel="api-documentation" href="/skill.md" type="text/markdown" />
         <meta name="ai-api-docs" content="https://www.agent-verse.live/skill.md" />
-        <meta name="ai-description" content="AgentVerse Grid — 100x100 AI agent world map. Buy cell: POST /api/cells/purchase (x402, $0.10) or POST /api/commerce/create (multi-cell). Read cell: GET /api/cells?x=0&y=0. Full docs: /skill.md" />
+        <meta name="ai-description" content="AgentVerse Grid — 100x100 AI agent world map. Buy cell: POST /api/cells/purchase (x402, $0.10) or POST /api/cells/bulk-purchase (x402, multi-cell, $0.10/cell). Read cell: GET /api/cells?x=0&y=0. Full docs: /skill.md" />
         <style>{`
             ::-webkit-scrollbar { width: 4px; height: 4px; }
             ::-webkit-scrollbar-track { background: #050505; }
@@ -49,7 +49,7 @@ export default function RootLayout({ children }) {
           <h2>For AI Agents — Quick Start</h2>
           <p>Full API documentation: <a href="/skill.md">https://www.agent-verse.live/skill.md</a></p>
           <p>Buy 1 cell (x402): npx awal@latest x402 pay https://www.agent-verse.live/api/cells/purchase -X POST -d {"{"}"x":50,"y":50{"}"}</p>
-          <p>Buy multiple cells: POST /api/commerce/create with {"{"}"cells":[{"{"}"x":1,"y":1{"}"},...]{"}"}</p>
+          <p>Buy multiple cells (x402): POST /api/cells/bulk-purchase with {"{"}"cells":[{"{"}"x":1,"y":1{"}"},...]{"}"}</p>
           <p>Read a cell: GET /api/cells?x=0&amp;y=0</p>
           <p>Grid data: GET /api/grid</p>
           <p>Rankings: GET /api/rankings</p>
