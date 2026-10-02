@@ -68,13 +68,16 @@ function PageInner() {
   const searchInputRef = React.useRef<HTMLInputElement>(null)
 
   // --- Data Fetching ---
-  const fetchGrid = useCallback(async () => {
+  const fetchGrid = useCallback(async (): Promise<Cell[]> => {
     try {
-      const res = await fetch('/api/grid')
+      const res = await fetch('/api/grid', { cache: 'no-store' })
       const data = res.ok ? await res.json() : []
-      setCells(Array.isArray(data) ? data : [])
+      const list: Cell[] = Array.isArray(data) ? data : []
+      setCells(list)
+      return list
     } catch {
       setCells([])
+      return []
     } finally {
       setLoading(false)
     }
@@ -284,6 +287,38 @@ function PageInner() {
     } catch { /* keep the old detail */ }
     return null
   }, [fetchGrid])
+
+  // "我让 AI 买完了": re-read the map, and if the chosen cells now have an owner open the first one so the person can review
+  // what the AI bought / decorated. Returns how many of the chosen cells have an owner (the modal explains the rest).
+  const handleAiDone = useCallback(async (): Promise<{ owned: number, total: number } | null> => {
+    const chosen = selectedCells.map(c => ({ x: c.x, y: c.y }))
+    if (chosen.length === 0) return null
+    let list: Cell[]
+    try {
+      const res = await fetch('/api/grid', { cache: 'no-store' })
+      if (!res.ok) return null
+      const data = await res.json()
+      if (!Array.isArray(data)) return null
+      list = data
+      setCells(list)
+    } catch {
+      return null
+    }
+    const ownerOf = new Map<string, Cell>()
+    list.forEach(c => { if (c.owner) ownerOf.set(`${c.x},${c.y}`, c) })
+    const owned = chosen.filter(c => ownerOf.has(`${c.x},${c.y}`))
+    if (owned.length === chosen.length) {
+      const first = owned[0]
+      setShowPurchaseModal(false)
+      setSelectedCells([])
+      setDetailLoading(true)
+      setDetailCell(ownerOf.get(`${first.x},${first.y}`) ?? null)
+      fetch(`/api/cells?x=${first.x}&y=${first.y}`, { cache: 'no-store' }).then(r => r.json()).then(d => {
+        if (d?.ok && d?.cell) setDetailCell(d.cell)
+      }).catch(() => {}).finally(() => setDetailLoading(false))
+    }
+    return { owned: owned.length, total: chosen.length }
+  }, [selectedCells])
 
   // A wallet payment settled: show the receipt (key shown once), refresh the map and open the decorate form.
   const handlePurchased = (r: PurchaseSuccess, keySaved: boolean) => {
@@ -615,6 +650,7 @@ function PageInner() {
           selectedCells={selectedCells.map(c => ({ x: c.x, y: c.y }))}
           onClose={() => { setShowPurchaseModal(false); setSelectedCells([]); }}
           onPurchased={handlePurchased}
+          onAiDone={handleAiDone}
           refCode={refCode}
         />
       )}

@@ -4,7 +4,8 @@
  * Touches ONLY the local stack — never production:
  *
  *   npm run db:local -- --no-sync
- *   X402_NETWORK_MODE=testnet X402_FACILITATOR_MOCK=1 npm run dev:local
+ *   X402_NETWORK_MODE=testnet X402_FACILITATOR_MOCK=1 NEXT_PUBLIC_WALLET_PAY_ENABLED=1 npm run dev:local
+ *   (the wallet button is switched off by default since 2026-10-02, see lib/wallet-pay/feature.ts)
  *   node scripts/e2e-wallet-buy.mjs
  *
  * What is real: the page, the wallet-pay code, the official @x402/fetch client,
@@ -184,9 +185,9 @@ try {
   check('price shows $0.10 USDC for 1 cell', (await page.getByTestId('total-price').innerText()).includes('0.10'))
   check('Monad is selected by default', (await page.getByTestId('net-monad').getAttribute('aria-checked')) === 'true' && (await page.getByTestId('net-base').getAttribute('aria-checked')) === 'false')
   check('primary button says 连接钱包付款', (await page.getByTestId('wallet-pay').innerText()).includes('连接钱包付款'))
-  check('commerce is shown as paused and disabled', await page.getByRole('button', { name: '信用卡支付暂停' }).isDisabled())
+  check('the old 信用卡支付暂停 button is gone (credit card / Commerce removed from the modal)', (await page.getByRole('button', { name: '信用卡支付暂停' }).count()) === 0)
   check('"让我的 AI 买" prompt mentions paid_fetch, the endpoint and max_price 0.10', await (async () => {
-    const t = await page.getByTestId('ai-prompt').innerText()
+    const t = (await page.getByTestId('ai-prompt').textContent()) || '' // textContent: the <pre> sits in a closed <details>
     return t.includes('paid_fetch') && t.includes('/api/cells/purchase') && t.includes('max_price: "0.10"') && t.includes('npx awal@latest')
   })())
   check('modal says only USDC is needed, gas is paid by the facilitator', (await modal.innerText()).includes('不需要 gas'))

@@ -1,8 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { X, Wallet, Box, Copy, Check, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { X, Wallet, Box, Copy, Check, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
-import { PRICE_PER_CELL } from '../app/types';
-import { formatAtomicUsdc, totalAtomicForCells, totalUsdcForCells } from '../lib/wallet-pay/amount';
+import {
+    AGENTVERSE_PAY_TO,
+    DEFAULT_ORIGIN,
+    EMPTY_DECORATE,
+    MAX_BULK_CELLS,
+    MONEYSWITCH_URL,
+    buildAiPurchasePrompt,
+    totalPriceUsdc,
+    unitPriceUsdc,
+    validateDecorateFields,
+    type AiDecorateFields,
+} from '../lib/ai-purchase-prompt';
+import { WALLET_PAY_ENABLED, WALLET_PAY_PAUSED_LABEL } from '../lib/wallet-pay/feature';
+import { formatAtomicUsdc, totalAtomicForCells } from '../lib/wallet-pay/amount';
 import { NO_GAS_NOTE, toPayError } from '../lib/wallet-pay/errors';
 import { saveCellKey, safeLocalStorage } from '../lib/wallet-pay/key-store';
 import { DEFAULT_PAY_NETWORK, PAY_NETWORK_ORDER, PAY_NETWORKS, type PayNetworkKey } from '../lib/wallet-pay/networks';
@@ -12,9 +24,16 @@ import type { PayStatus, PurchaseSuccess } from '../lib/wallet-pay/pay';
 interface PurchaseModalProps {
     selectedCells: { x: number; y: number }[];
     onClose: () => void;
-    /** Called once the payment settled; `keySaved` is false when this browser refused to store the key. */
+    /** Browser-wallet path only: called once the payment settled; `keySaved` is false when this browser refused to store the key. */
     onPurchased: (result: PurchaseSuccess, keySaved: boolean) => void;
     refCode?: string | null;
+    /**
+     * "我让 AI 买完了": re-read the map and the selected cells so the person can review the result.
+     * Resolves with how many of the selected cells now have an owner (null = could not tell).
+     */
+    onAiDone?: () => Promise<{ owned: number; total: number } | null>;
+    /** Show the browser-wallet payment path. Defaults to the WALLET_PAY_ENABLED switch (off). */
+    walletPayEnabled?: boolean;
 }
 
 const STATUS_TEXT: Record<PayStatus, string> = {
@@ -25,23 +44,38 @@ const STATUS_TEXT: Record<PayStatus, string> = {
     signing: '请在钱包里确认签名（不是转账交易，不花 gas）…',
 };
 
+const FIELD = 'w-full bg-[#050505] border border-[#333] rounded px-2 py-1.5 text-xs font-mono text-gray-200 focus:border-green-500 focus:outline-none placeholder:text-gray-600';
+const LABEL = 'block text-[10px] text-gray-500 font-mono mb-0.5';
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
 export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     selectedCells,
     onClose,
     onPurchased,
     refCode,
+    onAiDone,
+    walletPayEnabled = WALLET_PAY_ENABLED,
 }) => {
     const { t } = useLang();
+    // ---- AI-first purchase ----
+    const [fields, setFields] = useState<AiDecorateFields>({ ...EMPTY_DECORATE });
     const [copied, setCopied] = useState(false);
+    const [copyFailed, setCopyFailed] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
+    const [checking, setChecking] = useState(false);
+    const [doneMsg, setDoneMsg] = useState<string | null>(null);
+    // ---- browser-wallet path (only when walletPayEnabled) ----
     const [hasWallet, setHasWallet] = useState<boolean | null>(null);
     const [networkKey, setNetworkKey] = useState<PayNetworkKey>(DEFAULT_PAY_NETWORK);
     const [busy, setBusy] = useState(false);
     const [status, setStatus] = useState<PayStatus | null>(null);
     const [error, setError] = useState<string | null>(null);
+    // A text selection that starts inside the modal and ends on the backdrop must not close the modal.
+    const downOnBackdrop = useRef(false);
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin = (typeof window !== 'undefined' && window.location.origin) || DEFAULT_ORIGIN;
     const count = selectedCells.length;
-    const totalPrice = totalUsdcForCells(count);
+    const totalPrice = totalPriceUsdc(count);
     const maxPrice = formatAtomicUsdc(totalAtomicForCells(count));
     const minX = Math.min(...selectedCells.map(c => c.x));
     const maxX = Math.max(...selectedCells.map(c => c.x));
@@ -49,10 +83,26 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     const maxY = Math.max(...selectedCells.map(c => c.y));
     const rangeLabel = count === 1
         ? `(${selectedCells[0].x}, ${selectedCells[0].y})`
-        : `(${minX},${minY}) → (${maxX},${maxY})`;
+        : count <= 8
+            ? selectedCells.map(c => `(${c.x},${c.y})`).join(' ')
+            : `(${minX},${minY}) → (${maxX},${maxY})`;
+
+    const aiPrompt = useMemo(
+        () => buildAiPurchasePrompt({ origin, cells: selectedCells, decorate: fields, refCode }),
+        [origin, selectedCells, fields, refCode]
+    );
+    const fieldErrors = validateDecorateFields(fields);
+    const hasFieldErrors = Object.keys(fieldErrors).length > 0;
+    const tooMany = count > MAX_BULK_CELLS;
+
+    const setField = <K extends keyof AiDecorateFields>(k: K, v: AiDecorateFields[K]) => {
+        setFields(prev => ({ ...prev, [k]: v }));
+        setCopied(false);
+    };
 
     // Wallet extensions inject window.ethereum a moment after load — look now, and again shortly.
     useEffect(() => {
+        if (!walletPayEnabled) return;
         const check = () => setHasWallet(!!getInjectedProvider());
         check();
         const timer = setTimeout(check, 800);
@@ -61,7 +111,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
             clearTimeout(timer);
             window.removeEventListener('ethereum#initialized', check);
         };
-    }, []);
+    }, [walletPayEnabled]);
 
     const handleWalletPay = async () => {
         if (busy) return;
@@ -96,140 +146,246 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
         }
     };
 
-    // ---- "let my AI buy it" ----
-    const refPart = refCode ? `,"ref":"${refCode}"` : '';
-    const first = selectedCells[0];
-    const endpoint = count === 1 ? '/api/cells/purchase' : '/api/cells/bulk-purchase';
-    const bodyJson = count === 1
-        ? `{"x":${first.x},"y":${first.y}${refPart}}`
-        : `{"cells":${JSON.stringify(selectedCells.map(c => ({ x: c.x, y: c.y })))}${refPart}}`;
-    const awalCmd = `npx awal@latest x402 pay ${origin}${endpoint} -X POST -d '${bodyJson}'`;
-    const aiPrompt = [
-        `请用 MoneySwitch 的 paid_fetch 工具，在 AgentVerse 买 ${count} 个格子：`,
-        `- url: ${origin}${endpoint}`,
-        `- method: POST`,
-        `- body: ${bodyJson}`,
-        `- max_price: "${maxPrice}"（${PRICE_PER_CELL} USDC/格 × ${count}，Monad 或 Base 上的 USDC 都行）`,
-        ``,
-        `买完后响应里的 api_key（gk_ 开头）只返回这一次，请原样保存并告诉我。装修格子的方法见 ${origin}/skill.md`,
-        ``,
-        `备选（没有 MoneySwitch 时）：`,
-        awalCmd,
-    ].join('\n');
-
-    const handleCopyForAI = () => {
-        navigator.clipboard.writeText(aiPrompt);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleCopyForAI = async () => {
+        if (hasFieldErrors || tooMany) return;
+        try {
+            await navigator.clipboard.writeText(aiPrompt);
+            setCopied(true);
+            setCopyFailed(false);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // Clipboard blocked (insecure origin / permission): show the text so it can be selected by hand.
+            setCopyFailed(true);
+            setShowPreview(true);
+        }
     };
 
+    const handleAiDone = async () => {
+        if (!onAiDone || checking) return;
+        setChecking(true);
+        setDoneMsg(null);
+        try {
+            const r = await onAiDone();
+            if (!r) setDoneMsg('刷新失败，请检查网络后再点一次');
+            else if (r.owned === 0) setDoneMsg('已刷新，但还没看到这些格子被买走——AI 可能还没付款，或付款还在确认中。稍后再点一次。');
+            else if (r.owned < r.total) setDoneMsg(`已刷新：${r.total} 格里已有 ${r.owned} 格有主人。AI 可能还没买完，或有格子被别人先买走了。`);
+        } catch {
+            setDoneMsg('刷新失败，请检查网络后再点一次');
+        } finally {
+            setChecking(false);
+        }
+    };
+
+    const fieldError = (k: keyof AiDecorateFields) =>
+        fieldErrors[k] ? <p data-testid={`ai-err-${k}`} className="text-red-400 text-[10px] font-mono mt-0.5">{fieldErrors[k]}</p> : null;
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm" onClick={busy ? undefined : onClose}>
-            <div data-testid="purchase-modal" className="bg-[#111] border border-[#333] rounded-lg p-4 md:p-5 max-w-sm w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[calc(100dvh-1.5rem)] md:max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm"
+            onMouseDown={e => { downOnBackdrop.current = e.target === e.currentTarget; }}
+            onClick={e => { if (!busy && downOnBackdrop.current && e.target === e.currentTarget) onClose(); }}
+        >
+            <div data-testid="purchase-modal" className="bg-[#111] border border-[#333] rounded-lg p-4 md:p-5 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[calc(100dvh-1.5rem)] md:max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} disabled={busy} className="absolute top-4 right-4 text-gray-500 hover:text-white disabled:opacity-30">
                     <X size={20} />
                 </button>
 
-                <h2 className="text-green-500 font-mono font-bold mb-4 text-lg flex items-center gap-2">
+                <h2 className="text-green-500 font-mono font-bold mb-3 text-lg flex items-center gap-2">
                     <Box size={20} />
                     {t('acquire_node')} — {count} {count === 1 ? 'cell' : 'cells'}
                 </h2>
 
-                <div className="text-gray-400 text-xs font-mono mb-2">
-                    {rangeLabel}
-                </div>
-
-                <div className="bg-[#0a0a0a] border border-[#222] rounded p-4 mb-4">
-                    <div className="flex justify-between items-end mb-2">
+                {/* ---- what is being bought ---- */}
+                <div className="bg-[#0a0a0a] border border-[#222] rounded p-3 mb-3">
+                    <div data-testid="selected-cells" className="text-gray-300 text-xs font-mono mb-2 break-words">
+                        <span className="text-gray-500">所选格子 </span>{rangeLabel}
+                    </div>
+                    <div className="flex justify-between items-end mb-1">
                         <span className="text-gray-400 text-xs font-mono">{t('total_cost')}</span>
-                        <span data-testid="total-price" className="text-white text-xl font-bold font-mono">${totalPrice.toFixed(2)} USDC</span>
+                        <span data-testid="total-price" className="text-white text-xl font-bold font-mono">${totalPrice} USDC</span>
                     </div>
                     <div className="flex justify-between items-end">
-                        <span className="text-gray-500 text-[10px] font-mono">${PRICE_PER_CELL} × {count}</span>
+                        <span className="text-gray-500 text-[10px] font-mono">${unitPriceUsdc()} × {count}</span>
                         <span className="text-green-500 text-xs font-mono">{count} {t('units')}</span>
                     </div>
+                    <div className="mt-2 pt-2 border-t border-[#1a1a1a] text-[10px] font-mono text-gray-500 space-y-0.5">
+                        <div>收款地址 <span data-testid="pay-to" className="text-gray-300 break-all select-all">{AGENTVERSE_PAY_TO}</span></div>
+                        <div>支持网络 <span className="text-purple-300">Monad {PAY_NETWORKS.mainnet.monad.caip2}（优先）</span> · <span className="text-blue-300">Base {PAY_NETWORKS.mainnet.base.caip2}</span></div>
+                    </div>
                 </div>
 
-                {/* ---- primary: pay with a browser wallet ---- */}
-                <div className="mb-2 text-[11px] text-gray-400 font-mono">选择付款网络</div>
-                <div role="radiogroup" aria-label="付款网络" className="grid grid-cols-2 gap-2 mb-2">
-                    {PAY_NETWORK_ORDER.map(key => {
-                        const active = networkKey === key;
-                        return (
-                            <button
-                                key={key}
-                                type="button"
-                                role="radio"
-                                aria-checked={active}
-                                data-testid={`net-${key}`}
-                                disabled={busy}
-                                onClick={() => setNetworkKey(key)}
-                                className={`py-2 rounded border text-xs font-mono font-bold transition-all disabled:opacity-60 ${active
-                                    ? (key === 'monad' ? 'border-purple-500 bg-purple-900/30 text-purple-200' : 'border-blue-500 bg-blue-900/30 text-blue-200')
-                                    : 'border-[#333] bg-[#0a0a0a] text-gray-400 hover:border-gray-500'}`}
-                            >
-                                {PAY_NETWORKS.mainnet[key].label}
-                                {key === DEFAULT_PAY_NETWORK && <span className="ml-1 font-normal text-[9px] opacity-70">默认</span>}
-                            </button>
-                        );
-                    })}
-                </div>
-                <p className="text-[10px] text-gray-500 font-mono mb-3">{NO_GAS_NOTE}</p>
-
-                {error && (
-                    <div data-testid="pay-error" role="alert" className="bg-red-900/20 border border-red-900/50 p-2 rounded mb-3 text-red-300 text-xs font-mono break-words flex gap-1.5">
+                {tooMany && (
+                    <div data-testid="too-many" role="alert" className="bg-red-900/20 border border-red-900/50 p-2 rounded mb-3 text-red-300 text-xs font-mono flex gap-1.5">
                         <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                        <span>{error}</span>
+                        <span>一次最多买 {MAX_BULK_CELLS} 格，你选了 {count} 格。请缩小选区。</span>
                     </div>
                 )}
 
-                {hasWallet === false ? (
-                    <div data-testid="no-wallet" className="bg-yellow-900/20 border border-yellow-800/40 rounded p-3 mb-3">
-                        <p className="text-yellow-400 text-xs font-bold font-mono mb-1">没有检测到浏览器钱包</p>
-                        <p className="text-yellow-500/90 text-[11px] leading-relaxed">
-                            电脑上请安装 MetaMask / OKX / Rabby 浏览器扩展后刷新本页；手机上请在钱包 App（MetaMask、OKX、Rabby、Trust 等）的内置浏览器里打开本站。
-                            也可以用下面的「让我的 AI 买」。
-                        </p>
+                {/* ---- how I want it to look (optional) ---- */}
+                <div className="mb-3">
+                    <div className="text-green-500 text-[11px] font-bold font-mono mb-1.5">想要的样子（可选，不填就只买格子）</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <label className={LABEL} htmlFor="ai-title">标题 title</label>
+                            <input id="ai-title" data-testid="ai-title" className={FIELD} value={fields.title} maxLength={120} onChange={e => setField('title', e.target.value)} placeholder="我的格子" />
+                        </div>
+                        <div>
+                            <label className={LABEL} htmlFor="ai-fill-color">格子颜色 fill_color</label>
+                            <div className="flex gap-1.5">
+                                <input
+                                    type="color"
+                                    aria-label="选择颜色"
+                                    data-testid="ai-color-picker"
+                                    value={HEX_COLOR.test(fields.fill_color) ? fields.fill_color : '#10b981'}
+                                    onChange={e => setField('fill_color', e.target.value)}
+                                    className="h-[30px] w-9 shrink-0 bg-transparent border border-[#333] rounded cursor-pointer"
+                                />
+                                <input id="ai-fill-color" data-testid="ai-fill-color" className={FIELD} value={fields.fill_color} onChange={e => setField('fill_color', e.target.value)} placeholder="不选就不改颜色" />
+                                {fields.fill_color && (
+                                    <button type="button" onClick={() => setField('fill_color', '')} className="shrink-0 px-2 text-[10px] font-mono rounded border border-[#333] text-gray-500 hover:text-white">清除</button>
+                                )}
+                            </div>
+                            {fieldError('fill_color')}
+                        </div>
                     </div>
-                ) : (
-                    <button
-                        type="button"
-                        data-testid="wallet-pay"
-                        disabled={busy || hasWallet === null}
-                        onClick={handleWalletPay}
-                        className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:bg-[#222] disabled:text-gray-500 text-white font-mono font-bold rounded mb-2 text-sm flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-900/20"
-                    >
-                        {busy ? (
-                            <span data-testid="pay-status" className="animate-pulse text-xs">{status ? STATUS_TEXT[status] : t('processing')}</span>
-                        ) : (
-                            <><Wallet size={16} /> 连接钱包付款 · ${totalPrice.toFixed(2)} USDC</>
-                        )}
-                    </button>
-                )}
+                    <div className="mb-2">
+                        <label className={LABEL} htmlFor="ai-summary">一句话简介 summary</label>
+                        <input id="ai-summary" data-testid="ai-summary" className={FIELD} value={fields.summary} maxLength={200} onChange={e => setField('summary', e.target.value)} placeholder="一句话介绍这个格子" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                            <label className={LABEL} htmlFor="ai-iframe">嵌入网页 iframe_url（仅 https）</label>
+                            <input id="ai-iframe" data-testid="ai-iframe" className={FIELD} value={fields.iframe_url} onChange={e => setField('iframe_url', e.target.value)} placeholder="https://your-site.com" />
+                            {fieldError('iframe_url')}
+                        </div>
+                        <div>
+                            <label className={LABEL} htmlFor="ai-service-url">x402 服务地址 service_url（可选）</label>
+                            <input id="ai-service-url" data-testid="ai-service-url" className={FIELD} value={fields.service_url} onChange={e => setField('service_url', e.target.value)} placeholder="https://api.example.com/paid" />
+                            {fieldError('service_url')}
+                        </div>
+                    </div>
+                </div>
 
+                {/* ---- primary: copy the prompt to my AI ---- */}
                 <button
                     type="button"
-                    disabled
-                    title="Coinbase Commerce 已不可用"
-                    className="w-full py-2 bg-[#161616] border border-[#222] text-gray-600 font-mono text-[11px] rounded mb-4 cursor-not-allowed"
+                    data-testid="copy-for-ai"
+                    disabled={hasFieldErrors || tooMany}
+                    onClick={handleCopyForAI}
+                    className={`w-full py-3 font-mono font-bold rounded mb-1.5 text-sm flex items-center justify-center gap-2 transition-all disabled:bg-[#222] disabled:text-gray-500 disabled:cursor-not-allowed ${copied ? 'bg-green-900/40 border border-green-600 text-green-300' : 'bg-green-600 hover:bg-green-500 text-white shadow-lg hover:shadow-green-900/20'}`}
                 >
-                    信用卡支付暂停
+                    {copied ? <><Check size={16} /> 已复制，去粘贴给你的 AI</> : <><Copy size={16} /> 复制给我的 AI</>}
                 </button>
-
-                {/* ---- secondary: let my AI buy ---- */}
-                <div className="border-t border-[#222] pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-green-500 text-[10px] font-bold font-mono">让我的 AI 买（x402 · MoneySwitch）</p>
+                <p className="text-[10px] text-gray-500 font-mono mb-2">AI 会先向你确认总价 ${totalPrice} USDC，你同意后才付款；付款后它会把 key 的保存位置、交易链接告诉你。</p>
+                {copyFailed && (
+                    <div data-testid="copy-failed" role="alert" className="bg-yellow-900/20 border border-yellow-800/40 rounded p-2 mb-2 text-yellow-400 text-[11px]">
+                        浏览器不让自动复制。请在下面的提示词框里全选（Ctrl+A / 长按）后手动复制。
                     </div>
-                    <pre data-testid="ai-prompt" className="bg-[#050505] p-2 rounded border border-[#222] text-[9px] text-gray-500 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all hover:border-gray-600 transition-colors mb-2 max-h-36 overflow-y-auto">
-                        {aiPrompt}
-                    </pre>
-                    <button
-                        onClick={handleCopyForAI}
-                        className={`w-full py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${copied ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-green-500 hover:text-green-400'}`}
-                    >
-                        {copied ? <><Check size={10} /> {t('copied')}</> : <><Copy size={10} /> 复制给 AI 的提示词</>}
-                    </button>
+                )}
+                <details open={showPreview} onToggle={e => setShowPreview((e.currentTarget as HTMLDetailsElement).open)} className="mb-3">
+                    <summary className="text-[10px] font-mono text-gray-500 cursor-pointer hover:text-gray-300">查看将要复制的提示词</summary>
+                    <pre data-testid="ai-prompt" className="mt-1.5 bg-[#050505] p-2 rounded border border-[#222] text-[10px] text-gray-400 overflow-x-auto whitespace-pre-wrap break-all font-mono select-all max-h-56 overflow-y-auto">{aiPrompt}</pre>
+                </details>
+
+                {/* ---- secondary: no AI wallet yet ---- */}
+                <div data-testid="no-ai-wallet" className="bg-[#0a0a0a] border border-[#222] rounded p-3 mb-3">
+                    <p className="text-gray-300 text-[11px] font-bold font-mono mb-1">还没有 AI 钱包？</p>
+                    <p className="text-gray-500 text-[11px] leading-relaxed mb-1">
+                        推荐 MoneySwitch：给 AI 一把有额度的 MoneyKey，大额付款需要你批准，私钥不交给 AI。
+                    </p>
+                    <a href={MONEYSWITCH_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-400 text-[11px] font-mono hover:underline break-all">
+                        <ExternalLink size={10} /> {MONEYSWITCH_URL}
+                    </a>
+                    <p className="text-gray-500 text-[11px] leading-relaxed mt-1">
+                        或者用 npx awal 等 x402 钱包（这种方式等于把钱包私钥交给 AI，注意额度）。
+                    </p>
+                </div>
+
+                {/* ---- review the result ---- */}
+                <button
+                    type="button"
+                    data-testid="ai-done"
+                    disabled={checking || !onAiDone}
+                    onClick={handleAiDone}
+                    className="w-full py-2 mb-1 bg-[#1a1a1a] border border-[#333] hover:border-green-500 hover:text-green-400 disabled:opacity-60 text-gray-300 font-mono text-xs rounded flex items-center justify-center gap-1.5 transition-all"
+                >
+                    <RefreshCw size={12} className={checking ? 'animate-spin' : ''} /> {checking ? '正在刷新…' : '我让 AI 买完了（刷新地图，查看结果）'}
+                </button>
+                {doneMsg && (
+                    <p data-testid="ai-done-msg" role="status" className="text-yellow-400 text-[11px] font-mono mb-2">{doneMsg}</p>
+                )}
+
+                {/* ---- browser wallet: paused by default (see lib/wallet-pay/feature.ts) ---- */}
+                <div className="mt-3 pt-3 border-t border-[#222]">
+                    {!walletPayEnabled ? (
+                        <button
+                            type="button"
+                            data-testid="wallet-pay"
+                            disabled
+                            title="钱包安全插件会把 x402 的 EIP-3009 付款签名误报为恶意，暂时停用"
+                            className="w-full py-2 px-2 bg-[#161616] border border-[#222] text-gray-600 font-mono text-[11px] rounded cursor-not-allowed flex items-center justify-center gap-1.5"
+                        >
+                            <Wallet size={12} /> {WALLET_PAY_PAUSED_LABEL}
+                        </button>
+                    ) : (
+                        <>
+                            <div className="mb-2 text-[11px] text-gray-400 font-mono">选择付款网络</div>
+                            <div role="radiogroup" aria-label="付款网络" className="grid grid-cols-2 gap-2 mb-2">
+                                {PAY_NETWORK_ORDER.map(key => {
+                                    const active = networkKey === key;
+                                    return (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            role="radio"
+                                            aria-checked={active}
+                                            data-testid={`net-${key}`}
+                                            disabled={busy}
+                                            onClick={() => setNetworkKey(key)}
+                                            className={`py-2 rounded border text-xs font-mono font-bold transition-all disabled:opacity-60 ${active
+                                                ? (key === 'monad' ? 'border-purple-500 bg-purple-900/30 text-purple-200' : 'border-blue-500 bg-blue-900/30 text-blue-200')
+                                                : 'border-[#333] bg-[#0a0a0a] text-gray-400 hover:border-gray-500'}`}
+                                        >
+                                            {PAY_NETWORKS.mainnet[key].label}
+                                            {key === DEFAULT_PAY_NETWORK && <span className="ml-1 font-normal text-[9px] opacity-70">默认</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-[10px] text-gray-500 font-mono mb-2">{NO_GAS_NOTE}</p>
+
+                            {error && (
+                                <div data-testid="pay-error" role="alert" className="bg-red-900/20 border border-red-900/50 p-2 rounded mb-3 text-red-300 text-xs font-mono break-words flex gap-1.5">
+                                    <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
+                            {hasWallet === false ? (
+                                <div data-testid="no-wallet" className="bg-yellow-900/20 border border-yellow-800/40 rounded p-3">
+                                    <p className="text-yellow-400 text-xs font-bold font-mono mb-1">没有检测到浏览器钱包</p>
+                                    <p className="text-yellow-500/90 text-[11px] leading-relaxed">
+                                        电脑上请安装 MetaMask / OKX / Rabby 浏览器扩展后刷新本页；手机上请在钱包 App（MetaMask、OKX、Rabby、Trust 等）的内置浏览器里打开本站。
+                                        也可以用上面的「复制给我的 AI」。
+                                    </p>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    data-testid="wallet-pay"
+                                    disabled={busy || hasWallet === null}
+                                    onClick={handleWalletPay}
+                                    className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:bg-[#222] disabled:text-gray-500 text-white font-mono font-bold rounded text-sm flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-900/20"
+                                >
+                                    {busy ? (
+                                        <span data-testid="pay-status" className="animate-pulse text-xs">{status ? STATUS_TEXT[status] : t('processing')}</span>
+                                    ) : (
+                                        <><Wallet size={16} /> 连接钱包付款 · ${maxPrice} USDC</>
+                                    )}
+                                </button>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
         </div>

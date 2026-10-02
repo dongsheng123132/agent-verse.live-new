@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // tsconfig.json says jsx: preserve (Next compiles the JSX); tests that render a component need real JSX output.
+  oxc: { jsx: { runtime: 'automatic' } },
   test: {
     environment: 'node',
     include: ['test/**/*.test.ts'],
