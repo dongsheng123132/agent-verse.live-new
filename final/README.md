@@ -126,6 +126,8 @@ npm run dev
 
 ## 五、浏览器钱包付款与装修（2026-10）
 
+> **2026-10-02 起默认是「AI 原生购买」，浏览器钱包直付已暂停**（钱包安全插件会把 x402 的 EIP-3009 付款签名误报为恶意）。购买弹窗现在是：人选格子、填想要的样子 → 复制一段提示词给自己的 AI → AI 全程用 x402 购买并装修 → 人审核结果，见本节末「AI 原生购买」。钱包直付的代码（`lib/wallet-pay/`）原样保留，由 `lib/wallet-pay/feature.ts` 里的 `WALLET_PAY_ENABLED` 控制（默认关，弹窗里只剩一个灰色禁用按钮）；本地调试 / 跑钱包 e2e 时用环境变量 `NEXT_PUBLIC_WALLET_PAY_ENABLED=1` 打开。下面「付款」「本地端到端」两条描述的是开关打开时的钱包路径；「信用卡支付暂停」按钮已从弹窗移除。
+
 - **付款**：购买弹窗主按钮「连接钱包付款」（有 `window.ethereum` 时显示），网络二选一 Monad（默认）/ Base。付款前用只读 RPC 查 USDC 余额，不够就提示、不发起签名；只需要 USDC，gas 由 facilitator 代付。底层是官方 `@x402/fetch` + `@x402/evm` exact 客户端，且只使用用户所选网络的那条 accepts（`lib/wallet-pay/`）。单格 `POST /api/cells/purchase`，多格 `POST /api/cells/bulk-purchase`。Commerce 已不可用，按钮置灰为「信用卡支付暂停」。
 - **测试网模式**：构建时 `NEXT_PUBLIC_X402_NETWORK_MODE=testnet`，或服务端下发的 402 accepts 里出现 10143 / 84532 即自动按测试网处理。
 - **key**：买完后页面显示一次 `gk_…`，并按坐标存在浏览器 localStorage（`agentverse.cellKeys.v1`），随后直接打开「装修」表单（`PUT /api/cells/update`，Bearer key）。没有本机 key 时点「我有 key」手动粘贴。多格购买时 key 只对应所选范围的左上角那一格（服务端 bulk-purchase 现状）。
@@ -136,3 +138,6 @@ npm run dev
   node scripts/e2e-wallet-buy.mjs                    # Playwright + mock 钱包，截图存系统临时目录
   ```
   `X402_FACILITATOR_MOCK=1` 只在 `NODE_ENV !== 'production'` 且测试网模式下生效（本地签名校验、不上链）；生产构建里整段代码被剔除，`npm run build && node scripts/check-no-mock-in-build.mjs` 可验证。
+
+- **AI 原生购买（默认）**：弹窗顶部显示所选格子、格数、总价（0.1 USDC/格）、收款地址和支持网络（Monad `eip155:143` 优先，Base `eip155:8453`）；「想要的样子」可选填 title / summary / fill_color（取色器）/ iframe_url（https）/ service_url（https，x402 服务），只有填了的字段才会出现在提示词里的 `PUT /api/cells/update` JSON 中；「复制给我的 AI」生成提示词（`lib/ai-purchase-prompt.ts`，纯函数，单测在 `test/ai-purchase-prompt.test.ts`）：先向人确认总价、MoneySwitch `paid_fetch`（`max_price` = 总价）或 `npx awal@latest x402 pay` 两种付款方式、api_key 只返回一次要妥善保存并告知位置、装修、回报交易哈希/浏览器链接/格子链接、409/403/再次 402/审批等异常处理。多格购买只返回一把 key，对应 body 里的第一格。同一份模板也写在 `public/skill.md`（「人类给 AI 的购买提示词」一节，有测试保证与弹窗输出一致）。「我让 AI 买完了」刷新地图和所选格子；买到了就关闭弹窗并打开该格详情，人可以在那里点「我有 key」手动装修（装修表单不变）。
+- **本地端到端（AI 弹窗）**：`npm run db:local -- --no-sync`，`npm run dev:local`（端口被占用时 `LOCAL_APP_PORT=3006`，并给脚本 `E2E_BASE_URL=http://localhost:3006`），然后 `node scripts/e2e-ai-purchase.mjs`：填字段、复制提示词（真实剪贴板）、拖选 3×2 多格、用本地库 INSERT 模拟「AI 买完了」后点刷新，截图和提示词 txt 存系统临时目录。
