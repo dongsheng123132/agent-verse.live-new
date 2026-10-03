@@ -27,9 +27,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     onPan,
     onZoom,
 }) => {
-    // Desktop: default select (drag=box-select), Mobile: default pan (drag=move)
-    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    const mode: 'pan' | 'select' = isTouchDevice ? 'pan' : 'select';
+    // Decided per gesture, not per device: a finger (PointerEvent.pointerType 'touch') pans, a mouse or pen drags a
+    // box-select. (navigator.maxTouchPoints > 0 is true on touch-screen laptops and used to switch box-select off for
+    // their mouse as well.) A pointer event always arrives before the mouse events that go with it, including the
+    // emulated ones after a tap, so the last pointerdown tells the mouse handlers what kind of gesture this is.
+    const pointerTypeRef = useRef<string>('mouse');
     const { t } = useLang();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [hoveredCell, setHoveredCell] = useState<Cell | null>(null);
@@ -504,7 +506,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         dragStartPos.current = { x: e.clientX, y: e.clientY };
         lastMousePos.current = { x: e.clientX, y: e.clientY };
 
-        if (mode === 'select') {
+        if (pointerTypeRef.current !== 'touch') {
             const gc = getGridCoord(mouseX, mouseY);
             setSelectGridStart({ col: gc.x, row: gc.y });
             setSelectGridEnd({ col: gc.x, row: gc.y });
@@ -520,7 +522,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        if (isSelecting && mode === 'select') {
+        if (isSelecting) {
             const gc = getGridCoord(mouseX, mouseY);
             setSelectGridEnd({ col: gc.x, row: gc.y });
             return;
@@ -559,7 +561,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             Math.pow(e.clientY - dragStartPos.current.y, 2)
         );
 
-        if (isSelecting && mode === 'select' && selectionInfo) {
+        if (isSelecting && selectionInfo) {
             if (moveDist < 5) {
                 const rect = canvasRef.current?.getBoundingClientRect();
                 if (rect) {
@@ -621,21 +623,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             touchStartTime.current = Date.now();
-            if (mode === 'select') {
-                const rect = canvasRef.current?.getBoundingClientRect();
-                if (rect) {
-                    const tx = e.touches[0].clientX - rect.left;
-                    const ty = e.touches[0].clientY - rect.top;
-                    const gc = getGridCoord(tx, ty);
-                    setSelectGridStart({ col: gc.x, row: gc.y });
-                    setSelectGridEnd({ col: gc.x, row: gc.y });
-                    setIsSelecting(true);
-                } else {
-                    setIsDragging(true);
-                }
-            } else {
-                setIsDragging(true);
-            }
+            setIsDragging(true); // a finger pans; a tap (below) selects
         } else if (e.touches.length === 2) {
             lastTouchDist.current = getTouchDist(e.touches[0], e.touches[1]);
             setIsDragging(false);
@@ -645,15 +633,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     const handleTouchMove = (e: React.TouchEvent) => {
         e.preventDefault();
-        if (e.touches.length === 1 && isSelecting && mode === 'select') {
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (rect) {
-                const tx = e.touches[0].clientX - rect.left;
-                const ty = e.touches[0].clientY - rect.top;
-                const gc = getGridCoord(tx, ty);
-                setSelectGridEnd({ col: gc.x, row: gc.y });
-            }
-        } else if (e.touches.length === 1 && isDragging) {
+        if (e.touches.length === 1 && isDragging) {
             const dx = e.touches[0].clientX - lastMousePos.current.x;
             const dy = e.touches[0].clientY - lastMousePos.current.y;
             onPan(dx, dy);
@@ -681,32 +661,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             );
             const elapsed = Date.now() - touchStartTime.current;
 
-            if (isSelecting && mode === 'select' && selectionInfo) {
-                const rect = canvasRef.current?.getBoundingClientRect();
-                if (rect) {
-                    const tx = touch.clientX - rect.left;
-                    const ty = touch.clientY - rect.top;
-                    if (moveDist < 12) {
-                        const gc = getGridCoord(tx, ty);
-                        const cell = cellMap.get(`${gc.x},${gc.y}`) || { id: gc.y * COLS + gc.x, x: gc.x, y: gc.y, owner: null };
-                        if (!isReserved(gc.x, gc.y)) onSelectCells([cell]);
-                        else onSelectCells([]);
-                    } else {
-                        const newSelection: Cell[] = [];
-                        for (let r = selectionInfo.minRow; r <= selectionInfo.maxRow; r++) {
-                            for (let c = selectionInfo.minCol; c <= selectionInfo.maxCol; c++) {
-                                const cell = cellMap.get(`${c},${r}`);
-                                if (!isReserved(c, r) && !cell?.owner) {
-                                    newSelection.push(cell || { id: r * COLS + c, x: c, y: r, owner: null });
-                                }
-                            }
-                        }
-                        if (newSelection.length > 0) onSelectCells(newSelection);
-                    }
-                }
-                setSelectGridStart(null);
-                setSelectGridEnd(null);
-            } else if (moveDist < 12 && elapsed < 300 && !isSelecting) {
+            if (moveDist < 12 && elapsed < 300 && !isSelecting) {
                 const rect = canvasRef.current?.getBoundingClientRect();
                 if (rect) {
                     const tx = touch.clientX - rect.left;
@@ -733,7 +688,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 width={Math.round(width * dpr)}
                 height={Math.round(height * dpr)}
                 style={{ width, height }}
-                className={`block touch-none ${mode === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
+                className="block touch-none cursor-crosshair"
+                onPointerDown={(e) => { pointerTypeRef.current = e.pointerType; }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}

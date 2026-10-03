@@ -186,9 +186,9 @@ try {
   check('Monad is selected by default', (await page.getByTestId('net-monad').getAttribute('aria-checked')) === 'true' && (await page.getByTestId('net-base').getAttribute('aria-checked')) === 'false')
   check('primary button says 连接钱包付款', (await page.getByTestId('wallet-pay').innerText()).includes('连接钱包付款'))
   check('the old 信用卡支付暂停 button is gone (credit card / Commerce removed from the modal)', (await page.getByRole('button', { name: '信用卡支付暂停' }).count()) === 0)
-  check('"让我的 AI 买" prompt mentions paid_fetch, the endpoint and max_price 0.10', await (async () => {
+  check('"复制给我的 AI" prompt has the endpoint, body, the confirmed total and the skill.md pointer', await (async () => {
     const t = (await page.getByTestId('ai-prompt').textContent()) || '' // textContent: the <pre> sits in a closed <details>
-    return t.includes('paid_fetch') && t.includes('/api/cells/purchase') && t.includes('max_price: "0.10"') && t.includes('npx awal@latest')
+    return t.includes('/api/cells/purchase') && t.includes('body: {"x":') && t.includes('总价 0.10 USDC 我已确认，直接付款') && t.includes('「AI 购买」一节')
   })())
   check('modal says only USDC is needed, gas is paid by the facilitator', (await modal.innerText()).includes('不需要 gas'))
   await shot(page, 'purchase-modal')
