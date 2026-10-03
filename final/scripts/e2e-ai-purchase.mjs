@@ -237,6 +237,27 @@ try {
   const { context, page } = await newPage()
   await openMap(page)
   console.log(`      browser reports navigator.maxTouchPoints = ${await page.evaluate(() => navigator.maxTouchPoints)}`)
+
+  // The simplified product (2026-10-03): the map is full width, there is no FEED / sidebar / DOCS, and the removed surface answers 404.
+  const headerText = await page.locator('header').innerText()
+  check('header: no FEED tab, no /docs link, one link to skill.md', !/FEED|动态/.test(headerText) && (await page.locator('header a[href="/docs"]').count()) === 0 && (await page.locator('header a[href="/skill.md"]').count()) === 1, headerText.replace(/\s+/g, ' '))
+  const mainBox = await page.locator('main').boundingBox()
+  check('the desktop map takes the full window width (no sidebar)', !!mainBox && Math.abs(mainBox.width - 1440) <= 2, JSON.stringify(mainBox))
+  const answers = {}
+  for (const p of ['/api/rankings', '/api/events', '/api/referral/stats', '/api/commerce/create', '/api/cells/for-sale', '/api/cells/list-for-sale', '/api/cells/buy-resale', '/api/admin/payout', '/.well-known/ai-plugin.json']) {
+    answers[p] = (await fetch(`${BASE}${p}`, { redirect: 'manual' })).status
+  }
+  check('removed endpoints and the ai-plugin manifest answer 404', Object.values(answers).every((s) => s === 404), JSON.stringify(answers))
+  const docs = await fetch(`${BASE}/docs`, { redirect: 'manual' })
+  check('/docs redirects permanently to /skill.md', docs.status === 308 && new URL(docs.headers.get('location'), BASE).pathname === '/skill.md', `${docs.status} ${docs.headers.get('location')}`)
+  const sw = await (await fetch(`${BASE}/sw.js`)).text()
+  check('/sw.js is the self-unregistering worker (no fetch handler)', sw.includes('registration.unregister()') && !sw.includes("'fetch'"))
+  const services = await (await fetch(`${BASE}/api/services`)).json()
+  const statuses = new Set((services.services || []).map((s) => s.status))
+  check('/api/services statuses are only can_pay / failed / unchecked, no evidence fields, no sellers', [...statuses].every((s) => ['can_pay', 'failed', 'unchecked'].includes(s)) && !('sellers' in services) && (services.services || []).every((s) => !('evidence' in s) && !('evidence_by_network' in s)), [...statuses].join(','))
+  const purchaseGet = await (await fetch(`${BASE}/api/cells/purchase`)).json()
+  check('GET /api/cells/purchase reports no unavailable x402 network', Array.isArray(purchaseGet.x402_unavailable_networks) && purchaseGet.x402_unavailable_networks.length === 0, JSON.stringify(purchaseGet.x402_unavailable_networks))
+
   await searchCell(page, ONE.x, ONE.y)
   const modal = page.getByTestId('purchase-modal')
   await modal.waitFor({ timeout: T })
