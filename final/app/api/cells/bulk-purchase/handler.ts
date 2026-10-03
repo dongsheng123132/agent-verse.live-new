@@ -242,9 +242,9 @@ export async function bulkPurchaseHandler(req: NextRequest) {
       const originX = rect ? rect.ox : x
       const originY = rect ? rect.oy : y
       await client.query(
-        `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, block_id, block_w, block_h, block_origin_x, block_origin_y, last_updated)
-         VALUES ($1,$2,$3,$4,'HOLDING',false,$5,$6,$7,$8,$9,NOW())
-         ON CONFLICT (x, y) DO UPDATE SET owner_address = EXCLUDED.owner_address, status = EXCLUDED.status, is_for_sale = false,
+        `INSERT INTO grid_cells (id, x, y, owner_address, status, block_id, block_w, block_h, block_origin_x, block_origin_y, last_updated)
+         VALUES ($1,$2,$3,$4,'HOLDING',$5,$6,$7,$8,$9,NOW())
+         ON CONFLICT (x, y) DO UPDATE SET owner_address = EXCLUDED.owner_address, status = EXCLUDED.status,
            block_id = EXCLUDED.block_id, block_w = EXCLUDED.block_w, block_h = EXCLUDED.block_h,
            block_origin_x = EXCLUDED.block_origin_x, block_origin_y = EXCLUDED.block_origin_y, last_updated = NOW()`,
         [cellId, x, y, owner, blockId, bw, bh, originX, originY]

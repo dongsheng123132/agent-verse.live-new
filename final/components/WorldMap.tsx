@@ -339,30 +339,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                     }
                 }
 
-                // For-sale border and price label
-                if (cell?.is_for_sale && cell?.price_usdc > 0 && cellSize >= 4) {
-                    const borderWidth = Math.max(1, Math.min(3, cellSize * 0.12));
-                    ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
-                    ctx.lineWidth = borderWidth;
-                    ctx.strokeRect(screenX + borderWidth / 2, screenY + borderWidth / 2, drawW - borderWidth, drawH - borderWidth);
-                    if (cellSize >= 16) {
-                        const priceText = `$${cell.price_usdc}`;
-                        const fontSize = Math.max(8, Math.min(11, cellSize * 0.35));
-                        ctx.font = `bold ${fontSize}px monospace`;
-                        const tw = ctx.measureText(priceText).width;
-                        const labelH = fontSize + 4;
-                        const labelW = tw + 6;
-                        const lx = screenX + (drawW - labelW) / 2;
-                        const ly = screenY + drawH - labelH - 1;
-                        ctx.fillStyle = 'rgba(245, 158, 11, 0.85)';
-                        ctx.fillRect(lx, ly, labelW, labelH);
-                        ctx.fillStyle = '#000';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(priceText, lx + labelW / 2, ly + labelH / 2);
-                    }
-                }
-
                 // x402 service market: verified cells get a lantern-style warm glow
                 // (reuses the same animated glowBlocks pass as brand blocks, just with
                 // an amber "lantern" color instead of the cell's own brand color);

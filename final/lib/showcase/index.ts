@@ -148,7 +148,6 @@ function baseCell(block: ShowcaseBlock, x: number, y: number): Cell {
     block_h: block.h,
     block_origin_x: block.x,
     block_origin_y: block.y,
-    is_for_sale: false,
     showcase: true,
     showcase_kind: block.kind,
   }

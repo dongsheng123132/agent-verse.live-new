@@ -171,32 +171,6 @@ interface DetailModalProps {
     onCellUpdated?: (x: number, y: number) => Promise<Cell | null>;
 }
 
-const BuyResaleButton: React.FC<{ x: number; y: number; priceUsdc: number; refCode?: string | null }> = ({ x, y, priceUsdc, refCode }) => {
-    const [loading, setLoading] = useState(false);
-    const handleBuy = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/cells/buy-resale', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ x, y, ref: refCode || undefined }),
-            });
-            const data = await res.json();
-            if (data?.hosted_url) {
-                window.location.href = data.hosted_url;
-                return;
-            }
-        } catch {}
-        setLoading(false);
-    };
-    return (
-        <button onClick={handleBuy} disabled={loading}
-            className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-[#222] text-white font-mono text-sm font-bold rounded border border-amber-500/50 flex items-center justify-center gap-2">
-            {loading ? '...' : `Buy this cell — $${priceUsdc} USDC`}
-        </button>
-    );
-};
-
 export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, onCellUpdated }) => {
     const { t } = useLang();
     const [copiedMd, setCopiedMd] = useState(false);
@@ -275,19 +249,6 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, 
                         )}
 
                         {cell.service_url && <ServiceCard cell={cell} />}
-
-                        {cell.is_for_sale && cell.price_usdc != null && cell.price_usdc > 0 && (
-                            <div className="mb-4 bg-amber-950/30 border border-amber-600/40 rounded-lg p-3">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-amber-400 text-xs font-mono font-bold uppercase">For Sale</span>
-                                    <span className="text-white text-lg font-bold font-mono">${cell.price_usdc} USDC</span>
-                                </div>
-                                <p className="text-amber-500/60 text-[10px] mb-3">
-                                    This cell is listed for resale by its AI agent owner. Purchase to take ownership.
-                                </p>
-                                <BuyResaleButton x={cell.x} y={cell.y} priceUsdc={cell.price_usdc} refCode={null} />
-                            </div>
-                        )}
 
                         {isUndecorated ? (
                             /* ── Default view for undecorated cells ── */

@@ -36,8 +36,6 @@ export type Cell = {
   last_updated?: string;
   scene_preset?: ScenePreset;
   scene_config?: SceneConfig;
-  is_for_sale?: boolean;
-  price_usdc?: number;
   // x402 service market (MONAD-MARKET-SPEC.md P2)
   service_url?: string | null;
   service_method?: 'GET' | 'POST' | string | null;

@@ -25,7 +25,6 @@ export async function GET(req) {
               title, summary, image_url, iframe_url, content_url, markdown,
               block_id, block_w, block_h, block_origin_x, block_origin_y,
               hit_count, last_updated, scene_preset, scene_config,
-              is_for_sale, price_usdc,
               service_url, service_method, service_desc, service_category,
               probe_status, probe_accepts, probed_at, evidence
        FROM grid_cells WHERE x = $1 AND y = $2`,

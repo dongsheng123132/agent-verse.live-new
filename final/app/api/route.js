@@ -16,7 +16,6 @@ export async function GET() {
       rankings: { method: 'GET', path: '/api/rankings' },
       search: { method: 'GET', path: '/api/search?q=keyword' },
       events: { method: 'GET', path: '/api/events' },
-      cells_for_sale: { method: 'GET', path: '/api/cells/for-sale' },
       regen_key: { method: 'POST', path: '/api/cells/regen-key', price: '$0.10', note: 'x402, recover lost API key' },
     },
     quick_start: {

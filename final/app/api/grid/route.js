@@ -16,7 +16,7 @@ export async function GET() {
       `SELECT id, x, y, owner_address as owner, fill_color as color,
               title, summary, image_url,
               block_id, block_w, block_h, block_origin_x, block_origin_y,
-              is_for_sale, price_usdc, service_url, probe_status
+              service_url, probe_status
        FROM grid_cells WHERE owner_address IS NOT NULL ORDER BY y, x`,
       []
     )
