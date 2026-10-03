@@ -52,7 +52,7 @@ final/
 │   ├── x402-flow.ts              # 双链 x402；一条链的 facilitator 挂了另一条照常
 │   ├── ai-purchase-prompt.ts     # 「复制给我的 AI」提示词（纯函数，和 skill.md 一致由测试保证）
 │   ├── cell-block.ts             # 多格 = 一整块的判定
-│   ├── networks.ts / usdc-amount.ts / cell-key-store.ts
+│   ├── networks.ts / usdc-amount.ts
 │   ├── market/                   # 服务索引：probe（只读 402 探测）、ssrf、x402 解析、seed.json
 │   └── showcase/                 # 比武台 / 赞助商展示区（虚拟格子）
 ├── public/                       # skill.md、llms.txt、robots.txt、sw.js（自毁用）、manifest.json
