@@ -3,7 +3,6 @@ import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
 import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers, Zap } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
-import { DecorateForm } from './DecorateForm';
 
 const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
 
@@ -149,11 +148,9 @@ interface DetailModalProps {
     cell: Cell | null;
     loading: boolean;
     onClose: () => void;
-    /** Re-read the cell and the map after the owner saved a change; resolves with the fresh cell. */
-    onCellUpdated?: (x: number, y: number) => Promise<Cell | null>;
 }
 
-export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, onCellUpdated }) => {
+export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }) => {
     const { t } = useLang();
     const [copiedMd, setCopiedMd] = useState(false);
     const [copiedAll, setCopiedAll] = useState(false);
@@ -221,14 +218,6 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, 
                                 )}
                             </div>
                         </div>
-
-                        {/* 装修: only for real (non-showcase) owned cells; needs the cell's API key */}
-                        {cell.owner && !cell.showcase && onCellUpdated && (
-                            <DecorateForm
-                                cell={cell}
-                                onUpdated={onCellUpdated}
-                            />
-                        )}
 
                         {cell.service_url && <ServiceCard cell={cell} />}
 

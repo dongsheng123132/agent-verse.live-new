@@ -11,7 +11,7 @@
  *   1. one cell: fills the look fields, copies the prompt through the real clipboard, then plays the AI for real —
  *      a throwaway-key x402 buyer (scripts/lib/raw-x402-buyer.mjs) POSTs the prompt's own body to the dev server
  *      (mock facilitator: signature checked locally, nothing on-chain) and PUTs the prompt's own decoration JSON
- *      with the returned key; then 「我让 AI 买完了」 must refresh the map and open the cell.
+ *      with the returned key; then 「我让 AI 买完了」 must refresh the map and open the cell (no human edit form in it).
  *   2. a 3x2 block: touch drag pans (CDP touch events), a real mouse drag box-selects EVEN THOUGH the browser reports
  *      touch points (no maxTouchPoints spoof), the AI buys the whole rectangle in one payment, ONE key decorates all
  *      six cells, and the map shows it as one merged block (screenshot + pixel check).
@@ -111,6 +111,16 @@ async function searchCell(page, x, y) {
   await search.fill(`${x},${y}`)
   await search.press('Enter')
   await page.locator(`button:has-text("(${x},${y})")`).first().click({ timeout: T })
+}
+
+/** Everything of the removed browser-side decorate form (DecorateForm) still findable in the DOM: test ids and its button text. */
+async function decorateUiHits(page) {
+  const hits = []
+  const ids = await page.locator('[data-testid^="decorate-"], [data-testid="have-key-open"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))
+  hits.push(...ids.map((id) => `data-testid=${id}`))
+  const body = await page.locator('body').innerText()
+  for (const needle of ['我有 key', '装修这个格子', '忘掉本机的 key']) if (body.includes(needle)) hits.push(`text "${needle}"`)
+  return hits
 }
 
 async function copyAndRead(page) {
@@ -328,7 +338,8 @@ try {
   await page.getByText(TITLE).first().waitFor({ timeout: T })
   const detailText = await page.locator('body').innerText()
   check('...and opens the cell for review (title, summary, coordinates)', detailText.includes(TITLE) && detailText.includes('A tiny cafe run by an AI barista') && detailText.includes(`(${ONE.x},${ONE.y})`))
-  check('...with the 我有 key（装修）entry for the human', (await page.getByTestId('have-key-open').count()) === 1)
+  const decorateHits = await decorateUiHits(page)
+  check('...and no DecorateForm / 我有 key entry in the DOM: humans only look, the AI decorates through the API', decorateHits.length === 0, decorateHits.join(' | '))
   await shot(page, 'ai-done-review')
   check('no uncaught page errors (single-cell session)', page.__pageErrors.length === 0, page.__pageErrors.join(' | '))
   await context.close()

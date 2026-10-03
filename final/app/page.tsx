@@ -224,19 +224,6 @@ function PageInner() {
     setPan(clampPan({ x: cx, y: cy }, zoom, containerSize));
   };
 
-  // Re-read one cell (detail view) and the whole map after the cell changed. Returns the fresh cell.
-  const refreshCell = useCallback(async (x: number, y: number): Promise<Cell | null> => {
-    fetchGrid()
-    try {
-      const d = await fetch(`/api/cells?x=${x}&y=${y}`, { cache: 'no-store' }).then(r => r.json())
-      if (d?.ok && d?.cell) {
-        setDetailCell(prev => (prev && prev.x === d.cell.x && prev.y === d.cell.y) || !prev ? d.cell : prev)
-        return d.cell as Cell
-      }
-    } catch { /* keep the old detail */ }
-    return null
-  }, [fetchGrid])
-
   // "我让 AI 买完了": re-read the map, and if the chosen cells now have an owner open the first one so the person can review
   // what the AI bought / decorated. Returns how many of the chosen cells have an owner (the modal explains the rest).
   const handleAiDone = useCallback(async (): Promise<{ owned: number, total: number } | null> => {
@@ -552,7 +539,6 @@ function PageInner() {
         cell={detailCell}
         loading={detailLoading}
         onClose={() => { setDetailCell(null); setSelectedCells([]); }}
-        onCellUpdated={refreshCell}
       />
 
       {showPurchaseModal && selectedCells.length > 0 && (
