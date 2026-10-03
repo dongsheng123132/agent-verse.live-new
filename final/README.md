@@ -91,6 +91,9 @@ npm install
 npm run dev              # http://localhost:3005
 ```
 
+**健康检查**：`npm run check` = `tsc --noEmit` → `vitest run` → `next build`（构建带类型检查）→ `node scripts/check-no-mock-in-build.mjs`，任何一步失败就停。
+不过就不发布（规矩见仓库根目录 `PRODUCT.md` 的「维护规矩」）。
+
 ### 3.2 数据库
 
 在 Neon 等 PostgreSQL 中执行 `scripts/init-db.sql`。

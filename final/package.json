@@ -10,7 +10,8 @@
     "test": "vitest run",
     "db:local": "node scripts/local-db.mjs",
     "dev:local": "node scripts/dev-local.mjs",
-    "taste": "node scripts/taste-x402.mjs"
+    "taste": "node scripts/taste-x402.mjs",
+    "check": "tsc --noEmit && vitest run && next build && node scripts/check-no-mock-in-build.mjs"
   },
   "dependencies": {
     "@coinbase/x402": "^2.1.0",
