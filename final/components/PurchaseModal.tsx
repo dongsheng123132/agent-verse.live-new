@@ -276,7 +276,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 >
                     {copied ? <><Check size={16} /> 已复制，去粘贴给你的 AI</> : <><Copy size={16} /> 复制给我的 AI</>}
                 </button>
-                <p className="text-[10px] text-gray-500 font-mono mb-2">AI 会先向你确认总价 ${totalPrice} USDC，你同意后才付款；付款后它会把 key 的保存位置、交易链接告诉你。</p>
+                <p data-testid="ai-helper" className="text-[10px] text-gray-500 font-mono mb-2">总价 ${totalPrice} USDC 你已在这里确认：AI 直接付款，付款不会超过这个数，然后把 key 的保存位置、交易链接告诉你。</p>
                 {copyFailed && (
                     <div data-testid="copy-failed" role="alert" className="bg-yellow-900/20 border border-yellow-800/40 rounded p-2 mb-2 text-yellow-400 text-[11px]">
                         浏览器不让自动复制。请在下面的提示词框里全选（Ctrl+A / 长按）后手动复制。
@@ -289,16 +289,21 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
 
                 {/* ---- secondary: no AI wallet yet ---- */}
                 <div data-testid="no-ai-wallet" className="bg-[#0a0a0a] border border-[#222] rounded p-3 mb-3">
-                    <p className="text-gray-300 text-[11px] font-bold font-mono mb-1">还没有 AI 钱包？</p>
-                    <p className="text-gray-500 text-[11px] leading-relaxed mb-1">
-                        推荐 MoneySwitch：给 AI 一把有额度的 MoneyKey，大额付款需要你批准，私钥不交给 AI。
-                    </p>
-                    <a href={MONEYSWITCH_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-400 text-[11px] font-mono hover:underline break-all">
-                        <ExternalLink size={10} /> {MONEYSWITCH_URL}
-                    </a>
-                    <p className="text-gray-500 text-[11px] leading-relaxed mt-1">
-                        或者用 npx awal 等 x402 钱包（这种方式等于把钱包私钥交给 AI，注意额度）。
-                    </p>
+                    <p className="text-gray-300 text-[11px] font-bold font-mono mb-1.5">还没有 AI 钱包？三种办法：</p>
+                    <ul className="text-gray-500 text-[11px] leading-relaxed space-y-1.5 list-none">
+                        <li data-testid="wallet-opt-moneyswitch">
+                            <span className="text-green-400 font-bold">MoneySwitch（推荐）</span>：有额度、大额要你批准，AI 拿不到私钥。
+                            <a href={MONEYSWITCH_URL} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-1 text-blue-400 font-mono hover:underline break-all">
+                                <ExternalLink size={10} /> {MONEYSWITCH_URL}
+                            </a>
+                        </li>
+                        <li data-testid="wallet-opt-awal">
+                            <span className="text-gray-300 font-bold">awal</span>：Coinbase 出的，邮箱登录，只支持 Base。
+                        </li>
+                        <li data-testid="wallet-opt-rawkey">
+                            <span className="text-yellow-400 font-bold">私钥 + x402 客户端</span>：等于把整个钱包交给 AI，里面只放小额。
+                        </li>
+                    </ul>
                 </div>
 
                 {/* ---- review the result ---- */}

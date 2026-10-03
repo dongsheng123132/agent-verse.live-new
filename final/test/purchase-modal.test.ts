@@ -82,10 +82,11 @@ describe('PurchaseModal (AI-first)', () => {
     const html = render([{ x: 61, y: 61 }])
     const pre = unescapeHtml(html.match(/<pre[^>]*data-testid="ai-prompt"[^>]*>([\s\S]*?)<\/pre>/)![1])
     expect(pre).toContain('/api/cells/purchase')
-    expect(pre).toContain('- body: {"x":61,"y":61}')
-    expect(pre).toContain('- max_price: "0.10"')
-    expect(pre).toContain('付款前先向我确认总价')
-    expect(pre).toContain('/skill.md')
+    expect(pre).toContain('body: {"x":61,"y":61}')
+    expect(pre).toContain('总价 0.10 USDC 我已确认，直接付款')
+    expect(pre).not.toContain('付款前先向我确认')
+    expect(pre).toContain('/skill.md 的「AI 购买」一节')
+    expect(pre.split(String.fromCharCode(10)).length).toBeLessThanOrEqual(15)
   })
 
   it('a referral code from the URL goes into the prompt body', () => {
@@ -93,13 +94,38 @@ describe('PurchaseModal (AI-first)', () => {
     expect(unescapeHtml(html)).toContain('{"x":61,"y":61,"ref":"ref_10_20"}')
   })
 
-  it('shows the "no AI wallet yet" help: MoneySwitch link and the awal alternative', () => {
+  it('the helper text under the button says the AI pays the confirmed total directly, never more', () => {
+    const html = render([{ x: 61, y: 61 }])
+    const helper = html.match(/data-testid="ai-helper"[^>]*>([\s\S]*?)<\/p>/)![1]
+    expect(helper).toContain('总价')
+    expect(helper).toContain('0.10 USDC')
+    expect(helper).toContain('AI 直接付款')
+    expect(helper).toContain('不会超过')
+    expect(helper).not.toContain('先向你确认')
+    expect(helper).not.toContain('你同意后才付款')
+  })
+
+  it('"还没有 AI 钱包？" lists exactly three options with the right facts', () => {
     const html = render([{ x: 61, y: 61 }])
     expect(html).toContain('还没有 AI 钱包？')
-    expect(html).toContain('MoneySwitch')
-    expect(html).toContain(`href="${MONEYSWITCH_URL}"`)
-    expect(html).toContain('大额付款需要你批准，私钥不交给 AI')
-    expect(html).toContain('npx awal')
+    const box = html.match(/data-testid="no-ai-wallet"[\s\S]*?<\/ul>/)![0]
+    expect((box.match(/<li /g) || []).length).toBe(3)
+    // MoneySwitch: budgets / approval, the AI never holds the private key
+    expect(box).toContain('MoneySwitch')
+    expect(box).toContain(`href="${MONEYSWITCH_URL}"`)
+    expect(box).toContain('有额度、大额要你批准，AI 拿不到私钥')
+    // awal: Coinbase, email login, Base only
+    expect(box).toContain('awal')
+    expect(box).toContain('Coinbase')
+    expect(box).toContain('邮箱登录')
+    expect(box).toContain('只支持 Base')
+    // raw private key + x402 client: the whole wallet goes to the AI
+    expect(box).toContain('私钥 + x402 客户端')
+    expect(box).toContain('等于把整个钱包交给 AI，里面只放小额')
+    // the old, wrong claim about awal is gone everywhere
+    expect(html).not.toContain('等于把钱包私钥交给 AI')
+    expect(html).not.toContain('npx awal')
+    expect(html).not.toContain('-X POST')
   })
 
   it('has the "我让 AI 买完了" button (disabled only if the page gave no refresh handler)', () => {
