@@ -17,13 +17,12 @@ vi.mock('../lib/db.js', () => ({
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
 
-// Mock the probe/evidence layer for this file — its own behavior (SSRF,
-// 402 parsing, evidence grading) is covered by test/market/*.test.ts. Here we
-// only need to prove PUT /api/cells/update calls it with the right args and
-// persists exactly what it returns.
+// Mock the probe layer for this file — its own behavior (SSRF, 402 parsing)
+// is covered by test/market/*.test.ts. Here we only need to prove
+// PUT /api/cells/update calls it with the right args and persists what it returns.
 const probeHolder = vi.hoisted(() => ({ fn: vi.fn() }))
 vi.mock('../lib/market/service', () => ({
-  probeServiceAndEvidence: (...args: unknown[]) => probeHolder.fn(...args),
+  probeService: (...args: unknown[]) => probeHolder.fn(...args),
 }))
 
 let testDb: TestDb
@@ -123,17 +122,16 @@ describe('PUT /api/cells/update — service_url SSRF + validation', () => {
 })
 
 describe('PUT /api/cells/update — probes immediately after saving a service_url', () => {
-  it('saves + probes a GET service and persists a candidate result', async () => {
+  it('saves + probes a GET service and persists a can_pay result', async () => {
     await createOwnedCell(25, 25, 'gk_owner6')
     probeHolder.fn.mockResolvedValueOnce({
-      status: 'candidate',
+      status: 'can_pay',
       accepts: [{ scheme: 'exact', network: 'eip155:143', amount: '50000', asset: '0xUsdc', payTo: '0xPay' }],
       network: 'eip155:143',
       price_usdc: '0.05',
       pay_to: '0xPay',
-      evidence: null,
       probed_at: '2026-09-29T00:00:00.000Z',
-      note: 'candidate',
+      note: 'can pay',
     })
     const res = await PUT(
       putRequest(
@@ -143,50 +141,42 @@ describe('PUT /api/cells/update — probes immediately after saving a service_ur
     )
     expect(res.status).toBe(200)
     const json = await res.json()
-    expect(json.service.status).toBe('candidate')
+    expect(json.service).toEqual({ status: 'can_pay' }) // no evidence field any more
     expect(probeHolder.fn).toHaveBeenCalledWith('https://svc.example.com/api', 'GET')
 
-    const row = await testDb.dbQuery('SELECT probe_status, probe_accepts, probed_at, evidence FROM grid_cells WHERE x=25 AND y=25')
+    // The column keeps the old vocabulary (its CHECK constraint is not altered): can_pay is stored as 'candidate'.
+    const row = await testDb.dbQuery('SELECT probe_status, probe_accepts, probed_at, evidence, evidence_by_network FROM grid_cells WHERE x=25 AND y=25')
     expect(row.rows[0].probe_status).toBe('candidate')
     expect(row.rows[0].probe_accepts[0].network).toBe('eip155:143')
-    expect(row.rows[0].evidence).toBeNull()
+    expect(row.rows[0].evidence).toBeNull() // evidence is no longer written
+    expect(row.rows[0].evidence_by_network).toBeNull()
   })
 
-  it('upgrades to verified when the probe layer reports on-chain evidence', async () => {
+  it('a failed probe is stored as failed and reported as failed', async () => {
     await createOwnedCell(26, 26, 'gk_owner7')
     probeHolder.fn.mockResolvedValueOnce({
-      status: 'verified',
-      accepts: [{ scheme: 'exact', network: 'eip155:8453', amount: '100000', asset: '0xUsdcBase', payTo: '0xPay2' }],
-      network: 'eip155:8453',
-      price_usdc: '0.1',
-      pay_to: '0xPay2',
-      evidence: { payers_7d: 3, transfers_7d: 5, last_tx: '0xabc', last_at: '2026-09-28T00:00:00.000Z', source: 'rpc-short-window', window_blocks: 600 },
-      probed_at: '2026-09-29T00:00:00.000Z',
-      note: 'verified',
+      status: 'failed', accepts: null, network: null, price_usdc: null, pay_to: null,
+      probed_at: '2026-09-29T00:00:00.000Z', note: 'GET 未返回 402',
     })
     const res = await PUT(putRequest({ service_url: 'https://svc2.example.com/api' }, { authorization: 'Bearer gk_owner7' }))
     expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.service.status).toBe('verified')
-    expect(json.service.evidence.payers_7d).toBe(3)
-
-    const row = await testDb.dbQuery('SELECT probe_status, evidence FROM grid_cells WHERE x=26 AND y=26')
-    expect(row.rows[0].probe_status).toBe('verified')
-    expect(row.rows[0].evidence.payers_7d).toBe(3)
+    expect((await res.json()).service).toEqual({ status: 'failed' })
+    const row = await testDb.dbQuery('SELECT probe_status FROM grid_cells WHERE x=26 AND y=26')
+    expect(row.rows[0].probe_status).toBe('failed')
   })
 
-  it('never calls the probe layer for a POST service (stays unprobed)', async () => {
+  it('never calls the probe layer for a POST service (stays unchecked)', async () => {
     await createOwnedCell(27, 27, 'gk_owner8')
     const res = await PUT(
       putRequest({ service_url: 'https://svc3.example.com/api', service_method: 'POST' }, { authorization: 'Bearer gk_owner8' })
     )
     expect(res.status).toBe(200)
     const json = await res.json()
-    expect(json.service.status).toBe('unprobed')
+    expect(json.service.status).toBe('unchecked')
     expect(probeHolder.fn).not.toHaveBeenCalled()
 
     const row = await testDb.dbQuery('SELECT probe_status FROM grid_cells WHERE x=27 AND y=27')
-    expect(row.rows[0].probe_status).toBe('unprobed')
+    expect(row.rows[0].probe_status).toBe('unprobed') // stored in the column's old vocabulary
   })
 
   it('does not touch probe fields when the update has no service fields at all', async () => {

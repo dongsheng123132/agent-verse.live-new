@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../lib/db.js'
 import { ensureSchema } from '../../../lib/schema'
 import { applyShowcaseToGridRows } from '../../../lib/showcase/index'
+import { fromStoredStatus } from '../../../lib/market/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,9 @@ export async function GET() {
     )
     // Monad Metropolis showcase: virtual blocks merged in; real users' cells always win
     // (a block overlapping one is skipped and logged — lib/showcase/index.ts).
-    return NextResponse.json(applyShowcaseToGridRows(res.rows))
+    // probe_status keeps the old vocabulary in the column (CHECK constraint); the API speaks the probe-only one.
+    const rows = res.rows.map((r) => ({ ...r, probe_status: fromStoredStatus(r.probe_status) }))
+    return NextResponse.json(applyShowcaseToGridRows(rows))
   } catch (e) {
     console.error('[api/grid]', e)
     return NextResponse.json([])

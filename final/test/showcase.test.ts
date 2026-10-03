@@ -278,7 +278,7 @@ describe('virtual cells', () => {
     const d = virtualCellDetail(ling, ling.x, ling.y)
     expect(d.service_url).toBe('https://monad-lingqian.vercel.app/qian')
     expect(d.iframe_url).toBe('https://monad-lingqian.vercel.app')
-    expect(d.probe_status).toBe('unprobed')
+    expect(d.probe_status).toBe('unchecked')
     expect(d.showcase_listing).toEqual({ price_usdc: '0.01', networks: ['eip155:143'], basis: 'live-402', checked_at: '2026-09-30' })
   })
 })

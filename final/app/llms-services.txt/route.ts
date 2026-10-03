@@ -6,7 +6,7 @@ import { PAY_TO_ADDRESS } from '../../lib/x402-flow'
 // GET /llms-services.txt — dynamic service index + "how to pay" for AI
 // agents (MONAD-MARKET-SPEC.md P3). public/llms.txt stays a static file
 // describing the grid itself (site-authored, rarely changes); this route is
-// new and covers the *service market* (seed + Bazaar + cell listings), which
+// new and covers the *service market* (seed + cell listings), which
 // changes as cells get probed/re-probed and can't be pre-baked into a static
 // file. Deviation note: the spec offered "convert llms.txt to a dynamic
 // route OR keep the static one and add a new file — pick one"; we kept the
@@ -16,17 +16,10 @@ export const dynamic = 'force-dynamic'
 
 function formatEntry(e: Awaited<ReturnType<typeof getMarketServices>>[number]): string {
   const price = e.price_usdc ? `$${e.price_usdc}` : '?'
-  // 2026-09-30 诚实标注修复: this evidence is wallet-level (the same payTo can
-  // front many interfaces, see MarketEntry.seller_id), and it's scoped to ONE
-  // network + ONE window — say which, don't let it look interface-specific.
-  const evidence = e.evidence
-    ? `${e.evidence.payers} payers / ${e.evidence.transfers} transfers, network ${e.evidence.network}, window ${e.evidence.window.human} (${e.evidence.source}) — evidence is per receiving wallet, shared by every interface using the same payTo`
-    : 'no evidence yet'
   const lines = [
     `- ${e.name}`,
     `  url: ${e.url}`,
     `  method: ${e.method}  price: ${price}  network: ${e.network ?? '?'}  status: ${e.status}  source: ${e.source}`,
-    `  evidence: ${evidence}`,
   ]
   if (e.description) lines.push(`  description: ${e.description}`)
   return lines.join('\n')
@@ -66,6 +59,12 @@ Or, for x402-only endpoints without MoneySwitch installed:
 See GET /.well-known/x402 for AgentVerse's own paid endpoints (buy a cell,
 bulk-buy a block, recover an API key). Pay-to address (same on both chains):
 ${PAY_TO_ADDRESS}
+
+## What "status" means
+It comes from one read-only GET (nothing is paid), not from on-chain history.
+- can_pay: the URL returned a valid x402 v2 402 offering USDC on the network shown.
+- failed: it did not (unreachable, not a 402, an x402 v1 402, or no Monad/Base USDC offer).
+- unchecked: not checked: a POST service (it needs a body) or not probed yet.
 
 ## Machine-readable
 GET /api/services?q=&network=&max_price=&category=&status= returns this same

@@ -3,7 +3,8 @@ import { dbQuery } from '../../../../lib/db.js'
 import { verifyApiKey } from '../../../../lib/api-key.js'
 import { ensureSchema } from '../../../../lib/schema'
 import { assertPublicHttpsUrl } from '../../../../lib/market/ssrf'
-import { probeServiceAndEvidence } from '../../../../lib/market/service'
+import { probeService } from '../../../../lib/market/service'
+import { toStoredStatus } from '../../../../lib/market/types'
 
 const SERVICE_FIELDS = ['service_url', 'service_method', 'service_desc', 'service_category']
 
@@ -149,23 +150,19 @@ export async function PUT(req) {
       const svcUrl = svcRes.rows?.[0]?.service_url || null
       const svcMethod = (svcRes.rows?.[0]?.service_method || 'GET').toUpperCase()
 
-      let probeStatus = 'unprobed'
+      let probeStatus = 'unchecked'
       let probeAccepts = null
       let probedAt = null
-      let evidence = null
-      let evidenceByNetwork = null
 
       // POST services are never probed — not even a call into the probe layer,
       // let alone a network request. Only service_url + method === GET reaches
-      // probeServiceAndEvidence().
+      // probeService().
       if (svcUrl && svcMethod === 'GET') {
         try {
-          const result = await probeServiceAndEvidence(svcUrl, svcMethod)
+          const result = await probeService(svcUrl, svcMethod)
           probeStatus = result.status
           probeAccepts = result.accepts
           probedAt = result.probed_at
-          evidence = result.evidence
-          evidenceByNetwork = result.evidence_by_network
         } catch (e) {
           console.error('[cells/update] service probe threw:', e?.message)
           probeStatus = 'failed'
@@ -173,20 +170,20 @@ export async function PUT(req) {
       }
 
       const probeAcceptsJson = probeAccepts ? JSON.stringify(probeAccepts) : null
-      const evidenceJson = evidence ? JSON.stringify(evidence) : null
-      const evidenceByNetworkJson = evidenceByNetwork ? JSON.stringify(evidenceByNetwork) : null
+      // grid_cells.probe_status keeps its old vocabulary (CHECK constraint, tables are not altered).
+      const storedStatus = toStoredStatus(probeStatus)
       if (blockId) {
         await dbQuery(
-          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4, evidence_by_network = $5 WHERE block_id = $6`,
-          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, evidenceByNetworkJson, blockId]
+          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3 WHERE block_id = $4`,
+          [storedStatus, probeAcceptsJson, probedAt, blockId]
         )
       } else {
         await dbQuery(
-          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3, evidence = $4, evidence_by_network = $5 WHERE x = $6 AND y = $7`,
-          [probeStatus, probeAcceptsJson, probedAt, evidenceJson, evidenceByNetworkJson, keyInfo.x, keyInfo.y]
+          `UPDATE grid_cells SET probe_status = $1, probe_accepts = $2, probed_at = $3 WHERE x = $4 AND y = $5`,
+          [storedStatus, probeAcceptsJson, probedAt, keyInfo.x, keyInfo.y]
         )
       }
-      service = { status: probeStatus, evidence }
+      service = { status: probeStatus }
     }
 
     return NextResponse.json({ ok: true, updated: rowCount, service })

@@ -191,10 +191,9 @@ export function virtualCellDetail(block: ShowcaseBlock, x: number, y: number): C
     cell.service_method = block.service.method
     cell.service_desc = block.service.desc
     cell.service_category = block.service.category
-    cell.probe_status = 'unprobed'
+    cell.probe_status = 'unchecked'
     cell.probe_accepts = null
     cell.probed_at = null
-    cell.evidence = null
     cell.showcase_listing = block.service.listing
   }
   return cell

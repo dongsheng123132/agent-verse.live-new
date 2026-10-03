@@ -101,6 +101,10 @@ async function fetchGrid() {
   throw new Error(errors.join(' | '))
 }
 
+// The live /api/grid speaks the probe-only vocabulary (can_pay | failed | unchecked); the grid_cells column
+// keeps its CHECK constraint (verified | candidate | failed | unprobed). An older live server sends the old words.
+const STORED_PROBE_STATUS = { can_pay: 'candidate', failed: 'failed', unchecked: 'unprobed', verified: 'verified', candidate: 'candidate', unprobed: 'unprobed' }
+
 async function syncFromLive(db) {
   const rows = await fetchGrid()
   let n = 0
@@ -111,21 +115,20 @@ async function syncFromLive(db) {
       if (!Number.isInteger(x) || !Number.isInteger(y) || !c.owner) continue
       await tx.query(
         `INSERT INTO grid_cells
-           (id, x, y, owner_address, status, is_for_sale, price_usdc, fill_color, title, summary, image_url,
+           (id, x, y, owner_address, status, fill_color, title, summary, image_url,
             block_id, block_w, block_h, block_origin_x, block_origin_y, service_url, probe_status, last_updated)
-         VALUES ($1,$2,$3,$4,'HOLDING',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,COALESCE($17,'unprobed'),NOW())
+         VALUES ($1,$2,$3,$4,'HOLDING',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,COALESCE($15,'unprobed'),NOW())
          ON CONFLICT (x, y) DO UPDATE SET
-           owner_address = EXCLUDED.owner_address, status = 'HOLDING', is_for_sale = EXCLUDED.is_for_sale,
-           price_usdc = EXCLUDED.price_usdc, fill_color = EXCLUDED.fill_color, title = EXCLUDED.title,
+           owner_address = EXCLUDED.owner_address, status = 'HOLDING', fill_color = EXCLUDED.fill_color, title = EXCLUDED.title,
            summary = EXCLUDED.summary, image_url = EXCLUDED.image_url, block_id = EXCLUDED.block_id,
            block_w = EXCLUDED.block_w, block_h = EXCLUDED.block_h, block_origin_x = EXCLUDED.block_origin_x,
            block_origin_y = EXCLUDED.block_origin_y, service_url = EXCLUDED.service_url,
            probe_status = EXCLUDED.probe_status, last_updated = NOW()`,
         [
-          c.id ?? y * 100 + x, x, y, c.owner, Boolean(c.is_for_sale), c.price_usdc ?? null,
+          c.id ?? y * 100 + x, x, y, c.owner,
           c.color ?? null, c.title ?? null, c.summary ?? null, c.image_url ?? null,
           c.block_id ?? null, c.block_w ?? 1, c.block_h ?? 1, c.block_origin_x ?? x, c.block_origin_y ?? y,
-          c.service_url ?? null, c.probe_status ?? null,
+          c.service_url ?? null, STORED_PROBE_STATUS[c.probe_status] ?? null,
         ]
       )
       n++

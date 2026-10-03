@@ -8,7 +8,7 @@ vi.mock('../lib/db.js', () => ({
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
 // PUT /api/cells/update imports the service probe; these tests only send title / fill_color.
-vi.mock('../lib/market/service', () => ({ probeServiceAndEvidence: vi.fn() }))
+vi.mock('../lib/market/service', () => ({ probeService: vi.fn() }))
 
 let testDb: TestDb
 

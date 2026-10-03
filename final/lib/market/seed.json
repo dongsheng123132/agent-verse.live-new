@@ -63,18 +63,18 @@
     "name": "glim.sh · Twitter Search",
     "url": "https://glim.sh/api/v1/twitter/search",
     "method": "POST",
-    "note": "来源同上「实测表」：POST 接口，GET 回 404，按规则不探测（status 恒为 unprobed）。调研记录声称 $0.005，Solana/Base/eip155:143，未在本次运行中验证。"
+    "note": "来源同上「实测表」：POST 接口，GET 回 404，按规则不探测（status 恒为 unchecked）。调研记录声称 $0.005，Solana/Base/eip155:143，未在本次运行中验证。"
   },
   {
     "name": "MiroShark",
     "url": "https://x402.miroshark.xyz/run",
     "method": "POST",
-    "note": "来源同上「实测表」：POST，GET 回 405，按规则不探测（status 恒为 unprobed）。调研记录声称 $1.00，Base/Solana/eip155:143，未在本次运行中验证。"
+    "note": "来源同上「实测表」：POST，GET 回 405，按规则不探测（status 恒为 unchecked）。调研记录声称 $1.00，Base/Solana/eip155:143，未在本次运行中验证。"
   },
   {
     "name": "hosaka-agents",
     "url": "https://hosaka-agents.vercel.app/contacts",
     "method": "POST",
-    "note": "来源同上「实测表」：POST，GET 回 405，按规则不探测（status 恒为 unprobed）。调研记录声称 $0.02，含 eip155:143，未在本次运行中验证。"
+    "note": "来源同上「实测表」：POST，GET 回 405，按规则不探测（status 恒为 unchecked）。调研记录声称 $0.02，含 eip155:143，未在本次运行中验证。"
   }
 ]

@@ -13,7 +13,7 @@ vi.mock('../lib/db.js', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
-vi.mock('../lib/market/service', () => ({ probeServiceAndEvidence: vi.fn() }))
+vi.mock('../lib/market/service', () => ({ probeService: vi.fn() }))
 
 let testDb: TestDb
 beforeAll(async () => {

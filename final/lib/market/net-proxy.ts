@@ -1,8 +1,7 @@
 /**
  * 出站代理（本地开发用）：本机常见的 Clash/v2rayN 之类客户端只设置
- * HTTPS_PROXY/HTTP_PROXY 环境变量，Node 原生 fetch 默认不认它。市场探测/证据
- * 抓取（probe.ts / rpc.ts / hypersync.ts / bazaar.ts）都请求境外地址，本地开
- * 发没有代理常常连不上。
+ * HTTPS_PROXY/HTTP_PROXY 环境变量，Node 原生 fetch 默认不认它。服务探测
+ * （probe.ts，经 service.ts 调用）会请求境外地址，本地开发没有代理常常连不上。
  *
  * 只在检测到 HTTPS_PROXY / HTTP_PROXY 环境变量时才安装（Vercel 生产环境不设
  * 这两个变量，天然是 no-op，不影响 DB 连接——pg 走 TCP 不走这个 fetch

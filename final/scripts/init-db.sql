@@ -150,9 +150,8 @@ ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probe_status TEXT DEFAULT 'unpro
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probe_accepts JSONB;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS probed_at TIMESTAMPTZ;
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS evidence JSONB;
--- 2026-09-30 诚实标注修复：按网络拆分的证据（见 lib/market/types.ts
--- MarketEvidence 头注释、lib/market/evidence.ts）——evidence 列继续存
--- "最好的那条"（向后兼容），这一列额外存每个受支持网络各自的证据。
+-- 链上证据已于 2026-10-03 下线：evidence / evidence_by_network 两列保留（不改表），
+-- 但不再写入也不再读取。
 ALTER TABLE grid_cells ADD COLUMN IF NOT EXISTS evidence_by_network JSONB;
 DO $$
 BEGIN

@@ -3,6 +3,7 @@ import { dbQuery } from '../../../lib/db.js'
 import { ensureSchema } from '../../../lib/schema'
 import { findShowcaseBlockAt, isInShowcaseBounds, isRealUserOwner, virtualCellDetail } from '../../../lib/showcase/index'
 import { loadShowcase } from '../../../lib/showcase/server'
+import { fromStoredStatus } from '../../../lib/market/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export async function GET(req) {
               block_id, block_w, block_h, block_origin_x, block_origin_y,
               hit_count, last_updated, scene_preset, scene_config,
               service_url, service_method, service_desc, service_category,
-              probe_status, probe_accepts, probed_at, evidence
+              probe_status, probe_accepts, probed_at
        FROM grid_cells WHERE x = $1 AND y = $2`,
       [x, y]
     )
@@ -55,7 +56,8 @@ export async function GET(req) {
       dbQuery('UPDATE grid_cells SET hit_count = COALESCE(hit_count, 0) + 1 WHERE x = $1 AND y = $2', [ox, oy]).catch(() => {})
     }
 
-    return NextResponse.json({ ok: true, cell: res.rows[0] })
+    // The column keeps the old vocabulary (CHECK constraint); the API speaks the probe-only one.
+    return NextResponse.json({ ok: true, cell: { ...res.rows[0], probe_status: fromStoredStatus(res.rows[0].probe_status) } })
   } catch (e) {
     console.error('[cells]', e)
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 })

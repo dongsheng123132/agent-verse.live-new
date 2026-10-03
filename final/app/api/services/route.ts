@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getMarketServices, groupSellers } from '../../../lib/market/market'
+import { getMarketServices } from '../../../lib/market/market'
 import { ensureSchema } from '../../../lib/schema'
 
 // GET /api/services?q=&network=&max_price=&category=&status=
-// Text-version market for AI agents (MONAD-MARKET-SPEC.md P3). Combines
-// officially-curated services (seed.json + Coinbase Bazaar, cached in
-// market_services) and cell listings (grid_cells.service_url).
+// Text-version service index for AI agents. Combines the curated services
+// (seed.json, cached in market_services) and cell listings
+// (grid_cells.service_url). `status` is probe-only: can_pay | failed | unchecked.
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
@@ -28,13 +28,7 @@ export async function GET(req: NextRequest) {
     const max_price = maxPriceRaw !== null && maxPriceRaw !== '' ? Number(maxPriceRaw) : undefined
 
     const services = await getMarketServices({ q, network, category, status, max_price })
-    // Seller-grouped view (MONAD-MARKET-SPEC.md honesty fix, 2026-09-30): the
-    // same receiving wallet can front many interfaces (e.g. agent402's 15
-    // tools sharing one payTo) and evidence is wallet-level, not
-    // interface-level. `services` stays the flat list AI callers already
-    // depend on; `sellers` is additive grouping info for /market's UI.
-    const sellers = groupSellers(services, network)
-    return NextResponse.json({ ok: true, count: services.length, services, sellers })
+    return NextResponse.json({ ok: true, count: services.length, services })
   } catch (e: any) {
     console.error('[api/services]', e)
     return NextResponse.json({ ok: false, error: 'server_error', message: e?.message }, { status: 500 })

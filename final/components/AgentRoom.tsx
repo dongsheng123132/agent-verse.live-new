@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
-import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers, Sparkles, Zap } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers, Zap } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
 import { DecorateForm } from './DecorateForm';
 
-/** Best-effort tx explorer links — not verified against a real tx at write time (see docs/MONAD-MARKET-SPEC.md P2 deviations). */
-const EXPLORER_TX_URL: Record<string, (tx: string) => string> = {
-  'eip155:8453': (tx) => `https://basescan.org/tx/${tx}`,
-  'eip155:143': (tx) => `https://monadvision.com/tx/${tx}`,
-}
 const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
 
 /**
@@ -45,7 +40,7 @@ function deriveNetworkOffers(accepts: Cell['probe_accepts']): ProbeAcceptEntry[]
   return out
 }
 
-/** "服务卡": name/price/network/verified state/7d payers/last-tx link + "Copy for AI" (MoneySwitch paid_fetch prompt). */
+/** "服务卡": name/price/network/probe status + "Copy for AI" (MoneySwitch paid_fetch prompt). */
 const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
   const [copied, setCopied] = useState(false)
   if (!cell.service_url) return null
@@ -59,13 +54,9 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
     ? (Number(primary.amount) / 1_000_000).toFixed(2)
     : listing?.price_usdc ?? null
   const network = primary?.network || listing?.networks[0] || null
-  const status = cell.probe_status || 'unprobed'
-  const isVerified = status === 'verified'
-  // 证据自己的 network 字段才是这条证据实际查的是哪条链——不能用 primary
-  // （Monad 优先的展示网络）替代，两者可能不是同一条链（2026-09-30 诚实标注
-  // 修复：这条证据是「收款钱包级」的，不是「本接口在 primary 网络上」的证据）。
-  const evidenceNetwork = cell.evidence?.network || null
-  const explorerUrl = evidenceNetwork && cell.evidence?.last_tx ? EXPLORER_TX_URL[evidenceNetwork]?.(cell.evidence.last_tx) : null
+  // Probe-only: can_pay = a read-only GET got a valid x402 v2 402; failed = it did not; unchecked = POST / not probed.
+  const status = cell.probe_status || 'unchecked'
+  const canPay = status === 'can_pay'
 
   const copyForAi = () => {
     const maxPrice = priceUsdc ? `$${priceUsdc}` : '$0.10'
@@ -80,12 +71,14 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
   }
 
   return (
-    <div className={`mb-4 rounded-lg border p-3 ${isVerified ? 'border-purple-500/50 bg-purple-950/20' : 'border-[#333] bg-[#0a0a0a]'}`}>
+    <div className="mb-4 rounded-lg border border-[#333] bg-[#0a0a0a] p-3">
       <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
         <div className="flex items-center gap-1.5">
-          {isVerified ? <Sparkles size={13} className="text-purple-400" /> : <Zap size={13} className="text-amber-400" />}
+          <Zap size={13} className="text-amber-400" />
           <span className="text-xs font-mono font-bold text-white">{cell.title || 'x402 Service'}</span>
-          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${isVerified ? 'border-purple-500/50 text-purple-300 bg-purple-900/30' : status === 'candidate' ? 'border-amber-600/40 text-amber-400 bg-amber-900/20' : 'border-[#333] text-gray-500'}`}>
+          <span
+            title={canPay ? '只读 GET 返回了合法的 x402 v2 402（没有付款）' : status === 'failed' ? '只读 GET 没有拿到合法的 x402 v2 402' : 'POST 服务需要 body，或还没探测'}
+            className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${canPay ? 'border-green-600/40 text-green-400 bg-green-900/20' : status === 'failed' ? 'border-red-800/40 text-red-400 bg-red-950/30' : 'border-[#333] text-gray-500'}`}>
             {status.toUpperCase()}
           </span>
         </div>
@@ -107,17 +100,6 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
           ))
         ) : (
           <span>network unknown</span>
-        )}
-        {cell.evidence && (
-          <span title="同一收款地址下的所有接口共享这一证据">
-            · 收款方近{cell.evidence.window.human}内有 {cell.evidence.payers} 个付款人 / {cell.evidence.transfers} 笔转账
-            （网络：{NETWORK_LABEL[cell.evidence.network] || cell.evidence.network}，来源：{cell.evidence.source}）
-          </span>
-        )}
-        {explorerUrl && (
-          <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
-            <ExternalLink size={9} /> last tx
-          </a>
         )}
       </div>
       {listing && (

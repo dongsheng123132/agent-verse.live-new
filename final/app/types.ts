@@ -41,26 +41,10 @@ export type Cell = {
   service_method?: 'GET' | 'POST' | string | null;
   service_desc?: string | null;
   service_category?: string | null;
-  probe_status?: 'verified' | 'candidate' | 'failed' | 'unprobed' | null;
+  /** Probe-only (lib/market/types.ts MarketStatus): can_pay = a read-only GET got a valid x402 v2 402; failed = it did not; unchecked = POST or not probed. */
+  probe_status?: 'can_pay' | 'failed' | 'unchecked' | null;
   probe_accepts?: Array<{ scheme: string; network: string; amount: string | null; asset: string | null; payTo: string | null }> | null;
   probed_at?: string | null;
-  evidence?: {
-    /** 这条证据是在哪条链上查到的（eip155:143 = Monad，eip155:8453 = Base）——2026-09-30 诚实标注修复新增字段。 */
-    network: string;
-    payers: number;
-    transfers: number;
-    last_tx: string | null;
-    last_at: string | null;
-    source: 'hypersync' | 'rpc-short-window';
-    /** 区块数 + 换算成人类可读时长（如"约 6.7 小时"）。 */
-    window: { blocks: number; human: string };
-    /** @deprecated 用 payers。 */
-    payers_7d: number;
-    /** @deprecated 用 transfers。 */
-    transfers_7d: number;
-    /** @deprecated 用 window.blocks。 */
-    window_blocks: number;
-  } | null;
   // Monad Metropolis showcase (lib/showcase): virtual, display-only cells merged in by /api/grid and /api/cells.
   showcase?: boolean;
   showcase_kind?: ShowcaseKind;

@@ -168,7 +168,7 @@ const STREET: ShowcaseBlockSpec = {
 点开任意一格：看价格 / 网络、复制「给 AI」的调用命令。
 完整列表、搜索与筛选：/market （AI 可读文字版：/llms-services.txt）
 
-状态一栏为 UNPROBED 表示本站尚未对它实测；价格若标注为「收录标注」，以服务自己的 402 响应为准。`,
+状态一栏为 UNCHECKED 表示本站尚未对它实测；价格若标注为「收录标注」，以服务自己的 402 响应为准。`,
   links: [
     { label: '在 /market 查看全部服务', url: '/market' },
     { label: 'AI 可读服务索引', url: '/llms-services.txt' },
