@@ -10,7 +10,7 @@ import {
   totalPriceUsdc,
   validateDecorateFields,
 } from '../lib/ai-purchase-prompt'
-import { PAY_NETWORKS } from '../lib/wallet-pay/networks'
+import { PAY_NETWORKS } from '../lib/networks'
 import * as flow from '../lib/x402-flow'
 
 const ORIGIN = 'https://www.agent-verse.live'
@@ -223,7 +223,7 @@ describe('guards and consistency with the rest of the repo', () => {
     expect(() => buildAiPurchasePrompt({ origin: ORIGIN, cells: [] })).toThrow()
   })
 
-  it('both networks and their explorers match the wallet-pay tables', () => {
+  it('both networks and their explorers match the lib/networks tables', () => {
     expect(PAY_NETWORKS.mainnet.monad.caip2).toBe('eip155:143')
     expect(PAY_NETWORKS.mainnet.base.caip2).toBe('eip155:8453')
     const p = buildAiPurchasePrompt({ origin: ORIGIN, cells: ONE })

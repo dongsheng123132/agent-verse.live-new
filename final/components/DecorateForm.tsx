@@ -9,12 +9,10 @@ import {
     validateChanges,
     valuesFromCell,
 } from '../lib/cell-decorate';
-import { getCellKey, isPlausibleCellKey, removeCellKey, safeLocalStorage, saveCellKey } from '../lib/wallet-pay/key-store';
+import { getCellKey, isPlausibleCellKey, removeCellKey, safeLocalStorage, saveCellKey } from '../lib/cell-key-store';
 
 interface DecorateFormProps {
     cell: Cell;
-    /** Open the form straight away (right after a purchase). */
-    autoOpen?: boolean;
     /** Re-read the cell + map after a save; resolves with the fresh cell (or null if the re-read failed). */
     onUpdated: (x: number, y: number) => Promise<Cell | null>;
 }
@@ -26,10 +24,10 @@ const LABEL = 'block text-[10px] text-gray-500 font-mono mb-0.5';
 
 /**
  * "装修" — edit the cell the person owns. Shown when this browser remembers the
- * cell's API key (set automatically after a wallet purchase) or after clicking
+ * cell's API key (remembered when it was pasted into this form) or after clicking
  * 「我有 key」 and pasting one. Saves with PUT /api/cells/update (Bearer key).
  */
-export const DecorateForm: React.FC<DecorateFormProps> = ({ cell, autoOpen, onUpdated }) => {
+export const DecorateForm: React.FC<DecorateFormProps> = ({ cell, onUpdated }) => {
     const [storedKey, setStoredKey] = useState<string | null>(null);
     const [open, setOpen] = useState(false);
     const [keyInput, setKeyInput] = useState('');
@@ -47,23 +45,11 @@ export const DecorateForm: React.FC<DecorateFormProps> = ({ cell, autoOpen, onUp
         setStoredKey(k);
         setKeyInput(k ?? '');
         setEdits({});
-        setOpen(!!autoOpen && !!k);
+        setOpen(false);
         setMsg(null);
         setShowKey(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cell.x, cell.y]);
-
-    // Asked to open by itself (right after a purchase; the key was saved just before).
-    useEffect(() => {
-        if (!autoOpen) return;
-        const k = getCellKey(safeLocalStorage(), cell.x, cell.y);
-        if (k) {
-            setStoredKey(k);
-            setKeyInput(k);
-            setOpen(true);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [autoOpen]);
 
     const initial = useMemo(() => valuesFromCell(cell), [cell]);
     const values: DecorateValues = useMemo(() => ({ ...initial, ...edits }), [initial, edits]);

@@ -7,7 +7,7 @@ import {
   removeCellKey,
   saveCellKey,
   type StorageLike,
-} from '../lib/wallet-pay/key-store'
+} from '../lib/cell-key-store'
 
 function memoryStorage(initial: Record<string, string> = {}): StorageLike & { data: Record<string, string> } {
   const data = { ...initial }

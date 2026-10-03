@@ -15,8 +15,8 @@
  */
 import { PRICE_PER_CELL } from '../app/types'
 import { fullRectangle, sortCells, type CellCoord } from './cell-block'
-import { formatAtomicUsdc, totalAtomicForCells, usdcToAtomic } from './wallet-pay/amount'
-import { PAY_NETWORKS } from './wallet-pay/networks'
+import { formatAtomicUsdc, totalAtomicForCells, usdcToAtomic } from './usdc-amount'
+import { PAY_NETWORKS } from './networks'
 
 /** Receiving address of every purchase (same value as PAY_TO_ADDRESS in lib/x402-flow.ts; a test fails if they drift). */
 export const AGENTVERSE_PAY_TO = '0x4eCf92bAb524039Fc4027994b9D88C2DB2Ee05E6'

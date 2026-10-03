@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Wallet, Box, Copy, Check, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { X, Box, Copy, Check, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
 import {
     AGENTVERSE_PAY_TO,
@@ -13,36 +13,18 @@ import {
     validateDecorateFields,
     type AiDecorateFields,
 } from '../lib/ai-purchase-prompt';
-import { WALLET_PAY_ENABLED, WALLET_PAY_PAUSED_LABEL } from '../lib/wallet-pay/feature';
-import { formatAtomicUsdc, totalAtomicForCells } from '../lib/wallet-pay/amount';
-import { NO_GAS_NOTE, toPayError } from '../lib/wallet-pay/errors';
-import { saveCellKey, safeLocalStorage } from '../lib/wallet-pay/key-store';
-import { DEFAULT_PAY_NETWORK, PAY_NETWORK_ORDER, PAY_NETWORKS, type PayNetworkKey } from '../lib/wallet-pay/networks';
-import { getInjectedProvider } from '../lib/wallet-pay/wallet';
-import type { PayStatus, PurchaseSuccess } from '../lib/wallet-pay/pay';
+import { PAY_NETWORKS } from '../lib/networks';
 
 interface PurchaseModalProps {
     selectedCells: { x: number; y: number }[];
     onClose: () => void;
-    /** Browser-wallet path only: called once the payment settled; `keySaved` is false when this browser refused to store the key. */
-    onPurchased: (result: PurchaseSuccess, keySaved: boolean) => void;
     refCode?: string | null;
     /**
      * "我让 AI 买完了": re-read the map and the selected cells so the person can review the result.
      * Resolves with how many of the selected cells now have an owner (null = could not tell).
      */
     onAiDone?: () => Promise<{ owned: number; total: number } | null>;
-    /** Show the browser-wallet payment path. Defaults to the WALLET_PAY_ENABLED switch (off). */
-    walletPayEnabled?: boolean;
 }
-
-const STATUS_TEXT: Record<PayStatus, string> = {
-    quoting: '正在获取报价…',
-    connecting: '请在钱包里点「连接」…',
-    switching: '请在钱包里同意切换网络…',
-    checking_balance: '正在检查 USDC 余额…',
-    signing: '请在钱包里确认签名（不是转账交易，不花 gas）…',
-};
 
 const FIELD = 'w-full bg-[#050505] border border-[#333] rounded px-2 py-1.5 text-xs font-mono text-gray-200 focus:border-green-500 focus:outline-none placeholder:text-gray-600';
 const LABEL = 'block text-[10px] text-gray-500 font-mono mb-0.5';
@@ -51,10 +33,8 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     selectedCells,
     onClose,
-    onPurchased,
     refCode,
     onAiDone,
-    walletPayEnabled = WALLET_PAY_ENABLED,
 }) => {
     const { t } = useLang();
     // ---- AI-first purchase ----
@@ -64,19 +44,12 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     const [showPreview, setShowPreview] = useState(false);
     const [checking, setChecking] = useState(false);
     const [doneMsg, setDoneMsg] = useState<string | null>(null);
-    // ---- browser-wallet path (only when walletPayEnabled) ----
-    const [hasWallet, setHasWallet] = useState<boolean | null>(null);
-    const [networkKey, setNetworkKey] = useState<PayNetworkKey>(DEFAULT_PAY_NETWORK);
-    const [busy, setBusy] = useState(false);
-    const [status, setStatus] = useState<PayStatus | null>(null);
-    const [error, setError] = useState<string | null>(null);
     // A text selection that starts inside the modal and ends on the backdrop must not close the modal.
     const downOnBackdrop = useRef(false);
 
     const origin = (typeof window !== 'undefined' && window.location.origin) || DEFAULT_ORIGIN;
     const count = selectedCells.length;
     const totalPrice = totalPriceUsdc(count);
-    const maxPrice = formatAtomicUsdc(totalAtomicForCells(count));
     const minX = Math.min(...selectedCells.map(c => c.x));
     const maxX = Math.max(...selectedCells.map(c => c.x));
     const minY = Math.min(...selectedCells.map(c => c.y));
@@ -98,52 +71,6 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     const setField = <K extends keyof AiDecorateFields>(k: K, v: AiDecorateFields[K]) => {
         setFields(prev => ({ ...prev, [k]: v }));
         setCopied(false);
-    };
-
-    // Wallet extensions inject window.ethereum a moment after load — look now, and again shortly.
-    useEffect(() => {
-        if (!walletPayEnabled) return;
-        const check = () => setHasWallet(!!getInjectedProvider());
-        check();
-        const timer = setTimeout(check, 800);
-        window.addEventListener('ethereum#initialized', check);
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('ethereum#initialized', check);
-        };
-    }, [walletPayEnabled]);
-
-    const handleWalletPay = async () => {
-        if (busy) return;
-        const provider = getInjectedProvider();
-        if (!provider) {
-            setHasWallet(false);
-            return;
-        }
-        setBusy(true);
-        setError(null);
-        try {
-            const { payForCells } = await import('../lib/wallet-pay/pay');
-            const result = await payForCells({
-                provider,
-                networkKey,
-                cells: selectedCells,
-                buildMode: process.env.NEXT_PUBLIC_X402_NETWORK_MODE,
-                refCode,
-                origin: window.location.origin,
-                onStatus: setStatus,
-            });
-            const keySaved = saveCellKey(safeLocalStorage(), result.keyCell.x, result.keyCell.y, result.apiKey, {
-                network: result.network.caip2,
-                txHash: result.txHash ?? undefined,
-            });
-            onPurchased(result, keySaved);
-        } catch (e) {
-            setError(toPayError(e).message);
-        } finally {
-            setBusy(false);
-            setStatus(null);
-        }
     };
 
     const handleCopyForAI = async () => {
@@ -183,10 +110,10 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm"
             onMouseDown={e => { downOnBackdrop.current = e.target === e.currentTarget; }}
-            onClick={e => { if (!busy && downOnBackdrop.current && e.target === e.currentTarget) onClose(); }}
+            onClick={e => { if (downOnBackdrop.current && e.target === e.currentTarget) onClose(); }}
         >
             <div data-testid="purchase-modal" className="bg-[#111] border border-[#333] rounded-lg p-4 md:p-5 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[calc(100dvh-1.5rem)] md:max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
-                <button onClick={onClose} disabled={busy} className="absolute top-4 right-4 text-gray-500 hover:text-white disabled:opacity-30">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white">
                     <X size={20} />
                 </button>
 
@@ -319,79 +246,6 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 {doneMsg && (
                     <p data-testid="ai-done-msg" role="status" className="text-yellow-400 text-[11px] font-mono mb-2">{doneMsg}</p>
                 )}
-
-                {/* ---- browser wallet: paused by default (see lib/wallet-pay/feature.ts) ---- */}
-                <div className="mt-3 pt-3 border-t border-[#222]">
-                    {!walletPayEnabled ? (
-                        <button
-                            type="button"
-                            data-testid="wallet-pay"
-                            disabled
-                            title="钱包安全插件会把 x402 的 EIP-3009 付款签名误报为恶意，暂时停用"
-                            className="w-full py-2 px-2 bg-[#161616] border border-[#222] text-gray-600 font-mono text-[11px] rounded cursor-not-allowed flex items-center justify-center gap-1.5"
-                        >
-                            <Wallet size={12} /> {WALLET_PAY_PAUSED_LABEL}
-                        </button>
-                    ) : (
-                        <>
-                            <div className="mb-2 text-[11px] text-gray-400 font-mono">选择付款网络</div>
-                            <div role="radiogroup" aria-label="付款网络" className="grid grid-cols-2 gap-2 mb-2">
-                                {PAY_NETWORK_ORDER.map(key => {
-                                    const active = networkKey === key;
-                                    return (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            role="radio"
-                                            aria-checked={active}
-                                            data-testid={`net-${key}`}
-                                            disabled={busy}
-                                            onClick={() => setNetworkKey(key)}
-                                            className={`py-2 rounded border text-xs font-mono font-bold transition-all disabled:opacity-60 ${active
-                                                ? (key === 'monad' ? 'border-purple-500 bg-purple-900/30 text-purple-200' : 'border-blue-500 bg-blue-900/30 text-blue-200')
-                                                : 'border-[#333] bg-[#0a0a0a] text-gray-400 hover:border-gray-500'}`}
-                                        >
-                                            {PAY_NETWORKS.mainnet[key].label}
-                                            {key === DEFAULT_PAY_NETWORK && <span className="ml-1 font-normal text-[9px] opacity-70">默认</span>}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <p className="text-[10px] text-gray-500 font-mono mb-2">{NO_GAS_NOTE}</p>
-
-                            {error && (
-                                <div data-testid="pay-error" role="alert" className="bg-red-900/20 border border-red-900/50 p-2 rounded mb-3 text-red-300 text-xs font-mono break-words flex gap-1.5">
-                                    <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                                    <span>{error}</span>
-                                </div>
-                            )}
-
-                            {hasWallet === false ? (
-                                <div data-testid="no-wallet" className="bg-yellow-900/20 border border-yellow-800/40 rounded p-3">
-                                    <p className="text-yellow-400 text-xs font-bold font-mono mb-1">没有检测到浏览器钱包</p>
-                                    <p className="text-yellow-500/90 text-[11px] leading-relaxed">
-                                        电脑上请安装 MetaMask / OKX / Rabby 浏览器扩展后刷新本页；手机上请在钱包 App（MetaMask、OKX、Rabby、Trust 等）的内置浏览器里打开本站。
-                                        也可以用上面的「复制给我的 AI」。
-                                    </p>
-                                </div>
-                            ) : (
-                                <button
-                                    type="button"
-                                    data-testid="wallet-pay"
-                                    disabled={busy || hasWallet === null}
-                                    onClick={handleWalletPay}
-                                    className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:bg-[#222] disabled:text-gray-500 text-white font-mono font-bold rounded text-sm flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-900/20"
-                                >
-                                    {busy ? (
-                                        <span data-testid="pay-status" className="animate-pulse text-xs">{status ? STATUS_TEXT[status] : t('processing')}</span>
-                                    ) : (
-                                        <><Wallet size={16} /> 连接钱包付款 · ${maxPrice} USDC</>
-                                    )}
-                                </button>
-                            )}
-                        </>
-                    )}
-                </div>
             </div>
         </div>
     );

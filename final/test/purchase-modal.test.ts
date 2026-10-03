@@ -3,11 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { AGENTVERSE_PAY_TO, MONEYSWITCH_URL } from '../lib/ai-purchase-prompt'
-import { WALLET_PAY_ENABLED, WALLET_PAY_PAUSED_LABEL } from '../lib/wallet-pay/feature'
 
 function render(cells: { x: number; y: number }[], extra: Record<string, unknown> = {}): string {
   return renderToStaticMarkup(
-    React.createElement(PurchaseModal, { selectedCells: cells, onClose: () => {}, onPurchased: () => {}, ...extra })
+    React.createElement(PurchaseModal, { selectedCells: cells, onClose: () => {}, ...extra })
   )
 }
 
@@ -22,25 +21,14 @@ function tagOf(html: string, testId: string): string | null {
 }
 
 describe('PurchaseModal (AI-first)', () => {
-  it('the wallet switch is off by default', () => {
-    expect(WALLET_PAY_ENABLED).toBe(false)
-  })
-
-  it('the browser-wallet button is rendered but disabled, with the paused wording', () => {
+  it('there is no browser-wallet payment UI at all (button, network picker, credit card)', () => {
     const html = render([{ x: 61, y: 61 }])
-    const tag = tagOf(html, 'wallet-pay')
-    expect(tag).not.toBeNull()
-    expect(tag).toMatch(/\sdisabled(=""|\s|>)/)
-    expect(html).toContain(WALLET_PAY_PAUSED_LABEL)
-    expect(WALLET_PAY_PAUSED_LABEL).toBe('钱包直付（暂停：钱包安全插件会把付款签名误报为风险）')
-    // none of the live wallet UI is there
+    expect(tagOf(html, 'wallet-pay')).toBeNull()
     expect(tagOf(html, 'net-monad')).toBeNull()
+    expect(html).not.toContain('钱包直付')
     expect(html).not.toContain('连接钱包付款')
     expect(html).not.toContain('选择付款网络')
-  })
-
-  it('the credit-card (Commerce) button is gone', () => {
-    expect(render([{ x: 61, y: 61 }])).not.toContain('信用卡支付暂停')
+    expect(html).not.toContain('信用卡支付')
   })
 
   it('shows the chosen cell, count, total, receiving address and both networks (Monad first)', () => {
@@ -140,13 +128,5 @@ describe('PurchaseModal (AI-first)', () => {
     const html = render(many)
     expect(html).toContain('data-testid="too-many"')
     expect(tagOf(html, 'copy-for-ai')).toMatch(/\sdisabled(=""|\s|>)/)
-  })
-
-  it('when the switch is turned on the wallet UI comes back (network choice, no paused label)', () => {
-    const html = render([{ x: 61, y: 61 }], { walletPayEnabled: true })
-    expect(tagOf(html, 'net-monad')).not.toBeNull()
-    expect(tagOf(html, 'net-base')).not.toBeNull()
-    expect(html).toContain('选择付款网络')
-    expect(html).not.toContain(WALLET_PAY_PAUSED_LABEL)
   })
 })

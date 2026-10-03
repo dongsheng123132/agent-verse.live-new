@@ -34,7 +34,6 @@ const dict = {
   'units': { en: 'UNITS', zh: '格' },
   'area_blocked': { en: 'AREA BLOCKED BY EXISTING NODES', zh: '区域已被占用' },
   'confirm_tx': { en: 'CONFIRM TRANSACTION', zh: '确认支付' },
-  'processing': { en: 'PROCESSING...', zh: '处理中...' },
   'ai_payment': { en: 'AI AGENT PAYMENT (x402)', zh: 'AI Agent 支付 (x402)' },
   'only_1x1': { en: '1x1 ONLY', zh: '仅1x1' },
   'copy_for_ai': { en: 'Copy All to AI', zh: '一键复制给 AI' },
@@ -49,15 +48,8 @@ const dict = {
   'retrieving': { en: 'Retrieving node data...', zh: '获取节点数据...' },
 
   // API Key Modal
-  'payment_success': { en: 'PAYMENT SUCCESSFUL', zh: '支付成功' },
-  'acquired_node': { en: 'Acquired Node', zh: '已获取格子' },
   'save_warning': { en: 'WARNING: SAVE EVERYTHING BELOW', zh: '警告：请保存以下所有内容' },
   'save_warning_desc': { en: 'This key will not be shown again. Copy all info now.', zh: '此 Key 不会再次显示，请立即复制保存。' },
-  'api_key_label': { en: 'API KEY', zh: 'API 密钥' },
-  'customize_cmd': { en: 'CUSTOMIZE COMMAND', zh: '自定义命令' },
-  'documentation': { en: 'DOCUMENTATION', zh: '文档' },
-  'copy_all': { en: 'COPY ALL (Key + Command + Docs)', zh: '全部复制（Key + 命令 + 文档）' },
-  'i_saved': { en: 'I HAVE SAVED IT', zh: '我已保存，关闭' },
 
   // BotConnect / ME
   'quick_guide': { en: 'Quick Guide', zh: '快速指南' },

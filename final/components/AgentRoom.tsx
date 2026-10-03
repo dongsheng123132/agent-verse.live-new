@@ -167,8 +167,6 @@ interface DetailModalProps {
     cell: Cell | null;
     loading: boolean;
     onClose: () => void;
-    /** Cell whose 装修 (decorate) form should open by itself — set right after a purchase. */
-    openDecorateFor?: { x: number; y: number } | null;
     /** Re-read the cell and the map after the owner saved a change; resolves with the fresh cell. */
     onCellUpdated?: (x: number, y: number) => Promise<Cell | null>;
 }
@@ -199,7 +197,7 @@ const BuyResaleButton: React.FC<{ x: number; y: number; priceUsdc: number; refCo
     );
 };
 
-export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, openDecorateFor, onCellUpdated }) => {
+export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, onCellUpdated }) => {
     const { t } = useLang();
     const [copiedMd, setCopiedMd] = useState(false);
     const [copiedAll, setCopiedAll] = useState(false);
@@ -272,7 +270,6 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose, 
                         {cell.owner && !cell.showcase && onCellUpdated && (
                             <DecorateForm
                                 cell={cell}
-                                autoOpen={!!openDecorateFor && openDecorateFor.x === cell.x && openDecorateFor.y === cell.y}
                                 onUpdated={onCellUpdated}
                             />
                         )}

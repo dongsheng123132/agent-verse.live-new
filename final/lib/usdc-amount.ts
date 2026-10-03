@@ -1,4 +1,4 @@
-import { PRICE_PER_CELL } from '../../app/types'
+import { PRICE_PER_CELL } from '../app/types'
 
 /** USDC has 6 decimals on every chain we support. */
 export const USDC_DECIMALS = 6

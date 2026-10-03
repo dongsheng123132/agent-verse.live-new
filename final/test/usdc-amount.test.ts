@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAtomicUsdc, totalAtomicForCells, totalUsdcForCells, usdcToAtomic } from '../lib/wallet-pay/amount'
+import { formatAtomicUsdc, totalAtomicForCells, totalUsdcForCells, usdcToAtomic } from '../lib/usdc-amount'
 import { PRICE_PER_CELL } from '../app/types'
 import { usdcToAtomic as serverUsdcToAtomic } from '../lib/x402-flow'
 
