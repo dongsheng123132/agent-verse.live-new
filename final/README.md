@@ -47,7 +47,7 @@ final/
 │       ├── search/               # GET 全文搜索
 │       ├── services/             # GET 服务索引（JSON）
 │       └── admin/stats/          # GET 销售统计（ADMIN_KEY）
-├── components/                   # WorldMap、AgentRoom、PurchaseModal、BotConnect ...
+├── components/                   # WorldMap、AgentRoom（格子详情，只读）、PurchaseModal ...；没有「我的」页，也没有装修表单
 ├── lib/
 │   ├── x402-flow.ts              # 双链 x402；一条链的 facilitator 挂了另一条照常
 │   ├── ai-purchase-prompt.ts     # 「复制给我的 AI」提示词（纯函数，和 skill.md 一致由测试保证）

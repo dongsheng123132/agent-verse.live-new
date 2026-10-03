@@ -115,6 +115,20 @@ async function searchCell(page, x, y) {
   await page.locator(`button:has-text("(${x},${y})")`).first().click({ timeout: T })
 }
 
+/**
+ * The page is the map only: no 地图/我的 (MAP/ME) view toggle, no bottom nav bar (MobileNav), no BotConnect panel.
+ * textContent / element counts rather than innerText, so elements hidden by a breakpoint (md:hidden) are found too.
+ */
+async function mapOnlyHits(page) {
+  const hits = []
+  const labels = await page.locator('button').evaluateAll((els) => els.map((e) => (e.textContent || '').trim()))
+  for (const l of labels) if (/^(地图|MAP|我的|ME)$/.test(l)) hits.push(`button "${l}"`)
+  if ((await page.locator('nav').count()) > 0) hits.push('a <nav> element (MobileNav)')
+  const text = await page.locator('body').evaluate((el) => el.textContent || '')
+  for (const needle of ['Quick Guide', '快速指南', 'Recover API Key', '恢复 API Key', '完整 API 文档', '价格表']) if (text.includes(needle)) hits.push(`text "${needle}"`)
+  return hits
+}
+
 /** Everything of the removed browser-side decorate form (DecorateForm) still findable in the DOM: test ids and its button text. */
 async function decorateUiHits(page) {
   const hits = []
@@ -256,6 +270,8 @@ try {
   check('header: no FEED tab, no /docs link, one link to skill.md', !/FEED|动态/.test(headerText) && (await page.locator('header a[href="/docs"]').count()) === 0 && (await page.locator('header a[href="/skill.md"]').count()) === 1, headerText.replace(/\s+/g, ' '))
   const mainBox = await page.locator('main').boundingBox()
   check('the desktop map takes the full window width (no sidebar)', !!mainBox && Math.abs(mainBox.width - 1440) <= 2, JSON.stringify(mainBox))
+  const mapOnlyDesktop = await mapOnlyHits(page)
+  check('the page is the map only (desktop): no 地图/我的 toggle, no MobileNav, no BotConnect panel', mapOnlyDesktop.length === 0, mapOnlyDesktop.join(' | '))
   const answers = {}
   for (const p of ['/api/rankings', '/api/events', '/api/referral/stats', '/api/commerce/create', '/api/cells/for-sale', '/api/cells/list-for-sale', '/api/cells/buy-resale', '/api/admin/payout', '/.well-known/ai-plugin.json']) {
     answers[p] = (await fetch(`${BASE}${p}`, { redirect: 'manual' })).status
@@ -400,6 +416,18 @@ try {
   await shot(page, 'decorated-owned-detail')
   check('no uncaught page errors (single-cell session)', page.__pageErrors.length === 0, page.__pageErrors.join(' | '))
   await context.close()
+
+  // a phone-sized window: still only the map — no bottom nav bar, no 我的 tab, the map reaches the bottom edge
+  const s1c = await newPage({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
+  await s1c.page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: T })
+  await s1c.page.waitForSelector('main canvas', { timeout: T })
+  await s1c.page.waitForTimeout(1500)
+  const mapOnlyMobile = await mapOnlyHits(s1c.page)
+  check('the page is the map only (375x812): no 地图/我的 toggle, no MobileNav, no BotConnect panel', mapOnlyMobile.length === 0, mapOnlyMobile.join(' | '))
+  const mobileMain = await s1c.page.locator('main').boundingBox()
+  check('...and the map reaches the bottom edge of the phone window (no bar below it)', !!mobileMain && Math.abs(mobileMain.y + mobileMain.height - 812) <= 2 && Math.abs(mobileMain.width - 375) <= 2, JSON.stringify(mobileMain))
+  check('no uncaught page errors (phone session)', s1c.page.__pageErrors.length === 0, s1c.page.__pageErrors.join(' | '))
+  await s1c.context.close()
 
   // =====================================================================
   // 2) a 3x2 block — touch panning, mouse box-select, one block, one key

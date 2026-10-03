@@ -3,13 +3,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Cell, COLS, ROWS, CELL_PX, isReserved, truncAddr } from './types'
 import { WorldMap } from '../components/WorldMap'
-import { MobileNav } from '../components/MobileNav'
 import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
-import { BotConnect } from '../components/BotConnect'
 import { Minimap } from '../components/Minimap'
 import { MapToolbar } from '../components/MapToolbar'
-import { Globe, Search, Languages, Map as MapIcon, ShieldCheck, X } from 'lucide-react'
+import { Globe, Search, Languages, Map as MapIcon, X } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 import { SHOWCASE_ORIGIN } from '../lib/showcase/metropolis'
 
@@ -22,9 +20,6 @@ function PageInner() {
   // --- State ---
   const [cells, setCells] = useState<Cell[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Navigation
-  const [viewMode, setViewMode] = useState<'GRID' | 'ACCESS'>('GRID')
 
   // Map State
   const [zoom, setZoom] = useState(2.5)
@@ -207,7 +202,6 @@ function PageInner() {
   };
 
   const handleNavigate = (x: number, y: number) => {
-    setViewMode('GRID');
     const cellSize = CELL_PX * zoom;
     const targetX = -(x * cellSize) + (containerSize.width / 2);
     const targetY = -(y * cellSize) + (containerSize.height / 2);
@@ -337,20 +331,6 @@ function PageInner() {
           </span>
         </div>
         <div className="flex items-center gap-1.5 md:gap-2">
-          <div className="hidden md:flex items-center rounded border border-[#333] overflow-hidden">
-            <button
-              onClick={() => setViewMode('GRID')}
-              className={`px-2 py-1 text-[10px] font-mono flex items-center gap-1 border-r border-[#333] ${viewMode === 'GRID' ? 'text-green-500 bg-[#111]' : 'text-gray-500 hover:text-white'}`}
-            >
-              <MapIcon size={10} /> {t('nav_map')}
-            </button>
-            <button
-              onClick={() => setViewMode('ACCESS')}
-              className={`px-2 py-1 text-[10px] font-mono flex items-center gap-1 ${viewMode === 'ACCESS' ? 'text-purple-500 bg-[#111]' : 'text-gray-500 hover:text-white'}`}
-            >
-              <ShieldCheck size={10} /> {t('nav_me')}
-            </button>
-          </div>
           <button onClick={toggle} className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
             <Languages size={10} /> {lang === 'en' ? '中' : 'EN'}
           </button>
@@ -452,12 +432,11 @@ function PageInner() {
       )}
 
       {/* WORKSPACE */}
-      <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0">
-        {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Main Content: the map is the whole page */}
         <main className="flex-1 relative bg-[#050505] flex flex-col" ref={containerRef}>
 
-          {/* GRID VIEW */}
-          <div className={`absolute inset-0 ${viewMode === 'GRID' ? 'z-10 visible' : 'z-0 invisible'}`}>
+          <div className="absolute inset-0 z-10">
             {containerSize.width > 0 && (
               <WorldMap
                 grid={cells}
@@ -515,24 +494,8 @@ function PageInner() {
             </div>
           </div>
 
-          {/* ACCESS VIEW */}
-          {viewMode === 'ACCESS' && (
-            <div className="absolute inset-0 z-10 bg-[#050505] overflow-y-auto overscroll-contain">
-              <div className="flex flex-col items-center p-4 md:p-6 pb-8">
-                <div className="w-full max-w-md">
-                  <BotConnect mode="EMBED" />
-                </div>
-              </div>
-            </div>
-          )}
-
         </main>
       </div>
-
-      {/* Footer links removed — moved to header icons */}
-
-      {/* MOBILE NAV */}
-      <MobileNav viewMode={viewMode} setViewMode={setViewMode} />
 
       {/* MODALS */}
       <AgentRoom
