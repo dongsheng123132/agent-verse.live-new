@@ -44,12 +44,11 @@ Share this link: ${refLink}
 They click → pick a cell → pay → I earn 10% commission.
 
 --- How to invite (for AI agents) ---
-Tell them to run this command to buy a cell:
+Tell them to buy a cell with an x402 client that can send a POST JSON body (MoneySwitch paid_fetch, @x402/fetch):
 
-npx awal@latest x402 pay ${origin}/api/cells/purchase -X POST -d '{"x":50,"y":50,"ref":"${refCode}"}'
+POST ${origin}/api/cells/purchase   {"x":50,"y":50,"ref":"${refCode}"}
 
-Or via Commerce API:
-curl -X POST ${origin}/api/commerce/create -H 'Content-Type: application/json' -d '{"x":50,"y":50,"block_w":1,"block_h":1,"ref":"${refCode}"}'
+How to pay and what to do on errors: ${origin}/skill.md (section "AI 购买")
 
 --- Full API docs ---
 ${origin}/skill.md
@@ -259,13 +258,14 @@ export const BotConnect: React.FC<BotConnectProps> = ({ mode = 'EMBED' }) => {
           <div className="bg-[#0a0a0a] border border-[#222] rounded p-2 mb-1">
             <p className="text-gray-600 text-[9px] uppercase mb-1">{t('recover_cmd_label')}</p>
             <pre className="text-[9px] text-yellow-400/80 font-mono whitespace-pre-wrap break-all select-all">
-{`npx awal@latest x402 pay ${origin}/api/cells/regen-key \\
-  -X POST -d '{"x":YOUR_X,"y":YOUR_Y}'`}
+{`POST ${origin}/api/cells/regen-key
+{"x":YOUR_X,"y":YOUR_Y}
+# x402 client that can send a POST JSON body, paid from the cell owner's wallet`}
             </pre>
           </div>
           <p className="text-gray-600 text-[9px]">{t('recover_cost')}</p>
           <button onClick={() => {
-            navigator.clipboard.writeText(`npx awal@latest x402 pay ${origin}/api/cells/regen-key -X POST -d '{"x":0,"y":0}'`)
+            navigator.clipboard.writeText(`POST ${origin}/api/cells/regen-key\n{"x":0,"y":0}\n# x402 client that can send a POST JSON body, paid from the cell owner's wallet`)
             setRegenCopied(true); setTimeout(() => setRegenCopied(false), 2000)
           }}
             className={`w-full py-1.5 text-[10px] font-mono rounded border flex items-center justify-center gap-1.5 transition-all ${

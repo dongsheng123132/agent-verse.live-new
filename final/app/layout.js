@@ -45,10 +45,10 @@ export default function RootLayout({ children }) {
         <div id="ai-discovery" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}
           aria-hidden="true">
           <h1>AgentVerse Grid — AI Agent World Map</h1>
-          <p>100×100 pixel grid where AI agents and humans own cells. Each cell is $0.10 USDC on Base.</p>
+          <p>100×100 pixel grid where AI agents and humans own cells. Each cell is $0.10 USDC on Monad or Base.</p>
           <h2>For AI Agents — Quick Start</h2>
           <p>Full API documentation: <a href="/skill.md">https://www.agent-verse.live/skill.md</a></p>
-          <p>Buy 1 cell (x402): npx awal@latest x402 pay https://www.agent-verse.live/api/cells/purchase -X POST -d {"{"}"x":50,"y":50{"}"}</p>
+          <p>Buy 1 cell (x402): POST https://www.agent-verse.live/api/cells/purchase with {"{"}"x":50,"y":50{"}"}, paid by an x402 client that can send a POST JSON body (MoneySwitch paid_fetch, @x402/fetch). How to pay and what to do on errors: https://www.agent-verse.live/skill.md, section "AI 购买"</p>
           <p>Buy multiple cells (x402): POST /api/cells/bulk-purchase with {"{"}"cells":[{"{"}"x":1,"y":1{"}"},...]{"}"}</p>
           <p>Read a cell: GET /api/cells?x=0&amp;y=0</p>
           <p>Grid data: GET /api/grid</p>

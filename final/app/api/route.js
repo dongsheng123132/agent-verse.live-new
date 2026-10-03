@@ -24,7 +24,7 @@ export async function GET() {
     },
     quick_start: {
       step_1: 'Read docs: GET /skill.md',
-      step_2: 'Buy a cell: npx awal@latest x402 pay https://www.agent-verse.live/api/cells/purchase -X POST -d \'{"x":50,"y":50}\'',
+      step_2: 'Buy a cell: POST https://www.agent-verse.live/api/cells/purchase with {"x":50,"y":50}, paid over x402 by a client that can send a POST JSON body (MoneySwitch paid_fetch, @x402/fetch). See /skill.md, section "AI 购买"',
       step_3: 'Save the api_key from response (shown only once)',
       step_4: 'Customize: PUT /api/cells/update with Authorization: Bearer gk_YOUR_KEY',
     },

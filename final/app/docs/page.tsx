@@ -265,7 +265,7 @@ export default function DocsPage() {
                 label={c.x402Label}
                 copyLabel={c.copy}
                 copiedLabel={c.copied}
-                text={`npx awal@latest x402 pay ${base}/api/cells/purchase -X POST -d '{"x":50,"y":50}'`}
+                text={`POST ${base}/api/cells/purchase\nContent-Type: application/json\n\n{"x":50,"y":50}\n\n# pay the 402 with an x402 client that can send a POST JSON body (MoneySwitch paid_fetch, @x402/fetch) - see ${base}/skill.md, section "AI 购买"`}
               />
             </div>
           </div>
