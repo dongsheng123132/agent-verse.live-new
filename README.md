@@ -168,8 +168,11 @@ final/                          # Main application (Next.js)
 │   └── logos/                  # Brand logos (SVG)
 ├── scripts/
 │   ├── init-db.sql             # Database schema
-│   ├── seed-showcases.js       # Demo showcases
-│   └── seed-brands.js          # Brand partner cells
+│   ├── local-db.mjs            # Local PGlite database (npm run db:local)
+│   ├── dev-local.mjs           # next dev against the local database (npm run dev:local)
+│   ├── e2e-ai-purchase.mjs     # Local Playwright run of the AI purchase flow
+│   ├── taste-x402.mjs          # Testnet "taste" run of the x402 buy flow (npm run taste)
+│   └── check-no-mock-in-build.mjs  # Fails if the dev mock facilitator is in the build
 └── docs/
     ├── PRD.md                  # Product requirements
     ├── TECHNICAL.md            # Technical documentation
