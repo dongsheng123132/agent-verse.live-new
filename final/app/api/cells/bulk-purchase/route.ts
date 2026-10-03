@@ -10,7 +10,7 @@ export async function GET() {
   return NextResponse.json({
     endpoint: '/api/cells/bulk-purchase',
     method: 'POST',
-    body: '{ cells: [{x,y},...], ref?: string }',
+    body: '{ cells: [{x,y},...] }',
     pricing: `$${PRICE_PER_CELL.toFixed(2)} x cells.length`,
     max_cells: MAX_CELLS_PER_REQUEST,
     networks: ['Base (eip155:8453)', 'Monad (eip155:143)'],

@@ -45,9 +45,6 @@ function PageInner() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
 
-  // Referral
-  const [refCode, setRefCode] = useState<string | null>(null)
-
   // Search
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Cell[]>([])
@@ -75,12 +72,10 @@ function PageInner() {
 
   useEffect(() => { fetchGrid() }, [fetchGrid])
 
-  // Capture referral code & auto-open cell from URL params
+  // Auto-open a cell from URL params
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
-    const ref = params.get('ref')
-    if (ref) setRefCode(ref)
     // ?x=22&y=0 → auto-open cell detail
     const qx = params.get('x'), qy = params.get('y')
     if (qx != null && qy != null) {
@@ -600,7 +595,6 @@ function PageInner() {
           selectedCells={selectedCells.map(c => ({ x: c.x, y: c.y }))}
           onClose={() => { setShowPurchaseModal(false); setSelectedCells([]); }}
           onAiDone={handleAiDone}
-          refCode={refCode}
         />
       )}
     </div>

@@ -53,8 +53,6 @@ export const EMPTY_DECORATE: AiDecorateFields = { title: '', summary: '', fill_c
 export const DECORATE_ORDER: (keyof AiDecorateFields)[] = ['title', 'summary', 'fill_color', 'iframe_url', 'service_url']
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
-/** Referral codes look like ref_61_61; anything else is dropped rather than pasted into a prompt. */
-const SAFE_REF = /^[A-Za-z0-9_-]{1,64}$/
 
 /** Trimmed, non-empty fields only, in DECORATE_ORDER. The PUT body must contain only what the person filled in. */
 export function pickDecorateFields(input: Partial<AiDecorateFields> | null | undefined): Partial<AiDecorateFields> {
@@ -89,8 +87,6 @@ export interface AiPromptInput {
   origin?: string
   cells: Coord[]
   decorate?: Partial<AiDecorateFields> | null
-  /** Referral code from ?ref= — only passed on when it looks like a code. */
-  refCode?: string | null
 }
 
 function coordLabel(c: Coord): string {
@@ -98,10 +94,9 @@ function coordLabel(c: Coord): string {
 }
 
 /** The request body, compact JSON, cells in row-major order. */
-export function purchaseBody(cells: Coord[], refCode?: string | null): string {
-  const ref = refCode && SAFE_REF.test(refCode) ? { ref: refCode } : {}
-  if (cells.length === 1) return JSON.stringify({ x: cells[0].x, y: cells[0].y, ...ref })
-  return JSON.stringify({ cells: sortCells(cells).map((c) => ({ x: c.x, y: c.y })), ...ref })
+export function purchaseBody(cells: Coord[]): string {
+  if (cells.length === 1) return JSON.stringify({ x: cells[0].x, y: cells[0].y })
+  return JSON.stringify({ cells: sortCells(cells).map((c) => ({ x: c.x, y: c.y })) })
 }
 
 export function purchasePath(count: number): string {
@@ -115,7 +110,7 @@ export function buildAiPurchasePrompt(input: AiPromptInput): string {
   const count = cells.length
   const single = count === 1
   const total = totalPriceUsdc(count)
-  const body = purchaseBody(cells, input.refCode)
+  const body = purchaseBody(cells)
   const first = cells[0]
   const rect = fullRectangle(cells)
   const monad = PAY_NETWORKS.mainnet.monad

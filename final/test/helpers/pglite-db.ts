@@ -15,7 +15,7 @@ export interface PgliteClientLike {
  * A fully in-memory Postgres (no network, no Neon) that exposes the same
  * shape as lib/db.js: `dbQuery(text, params)` and `withTransaction(fn)`.
  * Used to replace lib/db.js wholesale via `vi.mock` in tests so every module
- * that imports it (routes, api-key.js, events.js, referral.js) transparently
+ * that imports it (routes, api-key.js, events.js) transparently
  * runs against this instance without any production code changes.
  *
  * `schemaSql` defaults to the full current scripts/init-db.sql; pass an
@@ -46,7 +46,7 @@ export async function createTestDb(schemaSql: string = SCHEMA_SQL) {
 
   async function reset() {
     await pglite.exec(`
-      TRUNCATE TABLE cell_reservations, cell_api_keys, referral_rewards, referrals,
+      TRUNCATE TABLE cell_reservations, cell_api_keys,
         grid_orders, grid_events, grid_cells RESTART IDENTITY CASCADE;
     `)
   }

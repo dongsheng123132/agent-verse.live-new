@@ -102,6 +102,8 @@ describe('POST /api/cells/purchase — verified payment flow', () => {
     expect(res.status).toBe(200)
     expect(json.owner.toLowerCase()).toBe('0xaaaa00000000000000000000000000000000a001')
     expect(json.network).toBe(BASE_NETWORK)
+    // no referral fields in the response any more
+    expect(Object.keys(json).sort()).toEqual(['api_key', 'cell', 'network', 'ok', 'owner', 'receipt_id', 'tx_hash'])
     expect(baseFacilitator.verify).toHaveBeenCalledTimes(1)
     expect(baseFacilitator.settle).toHaveBeenCalledTimes(1)
     expect(monadFacilitator.verify).not.toHaveBeenCalled()

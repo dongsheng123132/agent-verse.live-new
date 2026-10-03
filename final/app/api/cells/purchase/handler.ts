@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery, withTransaction } from '../../../../lib/db.js'
 import { generateApiKeyRaw, hashApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
-import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'
@@ -61,14 +60,13 @@ function extractNonce(paymentPayload: VerifiedPayment['paymentPayload']): string
 }
 
 export async function purchaseHandler(req: NextRequest) {
-  let x: number, y: number, refParam: string | null = null
+  let x: number, y: number
   let body: unknown
   try {
     body = await req.json()
-    const b = body as { x?: unknown; y?: unknown; ref?: unknown }
+    const b = body as { x?: unknown; y?: unknown }
     x = Number(b?.x)
     y = Number(b?.y)
-    refParam = typeof b?.ref === 'string' ? b.ref : null
   } catch {
     return NextResponse.json({ error: 'invalid_request', message: 'Body must be JSON with x, y' }, { status: 400 })
   }
@@ -206,18 +204,12 @@ export async function purchaseHandler(req: NextRequest) {
 
   await logEvent('purchase', { x, y, blockSize: '1×1', owner, message: `1×1 cell purchased at (${x},${y}) on ${outcome.network}` })
 
-  const refCode = await ensureRefCode(x, y)
-  if (refParam) {
-    await trackReferral(refParam, { receiptId, buyerX: x, buyerY: y, purchaseAmount: PRICE_PER_CELL })
-  }
-
   return NextResponse.json({
     ok: true,
     cell: { x, y },
     owner,
     receipt_id: receiptId,
     api_key: apiKeyPlain,
-    ref_code: refCode,
     network: outcome.network,
     tx_hash: settleResult.transaction,
   }, { headers: settlementHeaders(settleResult) })

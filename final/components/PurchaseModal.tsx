@@ -18,7 +18,6 @@ import { PAY_NETWORKS } from '../lib/networks';
 interface PurchaseModalProps {
     selectedCells: { x: number; y: number }[];
     onClose: () => void;
-    refCode?: string | null;
     /**
      * "我让 AI 买完了": re-read the map and the selected cells so the person can review the result.
      * Resolves with how many of the selected cells now have an owner (null = could not tell).
@@ -33,7 +32,6 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     selectedCells,
     onClose,
-    refCode,
     onAiDone,
 }) => {
     const { t } = useLang();
@@ -61,8 +59,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
             : `(${minX},${minY}) → (${maxX},${maxY})`;
 
     const aiPrompt = useMemo(
-        () => buildAiPurchasePrompt({ origin, cells: selectedCells, decorate: fields, refCode }),
-        [origin, selectedCells, fields, refCode]
+        () => buildAiPurchasePrompt({ origin, cells: selectedCells, decorate: fields }),
+        [origin, selectedCells, fields]
     );
     const fieldErrors = validateDecorateFields(fields);
     const hasFieldErrors = Object.keys(fieldErrors).length > 0;

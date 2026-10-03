@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
-import { OWNER_X402 } from '../../../../lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,42 +36,7 @@ export async function GET(req) {
       FROM grid_orders
     `)
 
-    // 3. Referral rewards — grouped by referrer with wallet address
-    const referralRes = await dbQuery(`
-      SELECT
-        r.code as referrer_code,
-        r.owner_x,
-        r.owner_y,
-        gc.owner_address as referrer_wallet,
-        COUNT(rr.id) as referral_count,
-        COALESCE(SUM(rr.purchase_amount), 0) as total_volume,
-        COALESCE(SUM(rr.reward_amount), 0) as total_reward,
-        COALESCE(SUM(rr.reward_amount) FILTER (WHERE rr.status = 'pending'), 0) as pending_reward,
-        COALESCE(SUM(rr.reward_amount) FILTER (WHERE rr.status = 'credited'), 0) as paid_reward
-      FROM referrals r
-      LEFT JOIN referral_rewards rr ON rr.referrer_code = r.code
-      LEFT JOIN grid_cells gc ON gc.x = r.owner_x AND gc.y = r.owner_y
-      GROUP BY r.code, r.owner_x, r.owner_y, gc.owner_address
-      ORDER BY total_reward DESC
-    `)
-
-    // 4. All individual referral reward records (for audit)
-    const rewardsListRes = await dbQuery(`
-      SELECT
-        rr.id,
-        rr.referrer_code,
-        rr.buyer_x,
-        rr.buyer_y,
-        rr.purchase_amount,
-        rr.reward_amount,
-        rr.status,
-        rr.created_at
-      FROM referral_rewards rr
-      ORDER BY rr.created_at DESC
-      LIMIT 100
-    `)
-
-    // 5. Recent purchases for activity overview
+    // 3. Recent orders
     const recentRes = await dbQuery(`
       SELECT
         go.receipt_id,
@@ -81,7 +45,6 @@ export async function GET(req) {
         go.amount_usdc,
         go.pay_method,
         go.status,
-        go.ref_code,
         go.created_at,
         gc.owner_address
       FROM grid_orders go
@@ -93,32 +56,9 @@ export async function GET(req) {
     const sales = salesRes.rows[0]
     const revenue = revenueRes.rows[0]
 
-    // Build action-items: who needs to be paid right now
-    const pendingPayouts = referralRes.rows
-      .filter(r => Number(r.pending_reward) > 0)
-      .map(r => ({
-        referrer_code: r.referrer_code,
-        wallet: r.referrer_wallet || 'unknown',
-        cell: `(${r.owner_x},${r.owner_y})`,
-        amount_usdc: Number(r.pending_reward),
-        note: r.referrer_wallet === OWNER_X402 || !r.referrer_wallet
-          ? 'WALLET UNKNOWN — x402 purchase, ask owner to update via API'
-          : 'READY TO PAY',
-      }))
-
-    const totalPendingPayout = pendingPayouts.reduce((s, p) => s + p.amount_usdc, 0)
-
     return NextResponse.json({
       ok: true,
       generated_at: new Date().toISOString(),
-
-      // === ACTION ITEMS ===
-      pending_payouts: {
-        total_pending_usdc: totalPendingPayout,
-        count: pendingPayouts.length,
-        items: pendingPayouts,
-        how_to_pay: 'POST /api/admin/payout with {"referrer_code":"ref_X_Y"} after sending USDC',
-      },
 
       overview: {
         sold_cells: Number(sales.sold_cells),
@@ -130,17 +70,6 @@ export async function GET(req) {
         total_revenue_usdc: Number(revenue.total_revenue),
         completed_revenue_usdc: Number(revenue.completed_revenue),
       },
-      referral_summary: referralRes.rows.map(r => ({
-        referrer_code: r.referrer_code,
-        referrer_cell: `(${r.owner_x},${r.owner_y})`,
-        referrer_wallet: r.referrer_wallet || 'unknown',
-        referral_count: Number(r.referral_count),
-        total_volume: Number(r.total_volume),
-        total_reward: Number(r.total_reward),
-        pending_reward: Number(r.pending_reward),
-        paid_reward: Number(r.paid_reward),
-      })),
-      referral_rewards: rewardsListRes.rows,
       recent_orders: recentRes.rows,
     })
   } catch (e) {

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery, withTransaction } from '../../../../lib/db.js'
 import { generateApiKeyRaw, hashApiKey } from '../../../../lib/api-key.js'
 import { logEvent } from '../../../../lib/events.js'
-import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'
@@ -134,17 +133,15 @@ async function anyCellTakenTx(client: { query: (text: string, params?: unknown[]
 
 export async function bulkPurchaseHandler(req: NextRequest) {
   let cells: CellCoord[]
-  let refParam: string | null = null
   let body: unknown
   try {
     body = await req.json()
-    const b = body as { cells?: unknown; ref?: unknown }
+    const b = body as { cells?: unknown }
     const parsed = parseCells(b?.cells)
     if ('error' in parsed) {
       return NextResponse.json(parsed, { status: parsed.error === 'reserved' || parsed.error === 'reserved_showcase' ? 403 : 400 })
     }
     cells = parsed.cells
-    refParam = typeof b?.ref === 'string' ? b.ref : null
   } catch {
     return NextResponse.json({ error: 'invalid_request', message: 'Body must be JSON' }, { status: 400 })
   }
@@ -292,11 +289,6 @@ export async function bulkPurchaseHandler(req: NextRequest) {
     message: `${cells.length} cells purchased via x402 bulk on ${outcome.network}`,
   })
 
-  const refCode = await ensureRefCode(keyCell.x, keyCell.y)
-  if (refParam) {
-    await trackReferral(refParam, { receiptId, buyerX: keyCell.x, buyerY: keyCell.y, purchaseAmount: totalUsd })
-  }
-
   return NextResponse.json({
     ok: true,
     cells,
@@ -308,7 +300,6 @@ export async function bulkPurchaseHandler(req: NextRequest) {
     // the cell the key belongs to; `block` is set when the cells were stored as one block (the key then decorates all of it)
     key_cell: keyCell,
     block: rect ? { x: rect.ox, y: rect.oy, w: rect.w, h: rect.h } : null,
-    ref_code: refCode,
     network: outcome.network,
     tx_hash: settleResult.transaction,
   }, { headers: settlementHeaders(settleResult) })

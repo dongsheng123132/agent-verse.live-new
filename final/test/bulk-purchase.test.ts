@@ -73,6 +73,8 @@ describe('POST /api/cells/bulk-purchase', () => {
     const json = await res.json()
     expect(json.count).toBe(4)
     expect(json.total_usdc).toBeCloseTo(0.4)
+    // no referral fields in the response any more
+    expect(Object.keys(json).sort()).toEqual(['api_key', 'block', 'cells', 'count', 'key_cell', 'network', 'ok', 'owner', 'receipt_id', 'total_usdc', 'tx_hash'])
     expect(baseFacilitator.settle).toHaveBeenCalledTimes(1)
 
     for (const c of cells) {

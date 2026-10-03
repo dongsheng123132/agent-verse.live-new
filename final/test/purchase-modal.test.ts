@@ -77,11 +77,6 @@ describe('PurchaseModal (AI-first)', () => {
     expect(pre.split(String.fromCharCode(10)).length).toBeLessThanOrEqual(15)
   })
 
-  it('a referral code from the URL goes into the prompt body', () => {
-    const html = render([{ x: 61, y: 61 }], { refCode: 'ref_10_20' })
-    expect(unescapeHtml(html)).toContain('{"x":61,"y":61,"ref":"ref_10_20"}')
-  })
-
   it('the helper text under the button says the AI pays the confirmed total directly, never more', () => {
     const html = render([{ x: 61, y: 61 }])
     const helper = html.match(/data-testid="ai-helper"[^>]*>([\s\S]*?)<\/p>/)![1]
