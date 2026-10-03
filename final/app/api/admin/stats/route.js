@@ -30,8 +30,8 @@ export async function GET(req) {
       SELECT
         COUNT(*) as total_orders,
         COALESCE(SUM(amount_usdc), 0) as total_revenue,
-        COUNT(*) FILTER (WHERE status = 'completed') as completed_orders,
-        COALESCE(SUM(amount_usdc) FILTER (WHERE status = 'completed'), 0) as completed_revenue,
+        COUNT(*) FILTER (WHERE status IN ('paid', 'completed')) as completed_orders,
+        COALESCE(SUM(amount_usdc) FILTER (WHERE status IN ('paid', 'completed')), 0) as completed_revenue,
         COUNT(*) FILTER (WHERE status = 'pending') as pending_orders
       FROM grid_orders
     `)
