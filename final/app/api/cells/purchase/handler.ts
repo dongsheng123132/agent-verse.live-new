@@ -7,7 +7,7 @@ import { isShowcaseReserved } from '../../../../lib/showcase/index'
 import {
   getSharedX402Server,
   getSharedX402Error,
-  buildDualNetworkAccepts,
+  buildOfferedAccepts,
   verifyPayment,
   settle,
   settlementHeaders,
@@ -28,7 +28,7 @@ const RESERVATION_TTL_SECONDS = 120
 
 function buildRouteConfig() {
   return {
-    accepts: buildDualNetworkAccepts(PRICE_PER_CELL),
+    accepts: buildOfferedAccepts(PRICE_PER_CELL),
     description: `Purchase one grid cell ($${PRICE_PER_CELL.toFixed(2)} USDC on Base or Monad)`,
     mimeType: 'application/json',
   }

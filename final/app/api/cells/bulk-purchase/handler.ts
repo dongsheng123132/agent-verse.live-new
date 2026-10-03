@@ -8,7 +8,7 @@ import { blockIdFor, fullRectangle, keyCellFor } from '../../../../lib/cell-bloc
 import {
   getSharedX402Server,
   getSharedX402Error,
-  buildDualNetworkAccepts,
+  buildOfferedAccepts,
   verifyPayment,
   settle,
   settlementHeaders,
@@ -30,7 +30,7 @@ type CellCoord = { x: number; y: number }
 
 function buildRouteConfig(totalUsd: number) {
   return {
-    accepts: buildDualNetworkAccepts(totalUsd),
+    accepts: buildOfferedAccepts(totalUsd),
     description: `Purchase ${totalUsd / PRICE_PER_CELL} grid cells ($${totalUsd.toFixed(2)} USDC on Base or Monad)`,
     mimeType: 'application/json',
   }

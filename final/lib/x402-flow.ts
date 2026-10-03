@@ -22,8 +22,9 @@ import { payerFromPaymentPayload } from './parse-payment'
  * Dual-chain x402: Base mainnet (CDP-authenticated facilitator, existing
  * treasury) + Monad mainnet (public facilitator run by molandak.org, USDC
  * address from @x402/evm 2.27's default asset table). A single
- * x402ResourceServer is built once with BOTH facilitator clients passed as an
- * array; x402ResourceServer#initialize() calls getSupported() on each client
+ * x402ResourceServer is built with BOTH facilitator clients passed as an
+ * array (it tolerates one of them being down, see buildResourceServer);
+ * x402ResourceServer#initialize() calls getSupported() on each client
  * and records, per (x402Version, network, scheme), exactly one facilitator —
  * so verify()/settle() for an eip155:8453 payment is routed to the CDP
  * client and eip155:143 to the Monad client automatically. See
@@ -150,7 +151,32 @@ export async function defaultFacilitatorClients(mode: X402NetworkMode = getNetwo
   return { base, monad }
 }
 
-async function buildResourceServer(clientFactory: FacilitatorClientFactory): Promise<x402ResourceServer> {
+/**
+ * One facilitator down must not stop the other chain.
+ *
+ * x402ResourceServer#initialize() asks every facilitator for its supported kinds and
+ * only throws when NONE answered. With one facilitator down it "succeeds" but that
+ * facilitator's network is unknown to the server, and then building the requirements
+ * for a route that lists both networks throws for every request (502 FACILITATOR_ERROR,
+ * "Facilitator does not support exact on eip155:..."), and because the server is
+ * cached it stays that way until the process restarts. So after initialize() we look
+ * at which of the two networks the server really supports:
+ *   - both: as before;
+ *   - one: cache the server anyway, offer only that network (buildOfferedAccepts),
+ *     and retry the missing one on later requests, in the background, with a short
+ *     backoff (RETRY_BACKOFF_MS). A retry builds a NEW server and replaces the cached
+ *     one only if it supports every network the current one does plus more, so a
+ *     retry can never take away a chain that works;
+ *   - none (initialize() throws, or no facilitator supports either): nothing is
+ *     cached, the caller answers 503 x402_unavailable and the next request tries again.
+ */
+interface BuiltServer {
+  server: x402ResourceServer
+  ready: string[]
+  missing: string[]
+}
+
+async function buildResourceServer(clientFactory: FacilitatorClientFactory): Promise<BuiltServer> {
   const { base, monad } = await clientFactory()
   const server = new x402ResourceServer([base, monad])
   if (getNetworkMode() === 'testnet') {
@@ -160,7 +186,19 @@ async function buildResourceServer(clientFactory: FacilitatorClientFactory): Pro
     registerExactEvmScheme(server, { networks: [BASE_NETWORK, MONAD_NETWORK] })
   }
   await server.initialize()
-  return server
+  const wanted = Object.values(getActiveNetworks())
+  // buildPaymentRequirements() looks facilitator support up at protocol version 2.
+  const ready = wanted.filter((network) => !!server.getSupportedKind(2, network, 'exact'))
+  if (ready.length === 0) {
+    throw new Error(`no facilitator supports exact on ${wanted.join(' or ')}`)
+  }
+  return { server, ready, missing: wanted.filter((network) => !ready.includes(network)) }
+}
+
+/** Wait before retrying a facilitator that was down: 2s, 4s, 8s, 16s, 32s, then every 60s. */
+const RETRY_BACKOFF_MS = [2_000, 4_000, 8_000, 16_000, 32_000, 60_000]
+function retryDelayMs(failures: number): number {
+  return RETRY_BACKOFF_MS[Math.min(Math.max(failures, 1), RETRY_BACKOFF_MS.length) - 1]
 }
 
 // Module-scope singleton shared by every route (purchase / regen-key /
@@ -171,17 +209,57 @@ async function buildResourceServer(clientFactory: FacilitatorClientFactory): Pro
 let cachedServer: x402ResourceServer | null = null
 let cachedError: string | null = null
 let initPromise: Promise<x402ResourceServer> | null = null
+let readyNetworks: string[] = []
+let missingNetworks: string[] = []
+let retryFailures = 0
+let nextRetryAt = 0
+let retryInFlight: Promise<void> | null = null
+
+function startRetryIfDue(clientFactory: FacilitatorClientFactory): void {
+  if (missingNetworks.length === 0 || retryInFlight || Date.now() < nextRetryAt) return
+  retryInFlight = (async () => {
+    try {
+      const next = await buildResourceServer(clientFactory)
+      const keepsEverything = readyNetworks.every((n) => next.ready.includes(n))
+      if (keepsEverything && next.ready.length > readyNetworks.length) {
+        cachedServer = next.server
+        readyNetworks = next.ready
+        missingNetworks = next.missing
+        console.warn(`[x402] facilitator recovered, now offering: ${next.ready.join(', ')}${next.missing.length ? ` (still missing: ${next.missing.join(', ')})` : ''}`)
+        retryFailures = next.missing.length > 0 ? 1 : 0
+      } else {
+        retryFailures += 1
+      }
+    } catch (e) {
+      retryFailures += 1
+      console.warn(`[x402] retrying the missing facilitator (${missingNetworks.join(', ')}) failed: ${(e as Error)?.message}`)
+    } finally {
+      nextRetryAt = Date.now() + retryDelayMs(retryFailures)
+      retryInFlight = null
+    }
+  })()
+}
 
 export async function getSharedX402Server(
   clientFactory: FacilitatorClientFactory = defaultFacilitatorClients
 ): Promise<x402ResourceServer> {
-  if (cachedServer) return cachedServer
+  if (cachedServer) {
+    startRetryIfDue(clientFactory)
+    return cachedServer
+  }
   if (!initPromise) {
     cachedError = null
     initPromise = buildResourceServer(clientFactory)
-      .then((s) => {
-        cachedServer = s
-        return s
+      .then((built) => {
+        cachedServer = built.server
+        readyNetworks = built.ready
+        missingNetworks = built.missing
+        retryFailures = built.missing.length > 0 ? 1 : 0
+        nextRetryAt = Date.now() + retryDelayMs(retryFailures)
+        if (built.missing.length > 0) {
+          console.warn(`[x402] only ${built.ready.join(', ')} is available; ${built.missing.join(', ')} is offered again once its facilitator answers`)
+        }
+        return built.server
       })
       .catch((e) => {
         initPromise = null
@@ -196,11 +274,26 @@ export function getSharedX402Error(): string | null {
   return cachedError
 }
 
+/** Networks whose facilitator is not available right now (empty when both work, or before the first init). */
+export function getUnavailableX402Networks(): string[] {
+  return [...missingNetworks]
+}
+
+/** Test-only: resolves when a background facilitator retry that is running right now has finished. */
+export async function waitForX402Retry(): Promise<void> {
+  await retryInFlight
+}
+
 /** Test-only: drop the cached server so a fresh mock factory takes effect. */
 export function resetSharedX402Server(): void {
   cachedServer = null
   cachedError = null
   initPromise = null
+  readyNetworks = []
+  missingNetworks = []
+  retryFailures = 0
+  nextRetryAt = 0
+  retryInFlight = null
 }
 
 export function buildDualNetworkAccepts(priceUsd: number, mode: X402NetworkMode = getNetworkMode()) {
@@ -210,6 +303,17 @@ export function buildDualNetworkAccepts(priceUsd: number, mode: X402NetworkMode 
     { scheme: 'exact' as const, price: priceStr, network: base as `${string}:${string}`, payTo: BASE_TREASURY_ADDRESS },
     { scheme: 'exact' as const, price: priceStr, network: monad as `${string}:${string}`, payTo: MONAD_TREASURY_ADDRESS },
   ]
+}
+
+/**
+ * The accepts a 402 really offers: buildDualNetworkAccepts() minus any network whose
+ * facilitator did not initialize (see buildResourceServer). Call it after
+ * getSharedX402Server(): until a server exists nothing is excluded.
+ */
+export function buildOfferedAccepts(priceUsd: number, mode: X402NetworkMode = getNetworkMode()) {
+  const all = buildDualNetworkAccepts(priceUsd, mode)
+  if (!cachedServer || readyNetworks.length === 0) return all
+  return all.filter((a) => readyNetworks.includes(a.network))
 }
 
 /**

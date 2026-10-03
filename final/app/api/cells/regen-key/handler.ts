@@ -7,7 +7,7 @@ import { isShowcaseReserved } from '../../../../lib/showcase/index'
 import {
   getSharedX402Server,
   getSharedX402Error,
-  buildDualNetworkAccepts,
+  buildOfferedAccepts,
   verifyPayment,
   settle,
   settlementHeaders,
@@ -19,7 +19,7 @@ const regenPriceStr = `$${PRICE_PER_CELL.toFixed(2)}`
 
 function buildRouteConfig() {
   return {
-    accepts: buildDualNetworkAccepts(PRICE_PER_CELL),
+    accepts: buildOfferedAccepts(PRICE_PER_CELL),
     description: `Recover API key for a grid cell (${regenPriceStr} USDC on Base or Monad)`,
     mimeType: 'application/json',
   }

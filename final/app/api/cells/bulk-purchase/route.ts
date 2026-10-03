@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PRICE_PER_CELL } from '../../../../app/types'
-import { getSharedX402Server, getSharedX402Error } from '../../../../lib/x402-flow'
+import { getSharedX402Server, getSharedX402Error, getUnavailableX402Networks } from '../../../../lib/x402-flow'
 import { bulkPurchaseHandler, MAX_CELLS_PER_REQUEST } from './handler'
 
 export async function GET() {
@@ -15,6 +15,8 @@ export async function GET() {
     max_cells: MAX_CELLS_PER_REQUEST,
     networks: ['Base (eip155:8453)', 'Monad (eip155:143)'],
     x402_error: getSharedX402Error(),
+    // networks whose facilitator is down right now (the 402 leaves them out and they are retried in the background)
+    x402_unavailable_networks: getUnavailableX402Networks(),
   })
 }
 
