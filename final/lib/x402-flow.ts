@@ -316,6 +316,22 @@ export function buildOfferedAccepts(priceUsd: number, mode: X402NetworkMode = ge
 }
 
 /**
+ * What GET /api/cells/purchase says about the offer: the networks and the receiving address per network.
+ * Derived from buildDualNetworkAccepts(), the very list every 402 is built from, so the info endpoint cannot
+ * drift from what a buyer is actually asked to pay. (It used to read TREASURY_ADDRESS / MONAD_TREASURY_ADDRESS,
+ * env vars the 402 never reads, and reported a stale Base address and null for Monad.)
+ */
+export function describeOffer(priceUsd: number, mode: X402NetworkMode = getNetworkMode()) {
+  const { base, monad } = getActiveNetworks(mode)
+  const accepts = buildDualNetworkAccepts(priceUsd, mode)
+  const payToOn = (network: Network) => accepts.find((a) => a.network === network)?.payTo ?? null
+  return {
+    networks: accepts.map((a) => `${a.network === base ? 'Base' : 'Monad'} (${a.network})`),
+    payTo: { base: payToOn(base), monad: payToOn(monad) },
+  }
+}
+
+/**
  * Framework adapter for Next.js Route Handlers (fetch Request/Response).
  * `getHeader('payment-signature')` also falls back to `x-payment`: the x402
  * v1 client wire format uses the `X-PAYMENT` header (see
