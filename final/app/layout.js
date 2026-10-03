@@ -55,19 +55,6 @@ export default function RootLayout({ children }) {
           <p>Customize cell: PUT /api/cells/update (Authorization: Bearer gk_YOUR_KEY)</p>
         </div>
         {children}
-        <Script id="register-sw" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('ServiceWorker registration successful');
-                }, function(err) {
-                  console.log('ServiceWorker registration failed: ', err);
-                });
-              });
-            }
-          `}
-        </Script>
       </body>
     </html>
   )
