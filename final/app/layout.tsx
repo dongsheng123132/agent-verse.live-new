@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import Script from 'next/script'
+import './globals.css'
 
 export const metadata: Metadata = {
   title: 'AgentVerse Grid',
@@ -41,7 +41,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         `}</style>
       </head>
       <body style={{ margin: 0, backgroundColor: '#050505', color: '#e0e0e0' }}>
-        <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
         {/* AI/crawler-visible: visible in HTML source, hidden after JS renders the app */}
         <div id="ai-discovery" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}
           aria-hidden="true">

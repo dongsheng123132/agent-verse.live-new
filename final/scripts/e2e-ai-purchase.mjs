@@ -20,7 +20,7 @@
  *
  * Env: E2E_BASE_URL (http://localhost:3005)  E2E_CELL_X/E2E_CELL_Y (force the single cell; the block starts at x+2)
  *      E2E_OUT_DIR (default <tmp>/av-ai-purchase-<time>)  LOCAL_DB_PORT (5433)
- *      PLAYWRIGHT_DIR (folder of the `playwright` package)  HTTPS_PROXY (only so the Tailwind CDN loads)
+ *      PLAYWRIGHT_DIR (folder of the `playwright` package)  HTTPS_PROXY (optional; the app itself loads nothing from third parties)
  * Exit code 0 = every check passed.
  */
 import fs from 'node:fs'
