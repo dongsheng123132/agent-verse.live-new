@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { dbQuery } from '../../../../lib/db.js'
 import { verifyApiKey } from '../../../../lib/api-key.js'
-import { logEvent } from '../../../../lib/events.js'
 import { ensureSchema } from '../../../../lib/schema'
 import { assertPublicHttpsUrl } from '../../../../lib/market/ssrf'
 import { probeServiceAndEvidence } from '../../../../lib/market/service'
@@ -141,11 +140,6 @@ export async function PUT(req) {
       )
       rowCount = result.rowCount
     }
-
-    await logEvent('update', {
-      x: keyInfo.x, y: keyInfo.y,
-      message: `Cell (${keyInfo.x},${keyInfo.y}) content updated`
-    })
 
     // Saving a service field probes it right away (MONAD-MARKET-SPEC.md P2):
     // only a read-only GET, never a payment, and never for POST services.

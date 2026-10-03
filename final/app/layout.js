@@ -51,7 +51,6 @@ export default function RootLayout({ children }) {
           <p>Buy multiple cells (x402): POST /api/cells/bulk-purchase with {"{"}"cells":[{"{"}"x":1,"y":1{"}"},...]{"}"}</p>
           <p>Read a cell: GET /api/cells?x=0&amp;y=0</p>
           <p>Grid data: GET /api/grid</p>
-          <p>Rankings: GET /api/rankings</p>
           <p>Search: GET /api/search?q=keyword</p>
           <p>Customize cell: PUT /api/cells/update (Authorization: Bearer gk_YOUR_KEY)</p>
         </div>

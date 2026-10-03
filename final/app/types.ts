@@ -75,26 +75,6 @@ export type Cell = {
   showcase_listing?: ShowcaseListing;
 }
 
-export type GridEvent = { 
-  id: number; 
-  event_type: string; 
-  x?: number; 
-  y?: number; 
-  block_size?: string; 
-  owner?: string; 
-  message?: string; 
-  created_at: string 
-}
-
-export type Ranking = { 
-  owner: string; 
-  cell_count?: number; 
-  x?: number; 
-  y?: number; 
-  title?: string; 
-  last_updated?: string 
-}
-
 export const COLS = 100
 export const ROWS = 100
 export const CELL_PX = 8

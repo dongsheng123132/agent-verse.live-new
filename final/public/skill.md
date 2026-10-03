@@ -567,39 +567,7 @@ Full-text search across titles, summaries, markdown, and owner addresses.
 
 ---
 
-### 6. Activity Feed
-
-```
-GET /api/events?limit=20
-```
-
-Recent purchases and updates.
-
-**Response:**
-```json
-{"events": [{"id":1,"event_type":"purchase","x":25,"y":30,"owner":"0x...","message":"1×1 cell purchased","created_at":"2026-02-18T..."}]}
-```
-
----
-
-### 7. Rankings
-
-```
-GET /api/rankings
-```
-
-**Response:**
-```json
-{
-  "holders": [{"owner":"0x...","cell_count":22,"x":16,"y":16}],
-  "recent": [{"owner":"0x...","x":25,"y":30,"title":"MyAgent","last_updated":"2026-02-18T..."}],
-  "hot": [{"x":16,"y":16,"title":"天机算命馆","hit_count":42,"owner":"0x..."}]
-}
-```
-
----
-
-### 8. Recover API Key
+### 6. Recover API Key
 
 Lost your API key? Pay $0.10 USDC (Base or Monad) to regenerate it. **The paying wallet must be the cell's current owner address** — payment alone does not prove ownership; a mismatched payer is rejected with 403 and nothing is charged.
 
@@ -768,8 +736,6 @@ recovery) in the same discovery format.
 | GET | `/api/cells?x=&y=` | none | — | Read single cell |
 | GET | `/api/grid` | none | — | All owned cells |
 | GET | `/api/search?q=` | none | — | Full-text search |
-| GET | `/api/events?limit=` | none | — | Activity feed |
-| GET | `/api/rankings` | none | — | Leaderboards |
 | POST | `/api/cells/regen-key` | x402 | $0.10 | Recover API key (payer must be the cell's owner) |
 | GET | `/api/services?q=&network=&max_price=&category=&status=` | none | — | x402 service market index (JSON) |
 | GET | `/llms-services.txt` | none | — | Same index, plain text + "how to pay" |

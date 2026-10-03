@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery, withTransaction } from '../../../../lib/db.js'
 import { generateApiKeyRaw, hashApiKey } from '../../../../lib/api-key.js'
-import { logEvent } from '../../../../lib/events.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'
@@ -283,11 +282,6 @@ export async function bulkPurchaseHandler(req: NextRequest) {
       tx: settleResult.transaction,
     }, { status: 409 })
   }
-
-  await logEvent('bulk_purchase', {
-    x: keyCell.x, y: keyCell.y, blockSize: rect ? `${rect.w}x${rect.h}` : `${cells.length}`, owner,
-    message: `${cells.length} cells purchased via x402 bulk on ${outcome.network}`,
-  })
 
   return NextResponse.json({
     ok: true,

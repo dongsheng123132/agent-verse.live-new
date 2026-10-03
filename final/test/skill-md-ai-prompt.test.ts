@@ -87,8 +87,8 @@ describe('public/skill.md no longer sends anyone to the dead Commerce flow or th
     expect(awalLines[0]).toContain('**Base only** (no Monad)')
   })
 
-  it('the API reference sections are numbered without a gap after removing Commerce', () => {
+  it('the API reference sections are numbered without a gap after removing Commerce, the activity feed and the rankings', () => {
     const heads = [...skill.matchAll(/^### (\d+b?)\. /gm)].map((m) => m[1])
-    expect(heads).toEqual(['1', '1b', '2', '3', '4', '5', '6', '7', '8'])
+    expect(heads).toEqual(['1', '1b', '2', '3', '4', '5', '6'])
   })
 })

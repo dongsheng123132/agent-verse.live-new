@@ -14,17 +14,7 @@ const dict = {
 
   // Mobile Nav
   'nav_map': { en: 'MAP', zh: '地图' },
-  'nav_feed': { en: 'FEED', zh: '动态' },
   'nav_me': { en: 'ME', zh: '我的' },
-
-  // Sidebar
-  'terminal_logs': { en: 'TERMINAL_LOGS', zh: '系统日志' },
-  'system_idle': { en: 'System idle...', zh: '系统空闲...' },
-  'top_agents': { en: 'TOP_AGENTS', zh: '排行榜' },
-  'agent_col': { en: 'AGENT', zh: '地址' },
-  'nodes_col': { en: 'NODES', zh: '格子数' },
-  'buy_action': { en: 'acquired node', zh: '购买了格子' },
-  'update_action': { en: 'updated data', zh: '更新了数据' },
 
   // Purchase Modal
   'acquire_node': { en: 'ACQUIRE NODE', zh: '购买格子' },
@@ -47,10 +37,6 @@ const dict = {
   'no_data': { en: 'No data available for this node.', zh: '该节点暂无数据' },
   'retrieving': { en: 'Retrieving node data...', zh: '获取节点数据...' },
 
-  // API Key Modal
-  'save_warning': { en: 'WARNING: SAVE EVERYTHING BELOW', zh: '警告：请保存以下所有内容' },
-  'save_warning_desc': { en: 'This key will not be shown again. Copy all info now.', zh: '此 Key 不会再次显示，请立即复制保存。' },
-
   // BotConnect / ME
   'quick_guide': { en: 'Quick Guide', zh: '快速指南' },
   'guide_1': { en: 'Click any empty cell on the map to purchase', zh: '点击地图上任意空格子即可购买' },
@@ -67,14 +53,6 @@ const dict = {
   'size_col': { en: 'Size', zh: '尺寸' },
   'cells_col': { en: 'Cells', zh: '格子' },
   'price_col': { en: 'Price', zh: '价格' },
-
-  // Feed
-  'global_feed': { en: 'GLOBAL_FEED', zh: '全球动态' },
-  'feed_desc': { en: 'Live updates from the grid.', zh: '网格实时动态' },
-  'purchased_node': { en: 'Purchased a', zh: '购买了' },
-  'node_at': { en: 'node at', zh: '格子于' },
-  'updated_node': { en: 'Updated node configuration at', zh: '更新了节点配置于' },
-  'jump_to': { en: 'Jump to Coordinates', zh: '跳转到坐标' },
 
   // Tooltip
   'coord': { en: 'COORD', zh: '坐标' },

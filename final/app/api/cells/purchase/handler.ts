@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery, withTransaction } from '../../../../lib/db.js'
 import { generateApiKeyRaw, hashApiKey } from '../../../../lib/api-key.js'
-import { logEvent } from '../../../../lib/events.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'
@@ -201,8 +200,6 @@ export async function purchaseHandler(req: NextRequest) {
       tx: settleResult.transaction,
     }, { status: 409 })
   }
-
-  await logEvent('purchase', { x, y, blockSize: '1×1', owner, message: `1×1 cell purchased at (${x},${y}) on ${outcome.network}` })
 
   return NextResponse.json({
     ok: true,

@@ -1,17 +1,15 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Cell, COLS, ROWS, CELL_PX, GridEvent, Ranking, isReserved, truncAddr } from './types'
+import { Cell, COLS, ROWS, CELL_PX, isReserved, truncAddr } from './types'
 import { WorldMap } from '../components/WorldMap'
-import { Sidebar } from '../components/Sidebar'
-import { MobileFeed } from '../components/MobileFeed'
 import { MobileNav } from '../components/MobileNav'
 import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { BotConnect } from '../components/BotConnect'
 import { Minimap } from '../components/Minimap'
 import { MapToolbar } from '../components/MapToolbar'
-import { Globe, Search, Languages, Map as MapIcon, Terminal, ShieldCheck, X } from 'lucide-react'
+import { Globe, Search, Languages, Map as MapIcon, ShieldCheck, X } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 import { SHOWCASE_ORIGIN } from '../lib/showcase/metropolis'
 
@@ -24,13 +22,9 @@ function PageInner() {
   // --- State ---
   const [cells, setCells] = useState<Cell[]>([])
   const [loading, setLoading] = useState(true)
-  const [events, setEvents] = useState<GridEvent[]>([])
-  const [holders, setHolders] = useState<Ranking[]>([])
-  const [recent, setRecent] = useState<Ranking[]>([])
-  const [hot, setHot] = useState<any[]>([])
 
   // Navigation
-  const [viewMode, setViewMode] = useState<'GRID' | 'FORUM' | 'ACCESS'>('GRID')
+  const [viewMode, setViewMode] = useState<'GRID' | 'ACCESS'>('GRID')
 
   // Map State
   const [zoom, setZoom] = useState(2.5)
@@ -104,14 +98,6 @@ function PageInner() {
 
   useEffect(() => {
     fetch('/api/cells/purchase').catch(() => { }) // Pre-warm x402
-    fetch('/api/events?limit=20').then(r => r.json()).then(d => {
-      if (d?.events) setEvents(d.events)
-    }).catch(() => { })
-    fetch('/api/rankings').then(r => r.json()).then(d => {
-      if (d?.holders) setHolders(d.holders)
-      if (d?.recent) setRecent(d.recent)
-      if (d?.hot) setHot(d.hot)
-    }).catch(() => { })
   }, [])
 
   // --- Helpers ---
@@ -372,12 +358,6 @@ function PageInner() {
               <MapIcon size={10} /> {t('nav_map')}
             </button>
             <button
-              onClick={() => setViewMode('FORUM')}
-              className={`px-2 py-1 text-[10px] font-mono flex items-center gap-1 border-r border-[#333] ${viewMode === 'FORUM' ? 'text-blue-500 bg-[#111]' : 'text-gray-500 hover:text-white'}`}
-            >
-              <Terminal size={10} /> {t('nav_feed')}
-            </button>
-            <button
               onClick={() => setViewMode('ACCESS')}
               className={`px-2 py-1 text-[10px] font-mono flex items-center gap-1 ${viewMode === 'ACCESS' ? 'text-purple-500 bg-[#111]' : 'text-gray-500 hover:text-white'}`}
             >
@@ -489,11 +469,6 @@ function PageInner() {
 
       {/* WORKSPACE */}
       <div className="flex-1 flex overflow-hidden relative pb-12 md:pb-0">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:flex h-full shrink-0 z-20">
-          <Sidebar events={events} holders={holders} recent={recent} hot={hot} onNavigate={handleNavigate} />
-        </div>
-
         {/* Main Content */}
         <main className="flex-1 relative bg-[#050505] flex flex-col" ref={containerRef}>
 
@@ -555,13 +530,6 @@ function PageInner() {
               </button>
             </div>
           </div>
-
-          {/* FEED VIEW — unified Logs + Rankings + Hot */}
-          {viewMode === 'FORUM' && (
-            <div className="absolute inset-0 z-10 bg-[#050505] flex flex-col">
-              <MobileFeed events={events} holders={holders} recent={recent} hot={hot} onNavigate={handleNavigate} />
-            </div>
-          )}
 
           {/* ACCESS VIEW */}
           {viewMode === 'ACCESS' && (

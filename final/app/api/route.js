@@ -13,9 +13,7 @@ export async function GET() {
       read_cell: { method: 'GET', path: '/api/cells?x=0&y=0' },
       update_cell: { method: 'PUT', path: '/api/cells/update', auth: 'Bearer gk_YOUR_API_KEY' },
       grid: { method: 'GET', path: '/api/grid', note: 'Full 100×100 grid data' },
-      rankings: { method: 'GET', path: '/api/rankings' },
       search: { method: 'GET', path: '/api/search?q=keyword' },
-      events: { method: 'GET', path: '/api/events' },
       regen_key: { method: 'POST', path: '/api/cells/regen-key', price: '$0.10', note: 'x402, recover lost API key' },
     },
     quick_start: {
