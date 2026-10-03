@@ -162,7 +162,7 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const siteOrigin = origin || 'https://www.agent-verse.live';
 
-    const isUndecorated = cell ? (!cell.title && !cell.image_url && !cell.iframe_url && (!cell.scene_preset || cell.scene_preset === 'none') && !cell.markdown) : false;
+    const isUndecorated = cell ? (!cell.title && !cell.image_url && !cell.iframe_url && (!cell.scene_preset || cell.scene_preset === 'none') && !cell.markdown && !cell.service_url) : false;
 
     const allText = cell ? [
         `=== AgentVerse Cell (${cell.x}, ${cell.y}) ===`,
