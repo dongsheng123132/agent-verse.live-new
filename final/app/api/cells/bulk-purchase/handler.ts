@@ -6,6 +6,7 @@ import { ensureRefCode, trackReferral } from '../../../../lib/referral.js'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'
+import { blockIdFor, fullRectangle, keyCellFor } from '../../../../lib/cell-block'
 import {
   getSharedX402Server,
   getSharedX402Error,
@@ -220,6 +221,11 @@ export async function bulkPurchaseHandler(req: NextRequest) {
   const receiptId = `x402b_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const apiKeyPlain = generateApiKeyRaw()
   const apiKeyHash = hashApiKey(apiKeyPlain)
+  // A full w x h rectangle is stored as ONE block (shared block_id, origin = top-left) and the key belongs to
+  // its origin, so one key decorates the whole block (PUT /api/cells/update works WHERE block_id = …).
+  // Any other set keeps one 1x1 block per cell and the key belongs to the first cell only.
+  const rect = fullRectangle(cells)
+  const keyCell = keyCellFor(cells)
 
   let anomaly = false
   await withTransaction(async (client) => {
@@ -230,13 +236,18 @@ export async function bulkPurchaseHandler(req: NextRequest) {
     }
     for (const { x, y } of cells) {
       const cellId = y * 100 + x
-      const blockId = `blk_${x}_${y}_1x1`
+      const blockId = rect ? blockIdFor(rect) : `blk_${x}_${y}_1x1`
+      const bw = rect ? rect.w : 1
+      const bh = rect ? rect.h : 1
+      const originX = rect ? rect.ox : x
+      const originY = rect ? rect.oy : y
       await client.query(
         `INSERT INTO grid_cells (id, x, y, owner_address, status, is_for_sale, block_id, block_w, block_h, block_origin_x, block_origin_y, last_updated)
-         VALUES ($1,$2,$3,$4,'HOLDING',false,$5,1,1,$2,$3,NOW())
+         VALUES ($1,$2,$3,$4,'HOLDING',false,$5,$6,$7,$8,$9,NOW())
          ON CONFLICT (x, y) DO UPDATE SET owner_address = EXCLUDED.owner_address, status = EXCLUDED.status, is_for_sale = false,
-           block_id = EXCLUDED.block_id, block_w = 1, block_h = 1, block_origin_x = $2, block_origin_y = $3, last_updated = NOW()`,
-        [cellId, x, y, owner, blockId]
+           block_id = EXCLUDED.block_id, block_w = EXCLUDED.block_w, block_h = EXCLUDED.block_h,
+           block_origin_x = EXCLUDED.block_origin_x, block_origin_y = EXCLUDED.block_origin_y, last_updated = NOW()`,
+        [cellId, x, y, owner, blockId, bw, bh, originX, originY]
       )
       await client.query(
         `INSERT INTO grid_orders (receipt_id, x, y, amount_usdc, unique_amount, pay_method, status, treasury_address, tx_hash, network, payer_address, cells_json)
@@ -255,13 +266,11 @@ export async function bulkPurchaseHandler(req: NextRequest) {
       )
       await client.query(`DELETE FROM cell_reservations WHERE x = $1 AND y = $2`, [x, y])
     }
-    if (cells[0]) {
-      await client.query(
-        `INSERT INTO cell_api_keys (key_hash, x, y) VALUES ($1, $2, $3)
-         ON CONFLICT (x, y) DO UPDATE SET key_hash = EXCLUDED.key_hash, created_at = NOW()`,
-        [apiKeyHash, cells[0].x, cells[0].y]
-      )
-    }
+    await client.query(
+      `INSERT INTO cell_api_keys (key_hash, x, y) VALUES ($1, $2, $3)
+       ON CONFLICT (x, y) DO UPDATE SET key_hash = EXCLUDED.key_hash, created_at = NOW()`,
+      [apiKeyHash, keyCell.x, keyCell.y]
+    )
   }).catch((e: any) => {
     if (!anomaly) throw e
   })
@@ -279,13 +288,13 @@ export async function bulkPurchaseHandler(req: NextRequest) {
   }
 
   await logEvent('bulk_purchase', {
-    x: cells[0]?.x, y: cells[0]?.y, blockSize: `${cells.length}`, owner,
+    x: keyCell.x, y: keyCell.y, blockSize: rect ? `${rect.w}x${rect.h}` : `${cells.length}`, owner,
     message: `${cells.length} cells purchased via x402 bulk on ${outcome.network}`,
   })
 
-  const refCode = cells[0] ? await ensureRefCode(cells[0].x, cells[0].y) : null
-  if (refParam && cells[0]) {
-    await trackReferral(refParam, { receiptId, buyerX: cells[0].x, buyerY: cells[0].y, purchaseAmount: totalUsd })
+  const refCode = await ensureRefCode(keyCell.x, keyCell.y)
+  if (refParam) {
+    await trackReferral(refParam, { receiptId, buyerX: keyCell.x, buyerY: keyCell.y, purchaseAmount: totalUsd })
   }
 
   return NextResponse.json({
@@ -296,6 +305,9 @@ export async function bulkPurchaseHandler(req: NextRequest) {
     owner,
     receipt_id: receiptId,
     api_key: apiKeyPlain,
+    // the cell the key belongs to; `block` is set when the cells were stored as one block (the key then decorates all of it)
+    key_cell: keyCell,
+    block: rect ? { x: rect.ox, y: rect.oy, w: rect.w, h: rect.h } : null,
     ref_code: refCode,
     network: outcome.network,
     tx_hash: settleResult.transaction,

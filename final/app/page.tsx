@@ -49,7 +49,7 @@ function PageInner() {
   // Purchase Flow (wallet payment lives inside PurchaseModal; the page handles the receipt)
   const [apiKeyResult, setApiKeyResult] = useState<string | null>(null)
   const [purchasedCell, setPurchasedCell] = useState<{ x: number, y: number } | null>(null)
-  const [receipt, setReceipt] = useState<{ txHash: string | null, txUrl: string | null, networkLabel: string, count: number, totalUsdc: string, keySaved: boolean } | null>(null)
+  const [receipt, setReceipt] = useState<{ txHash: string | null, txUrl: string | null, networkLabel: string, count: number, wholeBlock: boolean, totalUsdc: string, keySaved: boolean } | null>(null)
   const [keyCopied, setKeyCopied] = useState(false)
   // Cell whose decorate form should open by itself (set right after a purchase)
   const [decorateTarget, setDecorateTarget] = useState<{ x: number, y: number } | null>(null)
@@ -328,7 +328,7 @@ function PageInner() {
     setPurchasedCell(r.keyCell)
     setKeyCopied(false)
     if (r.refCode) setBuyerRefCode(r.refCode)
-    setReceipt({ txHash: r.txHash, txUrl: r.txUrl, networkLabel: r.network.label + (r.mode === 'testnet' ? ' 测试网' : ''), count: r.cells.length, totalUsdc: r.totalUsdc, keySaved })
+    setReceipt({ txHash: r.txHash, txUrl: r.txUrl, networkLabel: r.network.label + (r.mode === 'testnet' ? ' 测试网' : ''), count: r.cells.length, wholeBlock: r.wholeBlock, totalUsdc: r.totalUsdc, keySaved })
     setDecorateTarget(r.keyCell)
     fetchGrid()
     setDetailLoading(true)
@@ -665,7 +665,7 @@ function PageInner() {
           <div data-testid="success-modal" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => { /* the key is shown once: only the explicit button closes this */ }}>
             <div className="bg-[#111] border border-green-500 rounded-lg p-5 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h2 className="text-green-500 font-mono font-bold mb-1">{t('payment_success')}</h2>
-              {purchasedCell && <p className="text-gray-400 text-xs font-mono mb-2">{t('acquired_node')} ({purchasedCell.x}, {purchasedCell.y}){receipt && receipt.count > 1 ? ` · 共 ${receipt.count} 格，这把 key 对应左上角这一格` : ''}</p>}
+              {purchasedCell && <p className="text-gray-400 text-xs font-mono mb-2">{t('acquired_node')} ({purchasedCell.x}, {purchasedCell.y}){receipt && receipt.count > 1 ? (receipt.wholeBlock ? ` · 共 ${receipt.count} 格（一整块），这把 key 可以装修整块` : ` · 共 ${receipt.count} 格，这把 key 只对应这一格，装修也只改这一格`) : ''}</p>}
 
               {receipt && (
                 <div className="bg-[#0a0a0a] border border-[#333] rounded p-3 mb-2 text-xs font-mono">

@@ -2,6 +2,7 @@ import { wrapFetchWithPayment, x402Client, decodePaymentResponseHeader } from '@
 import { decodePaymentRequiredHeader } from '@x402/core/http'
 import { ExactEvmScheme } from '@x402/evm/exact/client'
 import { createWalletClient, custom } from 'viem'
+import { fullRectangle, keyCellFor } from '../cell-block'
 import { formatAtomicUsdc, totalAtomicForCells } from './amount'
 import { makeNetworkSelector, pickAcceptForNetwork } from './accepts'
 import { PayError, describeHttpFailure, toPayError } from './errors'
@@ -27,8 +28,10 @@ export interface PayForCellsOptions {
 
 export interface PurchaseSuccess {
   kind: 'single' | 'bulk'
-  /** The cell the API key belongs to (the first cell, top-left, of the purchase). */
+  /** The cell the API key belongs to: the origin (top-left) of a full rectangle, else the first cell. */
   keyCell: { x: number; y: number }
+  /** The cells form a full rectangle stored as ONE block: the key decorates all of it. */
+  wholeBlock: boolean
   cells: { x: number; y: number }[]
   apiKey: string
   txHash: string | null
@@ -177,7 +180,8 @@ async function run(opts: PayForCellsOptions): Promise<PurchaseSuccess> {
   }
   return {
     kind: single ? 'single' : 'bulk',
-    keyCell: { x: cells[0].x, y: cells[0].y },
+    keyCell: keyCellFor(cells),
+    wholeBlock: cells.length > 1 && fullRectangle(cells) !== null,
     cells,
     apiKey,
     txHash,
