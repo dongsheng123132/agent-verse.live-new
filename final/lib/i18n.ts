@@ -45,6 +45,7 @@ const dict = {
 
   // Agent Room
   'no_data': { en: 'No data yet', zh: '暂无数据' },
+  'undecorated_hint': { en: 'Not decorated yet — the owner\'s AI can decorate it (see /skill.md)', zh: '还没装修：主人可以让自己的 AI 来装修（说明见 /skill.md）' },
 } as const
 
 export type TKey = keyof typeof dict

@@ -12,6 +12,8 @@
  *      a throwaway-key x402 buyer (scripts/lib/raw-x402-buyer.mjs) POSTs the prompt's own body to the dev server
  *      (mock facilitator: signature checked locally, nothing on-chain) and PUTs the prompt's own decoration JSON
  *      with the returned key; then 「我让 AI 买完了」 must refresh the map and open the cell (no human edit form in it).
+ *      The detail card is look-only: a decorated cell shows iframe / README.MD / VIDEO / service card / copy button, an owned but
+ *      undecorated cell (a second cell at x+1, bought by the AI and left bare) shows exactly one hint line, en and zh.
  *   2. a 3x2 block: touch drag pans (CDP touch events), a real mouse drag box-selects EVEN THOUGH the browser reports
  *      touch points (no maxTouchPoints spoof), the AI buys the whole rectangle in one payment, ONE key decorates all
  *      six cells, and the map shows it as one merged block (screenshot + pixel check).
@@ -227,11 +229,12 @@ try {
   await localDb.connect()
   const area = await findFreeArea()
   const ONE = { x: area.x, y: area.y }
+  const UNDEC = { x: area.x + 1, y: area.y } // a second single cell, the AI buys it and leaves it undecorated for the read-only detail checks
   const BLOCK = { x: area.x + 2, y: area.y, w: 3, h: 2 }
   const blockCells = []
   for (let dy = 0; dy < BLOCK.h; dy++) for (let dx = 0; dx < BLOCK.w; dx++) blockCells.push({ x: BLOCK.x + dx, y: BLOCK.y + dy })
   const owned0 = await ownedSet()
-  for (const c of [ONE, ...blockCells]) if (owned0.has(`${c.x},${c.y}`)) throw new Error(`cell (${c.x},${c.y}) is already owned in the local DB; pick another with E2E_CELL_X/E2E_CELL_Y`)
+  for (const c of [ONE, UNDEC, ...blockCells]) if (owned0.has(`${c.x},${c.y}`)) throw new Error(`cell (${c.x},${c.y}) is already owned in the local DB; pick another with E2E_CELL_X/E2E_CELL_Y`)
   console.log(`      free area: single (${ONE.x},${ONE.y}), block (${BLOCK.x},${BLOCK.y}) ${BLOCK.w}x${BLOCK.h}`)
 
   // the dev server must be the testnet + mock-facilitator one: a throwaway key can only pay a fake settler
@@ -341,6 +344,60 @@ try {
   const decorateHits = await decorateUiHits(page)
   check('...and no DecorateForm / 我有 key entry in the DOM: humans only look, the AI decorates through the API', decorateHits.length === 0, decorateHits.join(' | '))
   await shot(page, 'ai-done-review')
+
+  // ---- 1b) the detail card is look-only -------------------------------------------------------------------------
+  // A decorated cell keeps showing what the AI put on it (iframe, service card with "Copy for AI", copy-all button) ...
+  const content1 = {
+    iframe: await page.locator('iframe[src="https://moon-cafe.example.com"]').count(),
+    serviceCardCopy: await page.getByText('Copy for AI', { exact: true }).count(),
+    copyAll: await page.getByRole('button', { name: /Copy All to AI|一键复制给 AI/ }).count(),
+    hint: await page.getByTestId('undecorated-hint').count(),
+  }
+  check('decorated cell: still shows its iframe, the service card with "Copy for AI" and the copy-all button, and no undecorated hint', content1.iframe === 1 && content1.serviceCardCopy === 1 && content1.copyAll === 1 && content1.hint === 0, JSON.stringify(content1))
+
+  // ... an owned cell nobody decorated shows exactly one hint line (en and zh), no old guidance block, no edit form ...
+  const undecKey = (await aiBuys('/api/cells/purchase', UNDEC)).json.api_key
+  await page.evaluate(() => localStorage.setItem('grid_lang', 'en')) // the page language follows the browser locale otherwise
+  await openMap(page) // fresh map so the new owner is known
+  await searchCell(page, UNDEC.x, UNDEC.y)
+  await page.getByTestId('undecorated-hint').waitFor({ timeout: T })
+  const HINT_EN = "Not decorated yet — the owner's AI can decorate it (see /skill.md)"
+  const HINT_ZH = '还没装修：主人可以让自己的 AI 来装修（说明见 /skill.md）'
+  const hintEn = (await page.getByTestId('undecorated-hint').innerText()).trim()
+  const bodyUndec = await page.locator('body').innerText()
+  const oldGuidance = ['waiting to be decorated', 'WHAT YOU CAN BUILD', 'HOW TO DECORATE', 'Explore the 100'].filter((s) => bodyUndec.includes(s))
+  const hitsUndec = await decorateUiHits(page)
+  check('owned undecorated cell: exactly one hint line (en), no old guidance block, no DecorateForm', hintEn === HINT_EN && (await page.getByTestId('undecorated-hint').count()) === 1 && oldGuidance.length === 0 && hitsUndec.length === 0, JSON.stringify({ hintEn, oldGuidance, hitsUndec }))
+  await shot(page, 'undecorated-owned-detail')
+  // the backdrop covers the header while the card is open, so flip the language with a DOM click
+  await page.locator('header button:has-text("中")').evaluate((el) => el.click())
+  await page.waitForFunction((zh) => document.querySelector('[data-testid="undecorated-hint"]')?.textContent?.trim() === zh, HINT_ZH, { timeout: 5000 }).catch(() => {})
+  const hintZh = (await page.getByTestId('undecorated-hint').innerText()).trim()
+  check('...and the same hint line in Chinese after the language toggle', hintZh === HINT_ZH, hintZh)
+  await page.locator('header button:has-text("EN")').evaluate((el) => el.click())
+
+  // ... and once the AI decorates it through the API, README.MD / VIDEO / the service card show up and the hint is gone.
+  const dec3 = await aiDecorates(undecKey, {
+    title: 'Reading Room',
+    markdown: ['## Reading Room', '', 'https://www.youtube.com/embed/dQw4w9WgXcQ', '', 'Open 24h.'].join('\n'),
+    service_url: 'https://example.com/paid',
+  })
+  check('AI decorated that cell with the gk_ key (PUT 200)', dec3.status === 200 && dec3.json?.ok === true, JSON.stringify(dec3.json))
+  await openMap(page)
+  await searchCell(page, UNDEC.x, UNDEC.y)
+  await page.getByText('README.MD', { exact: true }).waitFor({ timeout: T })
+  const content3 = {
+    readme: await page.getByText('README.MD', { exact: true }).count(),
+    readmeText: (await page.locator('body').innerText()).includes('Open 24h.'),
+    video: await page.locator('iframe[src^="https://www.youtube.com/embed/"]').count(),
+    videoLabel: await page.getByText('VIDEO', { exact: true }).count(),
+    serviceCardCopy: await page.getByText('Copy for AI', { exact: true }).count(),
+    copyAll: await page.getByRole('button', { name: /Copy All to AI|一键复制给 AI/ }).count(),
+    hint: await page.getByTestId('undecorated-hint').count(),
+    decorateHits: (await decorateUiHits(page)).length,
+  }
+  check('decorated cell (README + video + service): shows README.MD, the VIDEO embed, the service card, the copy-all button; no hint, no edit form', content3.readme === 1 && content3.readmeText && content3.video === 1 && content3.videoLabel === 1 && content3.serviceCardCopy === 1 && content3.copyAll === 1 && content3.hint === 0 && content3.decorateHits === 0, JSON.stringify(content3))
+  await shot(page, 'decorated-owned-detail')
   check('no uncaught page errors (single-cell session)', page.__pageErrors.length === 0, page.__pageErrors.join(' | '))
   await context.close()
 

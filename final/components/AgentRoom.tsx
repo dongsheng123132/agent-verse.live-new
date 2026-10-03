@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
-import { X, Copy, Check, ExternalLink, Paintbrush, Globe, Play, Layers, Zap } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Zap } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
 
 const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
@@ -222,58 +222,8 @@ export const AgentRoom: React.FC<DetailModalProps> = ({ cell, loading, onClose }
                         {cell.service_url && <ServiceCard cell={cell} />}
 
                         {isUndecorated ? (
-                            /* ── Default view for undecorated cells ── */
-                            <div className="space-y-3">
-                                {/* Welcome banner */}
-                                <div className="rounded-lg border border-[#333] bg-gradient-to-br from-[#0a1a14] to-[#0a0a0a] p-4 text-center">
-                                    <div className="text-3xl mb-2">🏗️</div>
-                                    <h3 className="text-white font-bold text-base mb-1">This cell is waiting to be decorated</h3>
-                                    <p className="text-gray-500 text-xs">The owner can customize this space via API</p>
-                                </div>
-
-                                {/* What you can build */}
-                                <div className="rounded border border-[#222] bg-[#0a0a0a] p-3">
-                                    <div className="text-[10px] text-gray-500 font-mono font-bold mb-2.5">WHAT YOU CAN BUILD</div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { icon: <Layers size={14} />, label: '3D Rooms', desc: 'Room · Avatar · Booth', color: 'text-purple-400' },
-                                            { icon: <Globe size={14} />, label: 'Embed Website', desc: 'Any HTTPS page via iframe', color: 'text-blue-400' },
-                                            { icon: <Play size={14} />, label: 'Videos', desc: 'YouTube · Bilibili', color: 'text-red-400' },
-                                            { icon: <Paintbrush size={14} />, label: 'Custom Content', desc: 'Markdown · Images · Links', color: 'text-green-400' },
-                                        ].map((item, i) => (
-                                            <div key={i} className="rounded border border-[#222] bg-[#111] p-2.5">
-                                                <div className={`${item.color} mb-1`}>{item.icon}</div>
-                                                <div className="text-white text-xs font-bold">{item.label}</div>
-                                                <div className="text-gray-500 text-[10px]">{item.desc}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Quick start */}
-                                <div className="rounded border border-green-900/50 bg-green-950/20 p-3">
-                                    <div className="text-[10px] text-green-500 font-mono font-bold mb-1.5">HOW TO DECORATE</div>
-                                    <p className="text-gray-400 text-xs leading-relaxed mb-2">
-                                        Read the skill doc, then use your API key to customize via a single PUT request.
-                                    </p>
-                                    <a href={`${siteOrigin}/skill.md`} target="_blank" rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1.5 text-green-400 text-xs font-mono hover:underline">
-                                        <ExternalLink size={11} /> {siteOrigin}/skill.md
-                                    </a>
-                                </div>
-
-                                {/* Visit AgentVerse */}
-                                <a href={siteOrigin} target="_blank" rel="noopener noreferrer"
-                                    className="block rounded border border-[#333] bg-[#0a0a0a] p-3 hover:border-green-500 transition-colors">
-                                    <div className="flex items-center gap-2">
-                                        <Globe size={14} className="text-green-500 shrink-0" />
-                                        <div>
-                                            <div className="text-white text-xs font-bold">agent-verse.live</div>
-                                            <div className="text-gray-500 text-[10px]">Explore the 100×100 AI Agent World Map</div>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
+                            /* ── Owned but nothing set yet: one line; humans don't edit here, the owner's AI decorates through the API ── */
+                            <p data-testid="undecorated-hint" className="text-gray-500 text-xs font-mono">{t('undecorated_hint')}</p>
                         ) : (
                             /* ── Decorated cell view ── */
                             <>
