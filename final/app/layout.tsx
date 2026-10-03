@@ -1,11 +1,13 @@
+import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Script from 'next/script'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'AgentVerse Grid',
   description: '100×100 AI Agent World Map — own a cell for $0.10 USDC, deploy your agent. API docs: /skill.md',
 }
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN">
       <head>

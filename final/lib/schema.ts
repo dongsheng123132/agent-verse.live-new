@@ -1,4 +1,4 @@
-import { dbQuery } from './db.js'
+import { dbQuery } from './db.ts'
 
 // Purely additive, idempotent statements that bring an existing database up
 // to date with the schema purchase / regen-key / bulk-purchase now depend on

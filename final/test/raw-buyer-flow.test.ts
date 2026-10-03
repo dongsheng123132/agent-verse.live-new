@@ -1,7 +1,6 @@
 import { beforeAll, beforeEach, afterAll, describe, expect, it, vi } from 'vitest'
 import { generatePrivateKey } from 'viem/accounts'
 import { createTestDb, type TestDb } from './helpers/pglite-db'
-// @ts-expect-error plain .mjs helper without type declarations
 import * as B from '../scripts/lib/raw-x402-buyer.mjs'
 
 // The taste kit's raw-private-key buyer against the real purchase / bulk-purchase handlers, in process:
@@ -9,7 +8,7 @@ import * as B from '../scripts/lib/raw-x402-buyer.mjs'
 // be refused by the buyer's guard before anything is signed.
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
@@ -33,7 +32,7 @@ const flow = await import('../lib/x402-flow')
 const { createMockFacilitatorPair } = await import('../lib/x402-mock-facilitator')
 const { purchaseHandler } = await import('../app/api/cells/purchase/handler')
 const { bulkPurchaseHandler } = await import('../app/api/cells/bulk-purchase/handler')
-const { PUT } = await import('../app/api/cells/update/route.js')
+const { PUT } = await import('../app/api/cells/update/route')
 
 async function serverIn(mode: 'testnet' | 'mainnet') {
   process.env.X402_NETWORK_MODE = mode
@@ -50,6 +49,12 @@ function inProcessFetch(calls: { url: string; headers: Record<string, string> }[
   }
 }
 
+type BuyResult = Awaited<ReturnType<typeof B.buyOnce>>
+/** buyOnce answers with different shapes per stage; only a paid result carries `accept` / `settle`. */
+function assertPaid(r: BuyResult): asserts r is Extract<BuyResult, { accept: unknown }> {
+  if (!('accept' in r)) throw new Error(`expected a paid result, got stage "${r.stage}" (status ${r.status})`)
+}
+
 describe('raw-key buyer, testnet server (mock facilitator)', () => {
   beforeAll(async () => {
     await serverIn('testnet')
@@ -60,6 +65,7 @@ describe('raw-key buyer, testnet server (mock facilitator)', () => {
     const calls: { url: string; headers: Record<string, string> }[] = []
     const r = await B.buyOnce(buyer, 'http://localhost/api/cells/purchase', { x: 70, y: 70 }, inProcessFetch(calls))
     expect(r.stage).toBe('paid')
+    assertPaid(r)
     expect(r.status).toBe(200)
     expect(r.accept.network).toBe('eip155:10143')
     expect(r.accept.asset.toLowerCase()).toBe(B.NETWORKS['eip155:10143'].usdc.toLowerCase())
@@ -97,6 +103,7 @@ describe('raw-key buyer, testnet server (mock facilitator)', () => {
     const buyer = B.makeBuyer(generatePrivateKey())
     const cells = [{ x: 72, y: 71 }, { x: 73, y: 71 }, { x: 74, y: 71 }, { x: 72, y: 72 }, { x: 73, y: 72 }, { x: 74, y: 72 }]
     const r = await B.buyOnce(buyer, 'http://localhost/api/cells/bulk-purchase', { cells }, inProcessFetch([]))
+    assertPaid(r)
     expect(r.status).toBe(200)
     expect(r.accept.amount).toBe('600000')
     expect(r.json.block).toEqual({ x: 72, y: 71, w: 3, h: 2 })

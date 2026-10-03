@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { dbQuery } from '../../../lib/db.js'
+import { dbQuery } from '../../../lib/db'
 import { ensureSchema } from '../../../lib/schema'
 import { applyShowcaseToGridRows } from '../../../lib/showcase/index'
 import { fromStoredStatus } from '../../../lib/market/types'

@@ -10,11 +10,10 @@ import type {
   RouteConfig,
   HTTPAdapter,
   PaymentCancellationDispatcher,
-  PaymentPayload,
-  PaymentRequirements,
   ProcessSettleResultResponse,
   FacilitatorClient,
 } from '@x402/core/server'
+import type { Network, PaymentPayload, PaymentRequirements } from '@x402/core/types'
 import { ExactEvmScheme, registerExactEvmScheme } from '@x402/evm/exact/server'
 import { payerFromPaymentPayload } from './parse-payment'
 
@@ -87,7 +86,7 @@ export const BASE_SEPOLIA_CHAIN: TestnetChain = {
 }
 
 /** The two CAIP-2 ids offered by 402 responses in the given mode. */
-export function getActiveNetworks(mode: X402NetworkMode = getNetworkMode()): { base: string; monad: string } {
+export function getActiveNetworks(mode: X402NetworkMode = getNetworkMode()): { base: Network; monad: Network } {
   return mode === 'testnet'
     ? { base: BASE_SEPOLIA_NETWORK, monad: MONAD_TESTNET_NETWORK }
     : { base: BASE_NETWORK, monad: MONAD_NETWORK }

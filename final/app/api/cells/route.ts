@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { dbQuery } from '../../../lib/db.js'
+import { dbQuery } from '../../../lib/db'
 import { ensureSchema } from '../../../lib/schema'
 import { findShowcaseBlockAt, isInShowcaseBounds, isRealUserOwner, virtualCellDetail } from '../../../lib/showcase/index'
 import { loadShowcase } from '../../../lib/showcase/server'
@@ -7,7 +7,7 @@ import { fromStoredStatus } from '../../../lib/market/types'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req) {
+export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const x = Number(url.searchParams.get('x'))

@@ -34,7 +34,6 @@ const dict = {
   'owner_label': { en: 'OWNER', zh: '拥有者' },
   'updated_label': { en: 'UPDATED', zh: '更新于' },
   'external_link': { en: 'EXTERNAL LINK', zh: '外部链接' },
-  'no_data': { en: 'No data available for this node.', zh: '该节点暂无数据' },
   'retrieving': { en: 'Retrieving node data...', zh: '获取节点数据...' },
 
   // BotConnect / ME

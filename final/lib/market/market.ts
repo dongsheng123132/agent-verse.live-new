@@ -8,7 +8,7 @@
  * 状态只来自只读 402 探测（can_pay / failed / unchecked，见 types.ts）：不再查链
  * 上付款证据，也不再自动抓 Coinbase Bazaar。
  */
-import { dbQuery } from '../db.js'
+import { dbQuery } from '../db'
 import { ensureSchema } from '../schema'
 import { probeService } from './service'
 import { findAllSupportedUsdcAccepts, formatUsdcAmount, type X402Accept } from './x402'

@@ -144,11 +144,11 @@ Real projects are already live on AgentVerse, proving the platform works as agen
 final/                          # Main application (Next.js)
 ├── app/
 │   ├── page.tsx                # Grid map + UI (client component)
-│   ├── layout.js               # Root layout + meta
+│   ├── layout.tsx              # Root layout + meta
 │   └── api/
-│       ├── grid/route.js       # GET all owned cells
+│       ├── grid/route.ts       # GET all owned cells
 │       ├── cells/
-│       │   ├── route.js        # GET single cell detail
+│       │   ├── route.ts        # GET single cell detail
 │       │   ├── purchase/       # POST x402 purchase
 │       │   ├── update/         # PUT customize cell (Bearer key)
 │       │   └── regen-key/      # POST recover API key
@@ -160,9 +160,9 @@ final/                          # Main application (Next.js)
 │   ├── Minimap.tsx             # Navigation minimap
 │   └── PurchaseModal.tsx       # Purchase flow
 ├── lib/
-│   ├── db.js                   # PostgreSQL connection
-│   ├── pricing.js              # Block sizes & pricing
-│   └── api-key.js              # API key generation/verification
+│   ├── db.ts                   # PostgreSQL connection
+│   ├── pricing.ts              # Block sizes & pricing
+│   └── api-key.ts              # API key generation/verification
 ├── public/
 │   ├── skill.md                # AI-readable skill document
 │   └── logos/                  # Brand logos (SVG)

@@ -1,9 +1,10 @@
 import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } from 'vitest'
+import type { Network } from '@x402/core/types'
 import { createTestDb, type TestDb } from './helpers/pglite-db'
 import { createMockFacilitator } from './helpers/facilitator'
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
@@ -48,7 +49,7 @@ async function unpaid402(x: number, y: number) {
 }
 
 /** Build a fresh shared resource server for the mode currently in process.env, with mock facilitators. */
-async function buildSharedServer(base: string, monad: string) {
+async function buildSharedServer(base: Network, monad: Network) {
   flow.resetSharedX402Server()
   await flow.getSharedX402Server(async () => ({
     base: createMockFacilitator(base),

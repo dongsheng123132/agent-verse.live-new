@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
-import { dbQuery } from '../../../../lib/db.js'
+import { dbQuery } from '../../../../lib/db'
 
 export const dynamic = 'force-dynamic'
 
-function checkAdmin(req) {
+function checkAdmin(req: Request): boolean {
   const key = req.headers.get('x-admin-key') || new URL(req.url).searchParams.get('key')
   const adminKey = process.env.ADMIN_KEY
   if (!adminKey || !key || key !== adminKey) return false
   return true
 }
 
-export async function GET(req) {
+export async function GET(req: Request) {
   if (!checkAdmin(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }

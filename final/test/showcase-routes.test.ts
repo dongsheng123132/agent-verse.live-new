@@ -7,7 +7,7 @@ import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facili
 // 403 reserved_showcase before any 402 is issued.
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
@@ -29,8 +29,8 @@ beforeEach(async () => {
 
 const { NextRequest } = await import('next/server')
 const { BASE_NETWORK, BASE_TREASURY_ADDRESS, getSharedX402Server, resetSharedX402Server } = await import('../lib/x402-flow')
-const { GET: gridGET } = await import('../app/api/grid/route.js')
-const { GET: cellsGET } = await import('../app/api/cells/route.js')
+const { GET: gridGET } = await import('../app/api/grid/route')
+const { GET: cellsGET } = await import('../app/api/cells/route')
 const { purchaseHandler } = await import('../app/api/cells/purchase/handler')
 const { bulkPurchaseHandler } = await import('../app/api/cells/bulk-purchase/handler')
 const { regenHandler } = await import('../app/api/cells/regen-key/handler')

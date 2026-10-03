@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { dbQuery } from '../../../lib/db.js'
+import { dbQuery } from '../../../lib/db'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req) {
+export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const q = (url.searchParams.get('q') || '').trim()
@@ -13,7 +13,7 @@ export async function GET(req) {
     }
 
     // Try FTS first, fallback to ILIKE
-    let rows = []
+    let rows: Record<string, unknown>[] = []
     try {
       const ftsRes = await dbQuery(
         `SELECT x, y, owner_address as owner, fill_color as color, title, summary, image_url,

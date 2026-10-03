@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { dbQuery, withTransaction } from '../../../../lib/db.js'
-import { generateApiKeyRaw, hashApiKey } from '../../../../lib/api-key.js'
+import { dbQuery, withTransaction } from '../../../../lib/db'
+import { generateApiKeyRaw, hashApiKey } from '../../../../lib/api-key'
 import { isReserved, PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'

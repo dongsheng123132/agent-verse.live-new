@@ -3,7 +3,7 @@ import { createTestDb, type TestDb } from './helpers/pglite-db'
 import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facilitator'
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
@@ -27,7 +27,7 @@ beforeEach(async () => {
 const { NextRequest } = await import('next/server')
 const { BASE_NETWORK, getSharedX402Server, resetSharedX402Server } = await import('../lib/x402-flow')
 const { bulkPurchaseHandler } = await import('../app/api/cells/bulk-purchase/handler')
-const { PUT } = await import('../app/api/cells/update/route.js')
+const { PUT } = await import('../app/api/cells/update/route')
 
 beforeAll(async () => {
   resetSharedX402Server()

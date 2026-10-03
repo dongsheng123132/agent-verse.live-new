@@ -12,7 +12,7 @@ vi.mock('node:dns', () => ({
 }))
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
@@ -41,8 +41,8 @@ beforeEach(async () => {
 })
 
 const { NextRequest } = await import('next/server')
-const { PUT } = await import('../app/api/cells/update/route.js')
-const { hashApiKey } = await import('../lib/api-key.js')
+const { PUT } = await import('../app/api/cells/update/route')
+const { hashApiKey } = await import('../lib/api-key')
 
 async function createOwnedCell(x: number, y: number, apiKey: string) {
   await testDb.dbQuery(

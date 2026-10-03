@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
-import { dbQuery } from '../../../../lib/db.js'
-import { verifyApiKey } from '../../../../lib/api-key.js'
+import { dbQuery } from '../../../../lib/db'
+import { verifyApiKey } from '../../../../lib/api-key'
 import { ensureSchema } from '../../../../lib/schema'
 import { assertPublicHttpsUrl } from '../../../../lib/market/ssrf'
 import { probeService } from '../../../../lib/market/service'
-import { toStoredStatus } from '../../../../lib/market/types'
+import { toStoredStatus, type MarketStatus } from '../../../../lib/market/types'
 
 const SERVICE_FIELDS = ['service_url', 'service_method', 'service_desc', 'service_category']
 
-export async function PUT(req) {
+export async function PUT(req: Request) {
   try {
     const auth = req.headers.get('authorization') || ''
     const token = auth.replace(/^Bearer\s+/i, '')
@@ -102,8 +102,8 @@ export async function PUT(req) {
       }
     }
 
-    const updates = []
-    const values = []
+    const updates: string[] = []
+    const values: unknown[] = []
     let paramIdx = 1
 
     for (const field of allowedFields) {
@@ -125,7 +125,7 @@ export async function PUT(req) {
     const cellRes = await dbQuery('SELECT block_id FROM grid_cells WHERE x = $1 AND y = $2', [keyInfo.x, keyInfo.y])
     const blockId = cellRes.rows?.[0]?.block_id
 
-    let rowCount
+    let rowCount: number | null
     if (blockId) {
       values.push(blockId)
       const result = await dbQuery(
@@ -144,15 +144,15 @@ export async function PUT(req) {
 
     // Saving a service field probes it right away (MONAD-MARKET-SPEC.md P2):
     // only a read-only GET, never a payment, and never for POST services.
-    let service = null
+    let service: { status: string } | null = null
     if (SERVICE_FIELDS.some((f) => body[f] !== undefined)) {
       const svcRes = await dbQuery('SELECT service_url, service_method FROM grid_cells WHERE x = $1 AND y = $2', [keyInfo.x, keyInfo.y])
       const svcUrl = svcRes.rows?.[0]?.service_url || null
       const svcMethod = (svcRes.rows?.[0]?.service_method || 'GET').toUpperCase()
 
-      let probeStatus = 'unchecked'
-      let probeAccepts = null
-      let probedAt = null
+      let probeStatus: MarketStatus = 'unchecked'
+      let probeAccepts: unknown = null
+      let probedAt: string | null = null
 
       // POST services are never probed — not even a call into the probe layer,
       // let alone a network request. Only service_url + method === GET reaches

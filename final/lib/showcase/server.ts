@@ -1,5 +1,5 @@
 /** Server-only: the one DB query the showcase needs (kept out of index.ts so that stays pure/client-safe). */
-import { dbQuery } from '../db.js'
+import { dbQuery } from '../db'
 import { SHOWCASE_BOUNDS, logSkippedShowcase, resolveShowcase, type ResolvedShowcase } from './index'
 
 /**

@@ -1,19 +1,19 @@
 import crypto from 'crypto'
-import { dbQuery } from './db.js'
+import { dbQuery } from './db'
 
-export function generateApiKeyRaw() {
+export function generateApiKeyRaw(): string {
   const raw = crypto.randomBytes(16).toString('hex')
   return `gk_${raw}`
 }
 
-export function hashApiKey(key) {
+export function hashApiKey(key: string): string {
   return crypto.createHash('sha256').update(key).digest('hex')
 }
 
 // Back-compat local alias for the rest of this file.
 const hashKey = hashApiKey
 
-export async function generateApiKey(x, y) {
+export async function generateApiKey(x: number, y: number): Promise<string> {
   const plaintext = generateApiKeyRaw()
   const keyHash = hashKey(plaintext)
   await dbQuery(
@@ -25,7 +25,7 @@ export async function generateApiKey(x, y) {
   return plaintext
 }
 
-export async function verifyApiKey(token) {
+export async function verifyApiKey(token?: string | null): Promise<{ x: number; y: number } | null> {
   if (!token || !token.startsWith('gk_')) return null
   const keyHash = hashKey(token)
   const res = await dbQuery(

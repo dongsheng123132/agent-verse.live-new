@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { dbQuery } from '../../../../lib/db.js'
-import { generateApiKey } from '../../../../lib/api-key.js'
+import { dbQuery } from '../../../../lib/db'
+import { generateApiKey } from '../../../../lib/api-key'
 import { PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'

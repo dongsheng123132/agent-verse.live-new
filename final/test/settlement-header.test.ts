@@ -9,7 +9,7 @@ import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facili
 // settlement-failed responses must not.
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))

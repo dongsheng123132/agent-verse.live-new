@@ -66,8 +66,8 @@ describe('public/sw.js is a self-unregistering worker', () => {
 })
 
 describe('the app no longer registers a service worker', () => {
-  it('app/layout.js has no serviceWorker registration', () => {
-    const layout = fs.readFileSync(path.join(__dirname, '..', 'app', 'layout.js'), 'utf8')
+  it('app/layout.tsx has no serviceWorker registration', () => {
+    const layout = fs.readFileSync(path.join(__dirname, '..', 'app', 'layout.tsx'), 'utf8')
     expect(layout).not.toMatch(/serviceWorker/)
     expect(layout).not.toMatch(/register-sw/)
   })

@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Network } from '@x402/core/types'
 import { createTestDb, type TestDb } from './helpers/pglite-db'
 import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facilitator'
 
@@ -8,7 +9,7 @@ import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facili
 // both throwing -> 503 x402_unavailable. The missing one is retried on later requests with a backoff.
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))
@@ -60,7 +61,7 @@ async function offeredNetworks(res: Response): Promise<string[]> {
 }
 
 /** A facilitator whose getSupported() rejects (what an unreachable facilitator does), until `recover()` is called. */
-function downFacilitator(network: string) {
+function downFacilitator(network: Network) {
   const f = createMockFacilitator(network)
   const working = f.getSupported.getMockImplementation()!
   f.getSupported.mockImplementation(async () => {

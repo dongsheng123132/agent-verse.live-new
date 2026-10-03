@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import type { Network, SupportedResponse } from '@x402/core/types'
 
 /**
  * Minimal FacilitatorClient double (verify/settle/getSupported — the whole
@@ -7,7 +8,7 @@ import { vi } from 'vitest'
  * mockImplementationOnce/mockResolvedValueOnce without rebuilding the
  * resource server.
  */
-export function createMockFacilitator(network: string) {
+export function createMockFacilitator(network: Network) {
   const verify = vi.fn(async (paymentPayload: any, _requirements: any) => ({
     isValid: true,
     payer: paymentPayload?.payload?.authorization?.from,
@@ -25,7 +26,7 @@ export function createMockFacilitator(network: string) {
   // uses; and v1 registered because our test payloads use x402Version 1
   // (see buildPaymentHeaderValue) and getFacilitatorClient() looks up by the
   // payload's own version when routing verify()/settle() to a facilitator.
-  const getSupported = vi.fn(async () => ({
+  const getSupported = vi.fn(async (): Promise<SupportedResponse> => ({
     kinds: [
       { x402Version: 1, scheme: 'exact', network },
       { x402Version: 2, scheme: 'exact', network },

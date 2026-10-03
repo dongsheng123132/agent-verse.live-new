@@ -6,7 +6,7 @@
 
 ## 技术栈
 - Next.js 14.2 App Router (混用 JS/TS)
-- PostgreSQL (Neon) — 通过 `lib/db.js` 的 `dbQuery(sql, params)` 访问；本地用 PGlite（`npm run db:local`）
+- PostgreSQL (Neon) — 通过 `lib/db.ts` 的 `dbQuery(sql, params)` 访问；本地用 PGlite（`npm run db:local`）
 - Tailwind CSS (CDN，非本地安装)
 - x402 协议 AI 付款（Monad + Base，同一个收款地址）
 
@@ -15,14 +15,14 @@
 - Block ID 格式: `blk_{x}_{y}_{w}x{h}`
 - API Key 格式: `gk_<32hex>`，SHA-256 存库
 - 所有 API 路由在 `app/api/` 下，使用 Next.js Route Handlers
-- 数据库操作统一用 `import { dbQuery } from '@/lib/db.js'`
+- 数据库操作统一用 `import { dbQuery } from '@/lib/db'`
 - 付款只有 x402 一条路；一条链的 facilitator 挂了，另一条链照常卖（`lib/x402-flow.ts`）
 - 不要 DROP / ALTER 表；已下线功能的表和列只是不再读写
 - `public/skill.md`、`lib/ai-purchase-prompt.ts`、服务端三处一致，由 `test/skill-md-ai-prompt.test.ts` 保证
 
 ## 文件导航
 - 付款: `lib/x402-flow.ts` + `app/api/cells/{purchase,bulk-purchase,regen-key}/`
-- 格子管理: `app/api/cells/update/route.js` (PUT, API Key 鉴权)
+- 格子管理: `app/api/cells/update/route.ts` (PUT, API Key 鉴权)
 - 前端: `app/page.tsx`（地图）、`components/PurchaseModal.tsx`（复制提示词给 AI）
 - 服务索引: `lib/market/`（只读 402 探测）、`app/market/page.tsx`、`app/api/services/`
 - 数据库 Schema: `scripts/init-db.sql`

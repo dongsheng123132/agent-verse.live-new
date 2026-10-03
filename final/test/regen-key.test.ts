@@ -3,7 +3,7 @@ import { createTestDb, type TestDb } from './helpers/pglite-db'
 import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facilitator'
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
-vi.mock('../lib/db.js', () => ({
+vi.mock('../lib/db', () => ({
   dbQuery: (text: string, params?: unknown[]) => dbHolder.db.dbQuery(text, params),
   withTransaction: (fn: any) => dbHolder.db.withTransaction(fn),
 }))

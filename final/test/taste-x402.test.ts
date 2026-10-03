@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-// @ts-expect-error plain .mjs helper without type declarations
 import * as B from '../scripts/lib/raw-x402-buyer.mjs'
 
 const MONAD_T = 'eip155:10143'
