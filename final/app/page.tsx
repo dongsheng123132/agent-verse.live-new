@@ -129,28 +129,6 @@ function PageInner() {
     }).catch(() => { })
   }, [])
 
-  // Verify payment
-  useEffect(() => {
-    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
-    if (params.get('paid') === '1' && params.get('receipt_id')) {
-      const px = Number(params.get('x'))
-      const py = Number(params.get('y'))
-      fetch(`/api/commerce/verify?receipt_id=${encodeURIComponent(params.get('receipt_id')!)}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d?.ok && d?.paid) {
-            fetchGrid()
-            if (d.api_key) {
-              setApiKeyResult(d.api_key)
-              if (Number.isFinite(px) && Number.isFinite(py)) setPurchasedCell({ x: px, y: py })
-            }
-            if (d.ref_code) setBuyerRefCode(d.ref_code)
-          }
-        })
-      window.history.replaceState({}, '', '/')
-    }
-  }, [fetchGrid])
-
   // --- Helpers ---
   const cellMap = useMemo(() => {
     const m = new Map<string, Cell>()

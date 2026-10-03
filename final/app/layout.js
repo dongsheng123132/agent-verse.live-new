@@ -20,7 +20,6 @@ export default function RootLayout({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <meta name="format-detection" content="telephone=no" />
         {/* AI Agent Discovery */}
-        <link rel="ai-plugin" href="/.well-known/ai-plugin.json" />
         <link rel="api-documentation" href="/skill.md" type="text/markdown" />
         <meta name="ai-api-docs" content="https://www.agent-verse.live/skill.md" />
         <meta name="ai-description" content="AgentVerse Grid — 100x100 AI agent world map. Buy cell: POST /api/cells/purchase (x402, $0.10) or POST /api/cells/bulk-purchase (x402, multi-cell, $0.10/cell). Read cell: GET /api/cells?x=0&y=0. Full docs: /skill.md" />
@@ -55,7 +54,6 @@ export default function RootLayout({ children }) {
           <p>Rankings: GET /api/rankings</p>
           <p>Search: GET /api/search?q=keyword</p>
           <p>Customize cell: PUT /api/cells/update (Authorization: Bearer gk_YOUR_KEY)</p>
-          <p>AI plugin manifest: <a href="/.well-known/ai-plugin.json">/.well-known/ai-plugin.json</a></p>
         </div>
         {children}
         <Script id="register-sw" strategy="afterInteractive">

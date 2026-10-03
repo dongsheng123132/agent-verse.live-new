@@ -3,7 +3,7 @@ import { createTestDb, type TestDb } from './helpers/pglite-db'
 import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facilitator'
 
 // /api/grid + /api/cells merge the Monad Metropolis showcase in; purchase /
-// bulk-purchase / regen-key / commerce-create refuse showcase coordinates with
+// bulk-purchase / regen-key refuse showcase coordinates with
 // 403 reserved_showcase before any 402 is issued.
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }))
@@ -34,7 +34,6 @@ const { GET: cellsGET } = await import('../app/api/cells/route.js')
 const { purchaseHandler } = await import('../app/api/cells/purchase/handler')
 const { bulkPurchaseHandler } = await import('../app/api/cells/bulk-purchase/handler')
 const { regenHandler } = await import('../app/api/cells/regen-key/handler')
-const { POST: commerceCreate } = await import('../app/api/commerce/create/route.js')
 const { SHOWCASE_BLOCKS, SHOWCASE_BOUNDS, resetShowcaseSkipLog } = await import('../lib/showcase/index')
 
 const baseFacilitator = createMockFacilitator(BASE_NETWORK)
@@ -206,24 +205,5 @@ describe('purchase routes refuse showcase coordinates with 403 reserved_showcase
     expect((await res.json()).error).toBe('reserved_showcase')
     expect(baseFacilitator.verify).not.toHaveBeenCalled()
     expect(baseFacilitator.settle).not.toHaveBeenCalled()
-  })
-
-  it('POST /api/commerce/create (Coinbase Commerce path), both the cells[] and the legacy single-block flow', async () => {
-    const prev = process.env.COMMERCE_API_KEY
-    process.env.COMMERCE_API_KEY = 'test-key-never-used'
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('must not reach Coinbase'))
-    try {
-      const multi = await commerceCreate(post('/api/commerce/create', { cells: [{ x: 58, y: 40 }] }))
-      expect(multi.status).toBe(403)
-      expect((await multi.json()).error).toBe('reserved_showcase')
-      const legacy = await commerceCreate(post('/api/commerce/create', { x: 57, y: 40, block_w: 2, block_h: 1 }))
-      expect(legacy.status).toBe(403)
-      expect((await legacy.json()).error).toBe('reserved_showcase')
-      expect(fetchSpy).not.toHaveBeenCalled()
-    } finally {
-      fetchSpy.mockRestore()
-      if (prev === undefined) delete process.env.COMMERCE_API_KEY
-      else process.env.COMMERCE_API_KEY = prev
-    }
   })
 })

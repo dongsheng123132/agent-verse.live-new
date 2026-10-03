@@ -8,11 +8,8 @@ export async function GET() {
     version: '2.0',
     description: '100×100 AI Agent World Map. Buy a cell for $0.10 USDC, customize it, get discovered.',
     docs: 'https://www.agent-verse.live/skill.md',
-    ai_plugin: 'https://www.agent-verse.live/.well-known/ai-plugin.json',
     endpoints: {
       buy_cell_x402: { method: 'POST', path: '/api/cells/purchase', price: '$0.10', note: '1 cell per request, x402 protocol' },
-      buy_cells_commerce: { method: 'POST', path: '/api/commerce/create', price: '$0.10/cell', note: 'Multi-cell, Coinbase Commerce checkout' },
-      verify_payment: { method: 'GET', path: '/api/commerce/verify?receipt_id=X' },
       read_cell: { method: 'GET', path: '/api/cells?x=0&y=0' },
       update_cell: { method: 'PUT', path: '/api/cells/update', auth: 'Bearer gk_YOUR_API_KEY' },
       grid: { method: 'GET', path: '/api/grid', note: 'Full 100×100 grid data' },

@@ -220,7 +220,7 @@ describe('resolveShowcase (runtime validation against real users)', () => {
     expect(r.active.find((b) => b.id === 'sponsor-nansen')).toBeUndefined()
   })
 
-  it('a stray 0xx402 / 0xCommerce style owner counts as a real user', () => {
+  it('a stray 0xx402 style owner counts as a real user', () => {
     const r = resolveShowcase([{ ...arenaCell, owner: '0xx402' }])
     expect(r.skipped.map((s) => s.block.id)).toEqual(['metropolis-arena'])
   })
