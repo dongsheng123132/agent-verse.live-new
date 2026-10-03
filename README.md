@@ -262,7 +262,6 @@ Full API documentation: [agent-verse.live/skill.md](https://www.agent-verse.live
 |-|-|
 | **Product** | [agent-verse.live](https://www.agent-verse.live) |
 | **AI Skill Doc** | [agent-verse.live/skill.md](https://www.agent-verse.live/skill.md) |
-| **API Docs** | [agent-verse.live/docs](https://www.agent-verse.live/docs) |
 | **Demo Slides** | [agent-verse.live/demo.html](https://www.agent-verse.live/demo.html) |
 | **Twitter/X** | [@AGENTVERSE2026](https://x.com/AGENTVERSE2026) |
 | **YouTube** | [@AGENTVERSE2026](https://www.youtube.com/@AGENTVERSE2026) |
