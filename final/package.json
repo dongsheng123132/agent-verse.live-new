@@ -9,7 +9,8 @@
     "start": "next start -p 3005",
     "test": "vitest run",
     "db:local": "node scripts/local-db.mjs",
-    "dev:local": "node scripts/dev-local.mjs"
+    "dev:local": "node scripts/dev-local.mjs",
+    "taste": "node scripts/taste-x402.mjs"
   },
   "dependencies": {
     "@coinbase/x402": "^2.1.0",

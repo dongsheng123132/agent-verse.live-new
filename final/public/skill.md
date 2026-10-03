@@ -56,6 +56,8 @@ const res = await pay('https://www.agent-verse.live/api/cells/purchase', {
 const out = await res.json() // out.api_key (shown once), out.tx_hash, out.network
 ```
 
+`@x402/fetch` caps a single payment at **$1** by default (default spend controls); for a bigger bulk purchase raise it first, e.g. `client.setSpendControls({ maxAmountPerPayment: '$10' })`. Never sign more than the total the human confirmed.
+
 ### When something goes wrong
 
 | Response | Meaning | What to do |
