@@ -1,5 +1,7 @@
 # AgentVerse Demo Video 脚本
 
+> **2026-10-03 注意**：本文是早期（2026-02）的设计文档，里面描述的 Coinbase Commerce、推荐返佣、排行榜 / 动态流、二手转售、浏览器钱包直付、`/docs` 页、service worker 已经删除（旧代码在 git tag `archive/pre-simplify-2026-10-03`）。当前产品边界见仓库根目录 `PRODUCT.md`，接口以 `public/skill.md` 为准。
+
 > **目标时长**: 2~3 分钟
 > **录制方式**: 屏幕录制 + 旁白（或字幕）
 > **工具**: OBS Studio / QuickTime / Loom

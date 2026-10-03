@@ -1,14 +1,14 @@
-# Grid Shop MVP — Cursor 项目上下文
+# AgentVerse Grid — Cursor 项目上下文
 
 ## 项目简介
-100×100 像素格子售卖平台（百万格子），基于 Next.js 14 + PostgreSQL + Coinbase Commerce USDC 支付。
+100×100 格子广告地图：人看地图，AI 用 x402 买格子并装修，格子主人挂的 x402 服务进一张给 AI 读的索引。
+产品边界以仓库根目录的 `PRODUCT.md` 为准；功能该不该有，先看那里的三个问题。
 
 ## 技术栈
 - Next.js 14.2 App Router (混用 JS/TS)
-- PostgreSQL (Neon) — 通过 `lib/db.js` 的 `dbQuery(sql, params)` 访问
+- PostgreSQL (Neon) — 通过 `lib/db.js` 的 `dbQuery(sql, params)` 访问；本地用 PGlite（`npm run db:local`）
 - Tailwind CSS (CDN，非本地安装)
-- Coinbase Commerce API 支付
-- x402 协议 AI 付款
+- x402 协议 AI 付款（Monad + Base，同一个收款地址）
 
 ## 关键约定
 - Cell ID = y * 100 + x
@@ -16,33 +16,34 @@
 - API Key 格式: `gk_<32hex>`，SHA-256 存库
 - 所有 API 路由在 `app/api/` 下，使用 Next.js Route Handlers
 - 数据库操作统一用 `import { dbQuery } from '@/lib/db.js'`
-- 事件记录用 `import { logEvent } from '@/lib/events.js'`
+- 付款只有 x402 一条路；一条链的 facilitator 挂了，另一条链照常卖（`lib/x402-flow.ts`）
+- 不要 DROP / ALTER 表；已下线功能的表和列只是不再读写
+- `public/skill.md`、`lib/ai-purchase-prompt.ts`、服务端三处一致，由 `test/skill-md-ai-prompt.test.ts` 保证
 
 ## 文件导航
-- 定价: `lib/pricing.js` — BLOCK_SIZES 数组
-- 支付: `app/api/commerce/create/route.js` + `verify/route.js`
+- 付款: `lib/x402-flow.ts` + `app/api/cells/{purchase,bulk-purchase,regen-key}/`
 - 格子管理: `app/api/cells/update/route.js` (PUT, API Key 鉴权)
-- 前端: `app/page.tsx` (单文件客户端组件)
+- 前端: `app/page.tsx`（地图）、`components/PurchaseModal.tsx`（复制提示词给 AI）
+- 服务索引: `lib/market/`（只读 402 探测）、`app/market/page.tsx`、`app/api/services/`
 - 数据库 Schema: `scripts/init-db.sql`
-- 完整文档: `docs/PRD.md`, `docs/TECHNICAL.md`, `docs/DEVELOPMENT.md`
+- 说明文档: `README.md`、`public/skill.md`
 
 ## API 列表
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /api/grid | 所有已售格子 |
 | GET | /api/cells?x=&y= | 单格详情 |
-| POST | /api/commerce/create | 创建支付 |
-| GET | /api/commerce/verify?receipt_id= | 验证支付 |
-| POST | /api/cells/purchase | x402 付款 |
+| POST | /api/cells/purchase | x402 买一格 |
+| POST | /api/cells/bulk-purchase | x402 买多格（整块） |
 | PUT | /api/cells/update | 更新格子内容 (Bearer gk_xxx) |
-| POST | /api/cells/regen-key | 重新生成 Key |
+| POST | /api/cells/regen-key | 重新生成 Key（x402） |
 | GET | /api/search?q= | 全文搜索 |
-| GET | /api/events?limit= | 事件列表 |
-| GET | /api/rankings | 排名 |
+| GET | /api/services | x402 服务索引（status: can_pay / failed / unchecked） |
 
 ## 开发命令
 ```bash
 npm run dev      # localhost:3005
 npm run build    # 生产构建
-psql $DATABASE_URL -f scripts/init-db.sql  # 初始化/迁移数据库
+npx vitest run   # 测试
+npm run db:local -- --no-sync && npm run dev:local   # 本地库 + 本地开发服务器（不碰生产）
 ```

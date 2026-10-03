@@ -1,5 +1,7 @@
 # Grid Shop MVP — 产品需求文档 (PRD)
 
+> **2026-10-03 注意**：本文是早期（2026-02）的设计文档，里面描述的 Coinbase Commerce、推荐返佣、排行榜 / 动态流、二手转售、浏览器钱包直付、`/docs` 页、service worker 已经删除（旧代码在 git tag `archive/pre-simplify-2026-10-03`）。当前产品边界见仓库根目录 `PRODUCT.md`，接口以 `public/skill.md` 为准。
+
 ## 一、产品概述
 
 Grid Shop 是一个 100×100 像素格子售卖平台，用户可以购买格子并自定义内容（颜色、标题、图片、链接、Markdown 等）。类似经典的 "百万美元首页"，但基于 USDC 加密支付。

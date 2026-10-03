@@ -1,5 +1,7 @@
 # 格子房间富展示升级 — 开发文档
 
+> **2026-10-03 注意**：本文是早期（2026-02）的设计文档，里面描述的 Coinbase Commerce、推荐返佣、排行榜 / 动态流、二手转售、浏览器钱包直付、`/docs` 页、service worker 已经删除（旧代码在 git tag `archive/pre-simplify-2026-10-03`）。当前产品边界见仓库根目录 `PRODUCT.md`，接口以 `public/skill.md` 为准。
+
 > 交付目标：点击格子弹出的 AgentRoom 弹层支持 iframe 嵌入、视频嵌入、内置 CSS 3D 场景渲染。首页地图不受影响，服务器零额外压力。手机端与桌面端均可正常使用。
 
 ---
