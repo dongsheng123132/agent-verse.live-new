@@ -273,10 +273,12 @@ try {
   const mapOnlyDesktop = await mapOnlyHits(page)
   check('the page is the map only (desktop): no 地图/我的 toggle, no MobileNav, no BotConnect panel', mapOnlyDesktop.length === 0, mapOnlyDesktop.join(' | '))
   const answers = {}
-  for (const p of ['/api/rankings', '/api/events', '/api/referral/stats', '/api/commerce/create', '/api/cells/for-sale', '/api/cells/list-for-sale', '/api/cells/buy-resale', '/api/admin/payout', '/.well-known/ai-plugin.json']) {
+  for (const p of ['/api/rankings', '/api/events', '/api/referral/stats', '/api/commerce/create', '/api/cells/for-sale', '/api/cells/list-for-sale', '/api/cells/buy-resale', '/api/admin/payout', '/api/admin/stats', '/.well-known/ai-plugin.json']) {
     answers[p] = (await fetch(`${BASE}${p}`, { redirect: 'manual' })).status
   }
   check('removed endpoints and the ai-plugin manifest answer 404', Object.values(answers).every((s) => s === 404), JSON.stringify(answers))
+  const about = await fetch(`${BASE}/about`, { redirect: 'manual' })
+  check('/about answers 200', about.status === 200, String(about.status))
   const docs = await fetch(`${BASE}/docs`, { redirect: 'manual' })
   check('/docs redirects permanently to /skill.md', docs.status === 308 && new URL(docs.headers.get('location'), BASE).pathname === '/skill.md', `${docs.status} ${docs.headers.get('location')}`)
   const sw = await (await fetch(`${BASE}/sw.js`)).text()
