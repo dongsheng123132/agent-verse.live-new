@@ -53,6 +53,7 @@ export const SCHEMA_STATEMENTS: string[] = [
    END $$`,
   `CREATE INDEX IF NOT EXISTS idx_grid_cells_service_url ON grid_cells (service_url) WHERE service_url IS NOT NULL`,
   `CREATE INDEX IF NOT EXISTS idx_grid_cells_probe_status ON grid_cells (probe_status) WHERE service_url IS NOT NULL`,
+  // market_services: no longer read or written since 2026-10-04 (the index is grid_cells.service_url only); table kept, never dropped.
   `CREATE TABLE IF NOT EXISTS market_services (
      url          TEXT PRIMARY KEY,
      name         TEXT,

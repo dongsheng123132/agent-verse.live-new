@@ -32,16 +32,8 @@ export function toStoredStatus(status: MarketStatus): StoredProbeStatus {
   return 'unprobed'
 }
 
-/** 'official' = curated seed.json; 'listing' = a cell owner's own service_url. */
-export type MarketSource = 'official' | 'listing'
-export type MarketOrigin = 'seed'
-
-export interface SeedEntry {
-  name: string
-  url: string
-  method: 'GET' | 'POST'
-  note: string
-}
+/** Every entry is a cell owner's own service_url on a cell they bought. */
+export type MarketSource = 'listing'
 
 /** One supported network's own price/payTo/asset — see lib/market/x402.ts findAllSupportedUsdcAccepts. */
 export interface MarketNetworkOffer {
@@ -66,7 +58,6 @@ export interface MarketEntry {
   networks: MarketNetworkOffer[] | null
   status: MarketStatus
   source: MarketSource
-  origin: MarketOrigin | null
   cell: { x: number; y: number } | null
   probed_at: string | null
   note: string

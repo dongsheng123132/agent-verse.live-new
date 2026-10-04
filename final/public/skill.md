@@ -649,7 +649,8 @@ curl "https://www.agent-verse.live/api/cells?x=42&y=42"
 
 AgentVerse cells can advertise their own paid x402 service (a GET endpoint that
 returns HTTP 402 until paid). There's a text-index of every such service —
-official picks plus anything a cell owner has listed — built for AI agents.
+it contains only services that cell owners listed on cells they bought (no
+hand-picked entries, no web crawl) — built for AI agents. It can be empty.
 
 ### Find services
 

@@ -4,9 +4,10 @@ import { ensureSchema } from '../../lib/schema'
 import { PAY_TO_ADDRESS } from '../../lib/x402-flow'
 
 // GET /llms-services.txt — dynamic service index + "how to pay" for AI
-// agents (MONAD-MARKET-SPEC.md P3). public/llms.txt stays a static file
+// agents. public/llms.txt stays a static file
 // describing the grid itself (site-authored, rarely changes); this route is
-// new and covers the *service market* (seed + cell listings), which
+// new and covers the *service index* (only services cell owners listed on
+// cells they bought; may be empty), which
 // changes as cells get probed/re-probed and can't be pre-baked into a static
 // file. Deviation note: the spec offered "convert llms.txt to a dynamic
 // route OR keep the static one and add a new file — pick one"; we kept the
@@ -41,7 +42,9 @@ export async function GET() {
 
 ## What this is
 Every entry below is a paid HTTP endpoint that speaks the x402 protocol
-(https://x402.org). GET it once unauthenticated: you get HTTP 402 with a
+(https://x402.org), listed by the owner of an AgentVerse cell on a cell they
+bought. The index only holds services cell owners listed themselves; it can be
+empty. GET it once unauthenticated: you get HTTP 402 with a
 PAYMENT-REQUIRED header (or a v1 JSON body) listing which network + USDC
 asset + price it accepts. Pay, retry with the payment header, get your data.
 
@@ -72,7 +75,10 @@ list as JSON. Networks used here: eip155:8453 (Base) and eip155:143 (Monad).
 
 ## Service index (${services.length} services)
 `
-    const body = services.map(formatEntry).join('\n\n')
+    const body =
+      services.length > 0
+        ? services.map(formatEntry).join('\n\n')
+        : '(none yet: no cell owner has listed a service on a cell)'
     return new NextResponse(`${header}\n${body}\n`, {
       status: 200,
       headers: { 'content-type': 'text/plain; charset=utf-8' },

@@ -53,7 +53,7 @@ final/
 │   ├── ai-purchase-prompt.ts     # 「复制给我的 AI」提示词（纯函数，和 skill.md 一致由测试保证）
 │   ├── cell-block.ts             # 多格 = 一整块的判定
 │   ├── networks.ts / usdc-amount.ts
-│   ├── market/                   # 服务索引：probe（只读 402 探测）、ssrf、x402 解析、seed.json
+│   ├── market/                   # 服务索引：probe（只读 402 探测）、ssrf、x402 解析
 │   └── showcase/                 # 比武台 / 赞助商展示区（虚拟格子）
 ├── public/                       # skill.md、llms.txt、robots.txt、sw.js（自毁用）、manifest.json
 ├── scripts/                      # init-db.sql、local-db.mjs、dev-local.mjs、e2e-ai-purchase.mjs、taste-x402.mjs ...
@@ -64,8 +64,8 @@ final/
 
 - **grid_cells**：格子主表。`(x, y)` 唯一；`owner_address` 非空表示已售；`block_*` 表示一整块；`service_*` / `probe_*` 是格子主人挂的 x402 服务和它的探测结果。
 - **grid_orders**：订单记录（`pay_method` 为 `x402` / `x402-bulk`，`status` 为 `paid`，含 `tx_hash`、`network`、`payer_address`）。
-- **cell_api_keys**（SHA-256 存 key）、**cell_reservations**（支付验证后到结算前占住格子）、**market_services**（官方收录服务的探测缓存）。
-- 以下表 / 列保留但**不再读写**：`referrals`、`referral_rewards`、`grid_events`、`grid_orders.ref_code` / `commerce_charge_id`、`grid_cells.is_for_sale` / `price_usdc` / `evidence` / `evidence_by_network`。
+- **cell_api_keys**（SHA-256 存 key）、**cell_reservations**（支付验证后到结算前占住格子）。
+- 以下表 / 列保留但**不再读写**：`market_services`（2026-10-04 起）、`referrals`、`referral_rewards`、`grid_events`、`grid_orders.ref_code` / `commerce_charge_id`、`grid_cells.is_for_sale` / `price_usdc` / `evidence` / `evidence_by_network`。
 - `grid_cells.probe_status` 有 CHECK 约束（`verified | candidate | failed | unprobed`），表不改，所以列里仍存这四个旧词；API 对外只说 `can_pay | failed | unchecked`，翻译只在 `lib/market/types.ts`（`fromStoredStatus` / `toStoredStatus`）。
 
 详见 `scripts/init-db.sql`。
@@ -76,7 +76,7 @@ final/
 - `failed`：没有拿到这样的 402（连不上、不是 402、x402 v1、没有 Monad/Base USDC、SSRF 检查没过）。
 - `unchecked`：POST 接口需要 body，我们不探测；或还没探测过。
 
-不查链上付款记录，不抓 Bazaar；官方收录只有 `lib/market/seed.json`，加上格子主人自己填的 `service_url`。
+不查链上付款记录，不抓 Bazaar，也没有手工收录：索引里的每一条都来自一个买下的格子，只收格子主人自己填的 `service_url`。
 
 ---
 

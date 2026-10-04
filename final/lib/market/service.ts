@@ -1,7 +1,7 @@
 /**
- * One service (a cell's service_url, or a curated seed.json entry): a
- * read-only 402 probe (lib/market/probe.ts, SSRF check included). That is all
- * the index claims: no on-chain payment evidence is gathered or shown.
+ * One service (a cell's service_url): a read-only 402 probe
+ * (lib/market/probe.ts, SSRF check included). That is all the index claims:
+ * no on-chain payment evidence is gathered or shown.
  * method !== 'GET' is never fetched and comes back 'unchecked'.
  */
 import { probeCellService } from './probe'

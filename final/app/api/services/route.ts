@@ -3,9 +3,9 @@ import { getMarketServices } from '../../../lib/market/market'
 import { ensureSchema } from '../../../lib/schema'
 
 // GET /api/services?q=&network=&max_price=&category=&status=
-// Text-version service index for AI agents. Combines the curated services
-// (seed.json, cached in market_services) and cell listings
-// (grid_cells.service_url). `status` is probe-only: can_pay | failed | unchecked.
+// Text-version service index for AI agents. Every entry is a service a cell
+// owner listed (grid_cells.service_url) on a cell they bought; an empty list
+// is a normal 200 with count 0. `status` is probe-only: can_pay | failed | unchecked.
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {

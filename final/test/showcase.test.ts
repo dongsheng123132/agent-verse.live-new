@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import seed from '../lib/market/seed.json'
 import {
   SHOWCASE_BLOCK_SPECS,
   SHOWCASE_DISCLAIMER,
@@ -138,7 +137,7 @@ describe('showcase config', () => {
     expect(md('腾讯混元')).toContain('$2,000 云券')
   })
 
-  it('service street: 2x2 slots to the right of the arena incl. 灵签 / Nansen / agent402, all taken from the seed list', () => {
+  it('service street: 2x2 slots to the right of the arena incl. 灵签 / Nansen / agent402', () => {
     const [arena] = byKind('arena')
     const services = byKind('service')
     expect(services.length).toBeGreaterThanOrEqual(3)
@@ -153,8 +152,6 @@ describe('showcase config', () => {
     expect(ling.service!.url).toBe('https://monad-lingqian.vercel.app/qian')
     expect(services.some((s) => s.title.startsWith('Nansen'))).toBe(true)
     expect(services.some((s) => s.title.startsWith('agent402'))).toBe(true)
-    const seedUrls = new Set((seed as { url: string }[]).map((e) => e.url))
-    for (const s of services) expect(seedUrls.has(s.service!.url), s.service!.url).toBe(true)
   })
 
   it('only shows verified links, and no logo / image assets', () => {

@@ -68,7 +68,7 @@ AI Agent → x402 HTTP 402 → USDC on Monad or Base → Cell Owned → Customiz
 | Track | How AgentVerse Fits |
 |-------|-------------------|
 | **Agent-native Payments** ✅ | Full x402 integration — AI pays via HTTP 402, USDC on Base, no wallet popup |
-| **Intelligent Markets** ✅ | Grid cells as ad space, plus a curated x402 service index (`/market`, `/api/services`) that AI agents read |
+| **Intelligent Markets** ✅ | Grid cells as ad space, plus an x402 service index (`/market`, `/api/services`) that AI agents read and that only lists services cell owners put on cells they bought |
 | **Agent-powered Apps** ✅ | Each cell = agent's space with AI-readable skill.md, 3D scenes, iframe embeds |
 
 ---

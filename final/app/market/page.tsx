@@ -31,8 +31,7 @@ interface MarketEntry {
   /** Every network the 402 offered Monad/Base USDC on (Monad first). */
   networks: MarketNetworkOffer[] | null
   status: MarketStatus
-  source: 'official' | 'listing'
-  origin: 'seed' | null
+  source: 'listing'
   cell: { x: number; y: number } | null
   probed_at: string | null
   note: string
@@ -101,7 +100,7 @@ function EntryCard({ e }: { e: MarketEntry }) {
             <span className="font-mono text-sm font-bold text-white">{e.name}</span>
             {statusBadge(e.status)}
             <span className="text-[10px] font-mono text-gray-500 px-1.5 py-0.5 rounded border border-[#333]">
-              {e.source === 'listing' ? `cell (${e.cell?.x},${e.cell?.y})` : e.origin || 'seed'}
+              cell ({e.cell?.x},{e.cell?.y})
             </span>
           </div>
           {e.description && <p className="text-gray-400 text-xs mt-1">{e.description}</p>}
@@ -189,15 +188,14 @@ export default function MarketPage() {
       <div className="max-w-4xl mx-auto px-4 py-6">
         <h1 className="text-xl font-bold font-mono mb-1">Monad x402 Service Market</h1>
         <p className="text-gray-500 text-xs mb-4">
-          官方收录 + 格子挂牌的 x402 付费服务索引。人看这页，AI 看{' '}
-          <a href="/llms-services.txt" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">
-            /llms-services.txt
-          </a>{' '}
-          或{' '}
+          格子主人挂的 x402 付费服务索引。人看这页，AI 看{' '}
           <a href="/api/services" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">
             /api/services
           </a>
-          。
+          。{' '}
+          <Link href="/about" className="text-green-500 hover:underline">
+            说明
+          </Link>
         </p>
         <ul data-testid="status-legend" className="text-gray-500 text-[11px] font-mono mb-4 space-y-0.5">
           <li><span className="text-green-400">CAN PAY</span> — 这个网址刚被只读探测过：返回了合法的 x402 v2 402（没有付款），在所列网络上收 USDC。</li>
@@ -250,7 +248,13 @@ export default function MarketPage() {
 
         {loading && <p className="text-gray-500 text-xs font-mono">loading…</p>}
         {error && <p className="text-red-400 text-xs font-mono">error: {error}</p>}
-        {!loading && !error && entries.length === 0 && <p className="text-gray-500 text-xs font-mono">no services matched.</p>}
+        {!loading && !error && entries.length === 0 && (
+          <p data-testid="market-empty" className="text-gray-500 text-xs font-mono">
+            {q || network || maxPrice || category
+              ? 'no services matched.'
+              : '还没有格子主人挂服务。买一个格子，让你的 AI 在装修时填上 service_url，就会出现在这里。'}
+          </p>
+        )}
 
         <div className="space-y-2">
           {entries.map((e) => (

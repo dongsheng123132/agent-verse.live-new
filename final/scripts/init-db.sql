@@ -165,12 +165,8 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_grid_cells_service_url ON grid_cells (service_url) WHERE service_url IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_grid_cells_probe_status ON grid_cells (probe_status) WHERE service_url IS NOT NULL;
 
--- Text-market cache (P3): officially-curated services (seed.json + Coinbase
--- Bazaar sync) probed/evidenced the same way as cell listings, keyed by URL so
--- a stale (>30min) row can be refreshed in the background without blocking
--- GET /api/services. Cell listings themselves are NOT cached here — they live
--- directly on grid_cells (service_* / probe_* / evidence columns above) and
--- are only re-probed when their owner PUTs again.
+-- market_services: no longer read or written since 2026-10-04 (the service index is
+-- grid_cells.service_* / probe_* only). Table kept, never dropped.
 CREATE TABLE IF NOT EXISTS market_services (
   url          TEXT PRIMARY KEY,
   name         TEXT,
