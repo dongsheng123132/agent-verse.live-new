@@ -45,8 +45,7 @@ final/
 │       ├── grid/                 # GET 已售格子列表
 │       ├── cells/                # GET 单格；purchase / bulk-purchase / regen-key（x402）；update（Bearer key）
 │       ├── search/               # GET 全文搜索
-│       ├── services/             # GET 服务索引（JSON）
-│       └── admin/stats/          # GET 销售统计（ADMIN_KEY）
+│       └── services/             # GET 服务索引（JSON）
 ├── components/                   # WorldMap、AgentRoom（格子详情，只读）、PurchaseModal ...；没有「我的」页，也没有装修表单
 ├── lib/
 │   ├── x402-flow.ts              # 双链 x402；一条链的 facilitator 挂了另一条照常
@@ -103,7 +102,6 @@ npm run dev              # http://localhost:3005
 | 变量 | 必填 | 说明 |
 |------|------|------|
 | DATABASE_URL | 是 | PostgreSQL 连接串 |
-| ADMIN_KEY | 否 | `GET /api/admin/stats` 的口令 |
 | PAY_TO_ADDRESS | 否 | 收款地址，默认见 `lib/x402-flow.ts` |
 | MONAD_FACILITATOR_URL | 否 | Monad facilitator，默认 `https://x402-facilitator.molandak.org` |
 | CDP_API_KEY_ID / CDP_API_KEY_SECRET | 否 | Base 主网 CDP facilitator 的鉴权；不填走 `@coinbase/x402` 默认 |
