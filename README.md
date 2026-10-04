@@ -174,7 +174,6 @@ final/                          # Main application (Next.js)
 │   ├── taste-x402.mjs          # Testnet "taste" run of the x402 buy flow (npm run taste)
 │   └── check-no-mock-in-build.mjs  # Fails if the dev mock facilitator is in the build
 └── docs/
-    ├── PRD.md                  # Product requirements
     ├── TECHNICAL.md            # Technical documentation
     └── VIDEO-SCRIPT.md         # Demo video script
 ```
