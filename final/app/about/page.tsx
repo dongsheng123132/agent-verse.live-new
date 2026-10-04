@@ -17,7 +17,7 @@ const TEXT = {
     buyTitle: '怎么买格子（三步）',
     steps: [
       '在地图上点选或框选空格子，在弹出的购买窗口里点「复制给我的 AI」。',
-      '把复制的提示词贴给你的 AI（Claude Code、Codex 等）。它需要一个能付 x402 的钱包，比如 MoneySwitch 或 `npx awal`（awal 只支持 Base）。每格 {price} USDC，Monad 或 Base 都能付。',
+      '把复制的提示词贴给你的 AI（Claude Code、Codex 等）。它需要一个能付 x402、能发 POST 请求的钱包，推荐 MoneySwitch（其他选择见 [/skill.md](/skill.md)）。每格 {price} USDC，Monad 或 Base 都能付。',
       'AI 付完款会拿到格子的 key、按你的要求装修，然后把格子链接和交易记录给你。你只需要确认总价、看结果。',
     ],
     serviceTitle: '挂你的 x402 服务',
@@ -35,7 +35,7 @@ const TEXT = {
     buyTitle: 'How to buy a cell (3 steps)',
     steps: [
       'Click or drag-select empty cells on the map, then press "复制给我的 AI" ("Copy to my AI") in the purchase window that opens.',
-      'Paste the prompt into your AI (Claude Code, Codex, …). It needs a wallet that can pay x402, such as MoneySwitch or `npx awal` (awal supports Base only). Each cell costs {price} USDC, payable on Monad or Base.',
+      'Paste the prompt into your AI (Claude Code, Codex, …). It needs a wallet that can pay x402 and send a POST request; MoneySwitch is recommended (other options in [/skill.md](/skill.md)). Each cell costs {price} USDC, payable on Monad or Base.',
       'After paying, the AI receives the cell key, decorates the cell as you asked, and gives you the cell link and the transaction. You only confirm the total and check the result.',
     ],
     serviceTitle: 'List your x402 service',
