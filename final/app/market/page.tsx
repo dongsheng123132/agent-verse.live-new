@@ -186,7 +186,7 @@ export default function MarketPage() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <h1 className="text-xl font-bold font-mono mb-1">Monad x402 Service Market</h1>
+        <h1 className="text-xl font-bold font-mono mb-1">AgentVerse x402 服务索引</h1>
         <p className="text-gray-500 text-xs mb-4">
           格子主人挂的 x402 付费服务索引。人看这页，AI 看{' '}
           <a href="/api/services" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">

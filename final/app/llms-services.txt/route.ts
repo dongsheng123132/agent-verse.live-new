@@ -37,8 +37,8 @@ export async function GET() {
     await ensureSchema()
     const services = await getMarketServices({})
 
-    const header = `# AgentVerse x402 Service Market — llms-services.txt
-> Monad 上第一个 x402 服务市场。人看格子地图，AI 看这份索引直接调用。
+    const header = `# AgentVerse x402 Service Index — llms-services.txt
+> AgentVerse 的 x402 服务索引：只收格子主人挂在自己格子上的服务。人看格子地图，AI 看这份索引直接调用。
 
 ## What this is
 Every entry below is a paid HTTP endpoint that speaks the x402 protocol

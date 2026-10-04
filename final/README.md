@@ -123,7 +123,7 @@ node scripts/e2e-ai-purchase.mjs                   # Playwright，截图存系�
 
 `X402_FACILITATOR_MOCK=1` 只在 `NODE_ENV !== 'production'` 且测试网模式下生效（本地签名校验、不上链）；生产构建里整段代码被剔除，`npm run build && node scripts/check-no-mock-in-build.mjs` 可验证。
 
-- **AI 原生购买**：弹窗显示所选格子、格数、总价（0.1 USDC/格）、收款地址和支持网络；「想要的样子」可选填 title / summary / fill_color / iframe_url（https）/ service_url（https，x402 服务），只有填了的字段才进提示词里的 `PUT /api/cells/update` JSON；「复制给我的 AI」生成提示词（`lib/ai-purchase-prompt.ts`，单测 `test/ai-purchase-prompt.test.ts`）；同一份模板也在 `public/skill.md`（有测试保证与弹窗输出一致）。「我让 AI 买完了」刷新地图；买到了就关闭弹窗并打开该格详情，人可以在那里点「我有 key」手动装修。
+- **AI 原生购买**：弹窗显示所选格子、格数、总价（0.1 USDC/格）、收款地址和支持网络；「想要的样子」可选填 title / summary / fill_color / iframe_url（https）/ service_url（https，x402 服务），只有填了的字段才进提示词里的 `PUT /api/cells/update` JSON；「复制给我的 AI」生成提示词（`lib/ai-purchase-prompt.ts`，单测 `test/ai-purchase-prompt.test.ts`）；同一份模板也在 `public/skill.md`（有测试保证与弹窗输出一致）。「我让 AI 买完了」刷新地图；买到了就关闭弹窗并打开该格详情；装修由 AI 用 key 调 `PUT /api/cells/update` 完成，网页上没有人工装修入口。
 - **多格 = 一整块**：所选格子恰好是一个完整的 w×h 矩形时，服务端写成一整块（`block_id` `blk_<x>_<y>_<w>x<h>`，origin = 左上角），key 存在左上角那一格，一把 key 一次 `PUT /api/cells/update` 装修整块；响应带 `key_cell` 和 `block`。拼不成矩形则每格各自 1×1，key 只对应第一格。
 - **地图手势**：`WorldMap` 按每次手势的 `PointerEvent.pointerType` 决定——手指 = 平移，鼠标 / 触控笔 = 框选。
 - **体验「传统 x402」**：`npm run taste`（真实 Monad 测试网，要一点测试网 USDC）或 `npm run taste -- --mock`（假 facilitator，不上链）。一条命令讲完：挑空格 → 把 402 解码成账单 → 签 EIP-3009 授权 → 重试 → 交易哈希 → 用 gk_ key 装修。钱包在 `%USERPROFILE%\.agentverse-taste\wallet.json`（仓库之外）；只给 `eip155:10143` / `eip155:84532` 签名、不超过 1 USDC。
