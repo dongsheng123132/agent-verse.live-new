@@ -54,9 +54,10 @@ describe('public/skill.md "AI 购买" section (the one the prompt points to)', (
     expect(section).toContain('**awal**')
     expect(section).toContain('email-OTP login')
     expect(section).toContain('**Base only** (no Monad)')
-    expect(section).toContain('`--scheme`, `--json` and `--chain`')
-    expect(section).toContain('no method or body flags')
-    expect(section).toContain('If your x402 client cannot send a POST JSON body, use one that can (e.g. `@x402/fetch`)')
+    // Coinbase's awal docs (checked 2026-10-05) list -X/--method and -d/--data; without -X POST
+    // awal settles with GET and the purchase route rejects it (coinbase/agentkit#1494).
+    expect(section).toContain("x402 pay https://www.agent-verse.live/api/cells/purchase -X POST -d '{\"x\":50,\"y\":50}' --max-amount 100000")
+    expect(section).toContain('Always pass `-X POST` and `-d`')
     expect(section).toContain('Private key + x402 client')
     expect(section).toContain('keep only small amounts in it')
   })
@@ -74,14 +75,14 @@ describe('public/skill.md "AI 购买" section (the one the prompt points to)', (
   })
 })
 
-describe('public/skill.md no longer sends anyone to the dead Commerce flow or the awal -X/-d form', () => {
+describe('public/skill.md no longer sends anyone to the dead Commerce flow; awal stays in one table row', () => {
   it('no Coinbase Commerce anywhere (front matter, quick actions, API reference, summary table)', () => {
     expect(skill).not.toMatch(/commerce/i)
     expect(skill).not.toContain('hosted_url')
   })
 
-  it('no `-X POST -d` awal example anywhere; awal only appears in the explanatory table row', () => {
-    expect(skill).not.toMatch(/awal@latest x402 pay [^\n]*-X POST/)
+  it('awal only appears in the explanatory table row, and every awal pay command uses -X POST', () => {
+    for (const m of skill.match(/awal@latest x402 pay [^\n`]*/g) ?? []) expect(m).toContain('-X POST -d')
     const awalLines = skill.split('\n').filter((l) => l.includes('awal'))
     expect(awalLines).toHaveLength(1)
     expect(awalLines[0]).toContain('**Base only** (no Monad)')

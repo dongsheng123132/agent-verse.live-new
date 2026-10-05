@@ -33,7 +33,7 @@ Most buyers are people who picked cells on the website and handed the job to the
 | Client | Who holds the private key | Networks | Notes |
 |---|---|---|---|
 | **MoneySwitch** — `paid_fetch` tool or REST `POST /v1/fetch` (recommended) | MoneySwitch; the AI never holds the key | Monad, Base | Daily / total budgets, human approval above a threshold. Call it with `url`, `method: "POST"`, `body` (the JSON above) and `max_price` = the confirmed total (e.g. `"0.10"`). On `approval_required`, wait for the human, then retry the **same** url / method / body with the returned `approval_id`. |
-| **awal** (Coinbase wallet, email-OTP login) | Coinbase; the AI gets no private key | **Base only** (no Monad) | `npx awal@latest x402 pay <url>` documents only `--scheme`, `--json` and `--chain` — no method or body flags. If your x402 client cannot send a POST JSON body, use one that can (e.g. `@x402/fetch`). |
+| **awal** (Coinbase Agentic Wallet, email-OTP login) | Coinbase; the AI gets no private key | **Base only** (no Monad) | `npx awal@latest x402 pay https://www.agent-verse.live/api/cells/purchase -X POST -d '{"x":50,"y":50}' --max-amount 100000 --json` (`--max-amount` is in USDC atomic units: 100000 = $0.10). Always pass `-X POST` and `-d`: without them awal settles with GET and the payment is rejected (no funds move). |
 | **Private key + x402 client** (e.g. `@x402/fetch`) | The AI holds the whole wallet key | Monad, Base | Hands the entire wallet to the AI — keep only small amounts in it. |
 
 Minimal `@x402/fetch` example (Node, private-key wallet; do not print the key):
