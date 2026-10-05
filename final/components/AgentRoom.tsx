@@ -3,8 +3,7 @@ import dynamic from 'next/dynamic';
 import { Cell, truncAddr } from '../app/types';
 import { X, Copy, Check, ExternalLink, Zap } from 'lucide-react';
 import { useLang } from '../lib/LangContext';
-
-const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
+import { NETWORK_LABEL, buildCallPrompt } from '../lib/market/call-prompt';
 
 /**
  * Same two networks/USDC addresses as lib/market/x402.ts's NETWORK_USDC /
@@ -39,7 +38,7 @@ function deriveNetworkOffers(accepts: Cell['probe_accepts']): ProbeAcceptEntry[]
   return out
 }
 
-/** "服务卡": name/price/network/probe status + "Copy for AI" (MoneySwitch paid_fetch prompt). */
+/** "服务卡": name/price/network/probe status + "Copy for AI" (wallet-neutral prompt, lib/market/call-prompt.ts). */
 const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
   const [copied, setCopied] = useState(false)
   if (!cell.service_url) return null
@@ -58,12 +57,15 @@ const ServiceCard: React.FC<{ cell: Cell }> = ({ cell }) => {
   const canPay = status === 'can_pay'
 
   const copyForAi = () => {
-    const maxPrice = priceUsdc ? `$${priceUsdc}` : '$0.10'
-    const prompt = [
-      `Use MoneySwitch to call this x402 service:`,
-      `  npx moneyswitch paid_fetch ${cell.service_url} --max-price ${maxPrice}`,
-      `Network: ${network ? NETWORK_LABEL[network] || network : 'see 402 response'}. Status: ${status}.`,
-    ].join('\n')
+    const networks = offers.length ? offers.map((o) => o.network) : listing?.networks ?? (network ? [network] : [])
+    const prompt = buildCallPrompt({
+      url: cell.service_url!,
+      method: cell.service_method,
+      priceUsdc,
+      networks,
+      cell: { x: cell.x, y: cell.y },
+      origin: typeof window !== 'undefined' ? window.location.origin : 'https://www.agent-verse.live',
+    })
     navigator.clipboard.writeText(prompt)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)

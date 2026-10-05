@@ -48,15 +48,16 @@ empty. GET it once unauthenticated: you get HTTP 402 with a
 PAYMENT-REQUIRED header (or a v1 JSON body) listing which network + USDC
 asset + price it accepts. Pay, retry with the payment header, get your data.
 
-## How to pay (one command, MoneySwitch)
-The fastest path for an AI agent is MoneySwitch's paid_fetch — it does the
-whole 402 -> pay -> retry dance for you:
+## How to pay (any x402 wallet)
+Use any x402 client that pays USDC on the entry's network; it does the
+402 -> pay -> retry dance for you. For example:
 
-    npx moneyswitch paid_fetch <url> --max-price 0.05
-
-Or, for x402-only endpoints without MoneySwitch installed:
-
-    npx awal@latest x402 pay <url>
+- MoneySwitch (Monad, Base): POST <your MoneySwitch>/v1/fetch with
+  {"url":"<url>","method":"GET","max_price":"0.05"} and your MoneyKey.
+- awal from Coinbase (Base only, cannot pay Monad entries):
+      npx awal@latest x402 pay <url> --max-amount 50000
+  (add -X POST -d '<json>' for POST endpoints)
+- A private-key x402 client such as @x402/fetch (Monad, Base).
 
 ## This site's own paid endpoints
 See GET /.well-known/x402 for AgentVerse's own paid endpoints (buy a cell,

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Search, Copy, Check, ExternalLink, Sparkles } from 'lucide-react'
+import { NETWORK_LABEL, buildCallPrompt } from '../../lib/market/call-prompt'
 
 interface MarketNetworkOffer {
   network: string
@@ -37,7 +38,6 @@ interface MarketEntry {
   note: string
 }
 
-const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
 
 const STATUS_HINT: Record<MarketStatus, string> = {
   can_pay: '只读 GET 返回了合法的 x402 v2 402（没有付款）',
@@ -57,27 +57,17 @@ function statusBadge(status: MarketStatus) {
   }
 }
 
-function buildPaidFetchPrompt(entry: MarketEntry, origin: string): string {
-  const maxPrice = entry.price_usdc ? `$${entry.price_usdc}` : '$0.10'
-  return [
-    `Use MoneySwitch to call this x402 service:`,
-    `  npx moneyswitch paid_fetch ${entry.url} --max-price ${maxPrice}`,
-    entry.method === 'POST' ? `  (POST endpoint — check ${entry.url}'s own docs for the request body)` : '',
-    `Network: ${entry.network ? NETWORK_LABEL[entry.network] || entry.network : 'see 402 response'}. Status: ${entry.status}.`,
-    `Discovered via ${origin}/market.`,
-  ]
-    .filter(Boolean)
-    .join('\n')
-}
-
 function CopyForAiButton({ entry }: { entry: MarketEntry }) {
   const [copied, setCopied] = useState(false)
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.agent-verse.live'
+  const networks = entry.networks?.map((n) => n.network) ?? (entry.network ? [entry.network] : [])
   return (
     <button
       type="button"
       onClick={() => {
-        navigator.clipboard.writeText(buildPaidFetchPrompt(entry, origin))
+        navigator.clipboard.writeText(
+          buildCallPrompt({ url: entry.url, method: entry.method, priceUsdc: entry.price_usdc, networks, cell: entry.cell, origin })
+        )
         setCopied(true)
         setTimeout(() => setCopied(false), 1500)
       }}
