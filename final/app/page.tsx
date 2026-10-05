@@ -7,7 +7,7 @@ import { AgentRoom } from '../components/AgentRoom'
 import { PurchaseModal } from '../components/PurchaseModal'
 import { Minimap } from '../components/Minimap'
 import { MapToolbar } from '../components/MapToolbar'
-import { Globe, Info, Search, Languages, Map as MapIcon, X } from 'lucide-react'
+import { Globe, Info, Search, Languages, Map as MapIcon, Store, X } from 'lucide-react'
 import { LangProvider, useLang } from '../lib/LangContext'
 import { SHOWCASE_ORIGIN } from '../lib/showcase/metropolis'
 
@@ -336,6 +336,9 @@ function PageInner() {
           </button>
           <a href="/about" className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
             <Info size={10} /> {t('about')}
+          </a>
+          <a href="/market" className="flex items-center gap-1 text-[10px] font-mono text-gray-500 border border-[#333] px-2 py-1 rounded hover:text-white hover:border-gray-500 transition-colors">
+            <Store size={10} /> {t('services')}
           </a>
 
           {/* Mobile: search icon toggle */}

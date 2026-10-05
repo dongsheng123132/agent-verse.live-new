@@ -7,6 +7,7 @@ const dict = {
   'searching': { en: 'Searching...', zh: '搜索中...' },
   'empty': { en: 'Empty', zh: '空闲' },
   'about': { en: 'About', zh: '说明' },
+  'services': { en: 'Services', zh: '服务' },
 
   // Purchase Modal
   'acquire_node': { en: 'ACQUIRE NODE', zh: '购买格子' },
