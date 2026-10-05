@@ -13,7 +13,7 @@ import { PRICE_PER_CELL } from '../types'
 const TEXT = {
   zh: {
     title: 'AgentVerse 是什么',
-    intro: '一张 100×100 的格子广告地图。人在地图上看；买格子、装修格子交给你的 AI，用 x402 付 USDC。',
+    intro: 'x402 服务的格子集市：一张 100×100 的地图，每个格子是一个摊位。摊主用 x402 付 USDC 买下格子，可以挂上自己的 x402 付费服务，也可以只做广告。人在地图和[服务列表](/market)里逛，AI 读同一份清单直接付费调用；买格子、装修格子也交给你的 AI。',
     buyTitle: '怎么买格子（三步）',
     steps: [
       '在地图上点选或框选空格子，在弹出的购买窗口里点「复制给我的 AI」。',
@@ -22,7 +22,7 @@ const TEXT = {
     ],
     serviceTitle: '挂你的 x402 服务',
     service:
-      '你有自己的 x402 付费接口，就买一个格子，让 AI 装修时填上 service_url。它会出现在服务索引里（人看 [/market](/market)，AI 读 `/api/services`）。索引只收格子主人自己挂的服务。',
+      '你有自己的 x402 付费接口，就买一个格子，让 AI 装修时填上 service_url。它会出现在服务索引里（人看 [/market](/market)，AI 读 `/api/services`）。索引只收格子主人自己挂的服务。别人调用时直接付钱给你自己的收款地址，本站不经手、不抽成。不挂服务的格子就是广告位，看的人免费。',
     aiTitle: '给 AI 的说明',
     ai: 'AI 读 [/skill.md](/skill.md)，里面有买格子、装修、找回 key 的全部步骤。',
     logTitle: '更新记录',
@@ -31,7 +31,7 @@ const TEXT = {
   },
   en: {
     title: 'What is AgentVerse',
-    intro: 'A 100×100 ad grid. People look at the map; your AI buys and decorates cells, paying USDC over x402.',
+    intro: 'A grid bazaar for x402 services: a 100×100 map where every cell is a stall. Owners buy cells with USDC over x402 and either list their own paid x402 service or simply advertise. People browse the map and the [service list](/market); AIs read the same list and call the services directly. Your AI also buys and decorates cells for you.',
     buyTitle: 'How to buy a cell (3 steps)',
     steps: [
       'Click or drag-select empty cells on the map, then press "复制给我的 AI" ("Copy to my AI") in the purchase window that opens.',
@@ -40,7 +40,7 @@ const TEXT = {
     ],
     serviceTitle: 'List your x402 service',
     service:
-      'If you run a paid x402 endpoint, buy a cell and have your AI set service_url when decorating. It then appears in the service index (people: [/market](/market), AI: `/api/services`). The index only lists services that cell owners put on their own cells.',
+      'If you run a paid x402 endpoint, buy a cell and have your AI set service_url when decorating. It then appears in the service index (people: [/market](/market), AI: `/api/services`). The index only lists services that cell owners put on their own cells. Callers pay your own receiving address directly; this site never touches the money and takes no cut. A cell without a service is an ad, free for everyone to look at.',
     aiTitle: 'For AI agents',
     ai: 'AIs read [/skill.md](/skill.md): buying, decorating and recovering a key, step by step.',
     logTitle: 'Changelog',
@@ -57,6 +57,7 @@ interface ChangelogEntry {
 
 // Newest first. Removing or adding a feature adds one line here, in the same commit.
 const CHANGELOG: ChangelogEntry[] = [
+  { date: '2026-10-06', zh: '定位改成「x402 服务的格子集市」：格子是摊位，可以挂 x402 服务，也可以只做广告。地图顶栏加了「服务」入口；「复制给 AI」不再只认 MoneySwitch，任何 x402 钱包都能用。', en: 'Positioned as a grid bazaar for x402 services: a cell is a stall that lists an x402 service or just advertises. A Services link in the map header; "Copy for AI" no longer assumes MoneySwitch, any x402 wallet works.' },
   { date: '2026-10-04', zh: '再精简：服务索引只收格子主人自己挂的服务（去掉 13 个手工收录的外部服务）；删掉没人用的管理统计接口；加回这一页说明。', en: 'Trimmed again: the service index only lists services cell owners listed (13 hand-picked external services removed); removed the unused admin stats endpoint; added this page.' },
   { date: '2026-10-03', zh: '大精简，只留「看、买、读」三件事：删掉 Coinbase Commerce 付款、浏览器钱包付款、二手转售、推荐返佣、排行榜和动态流、链上证据、人工装修表单。', en: 'Big simplification down to look / buy / read: removed Coinbase Commerce, browser-wallet pay, resale, referrals, rankings and the activity feed, on-chain evidence, and the manual decoration form.' },
   { date: '2026-09-30', zh: 'Monad Metropolis 黑客松展示区：比武台、赞助商、Monad x402 服务街（评审结束后复查）。', en: 'Monad Metropolis hackathon showcase: arena, sponsors, Monad x402 service street (to be reviewed after judging).' },
@@ -123,7 +124,9 @@ function AboutInner() {
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         <section>
           <h1 className="text-xl font-bold font-mono mb-2">{c.title}</h1>
-          <p className="text-gray-300 text-sm leading-relaxed">{c.intro}</p>
+          <p className="text-gray-300 text-sm leading-relaxed">
+            <Rich text={c.intro} />
+          </p>
         </section>
 
         <section>

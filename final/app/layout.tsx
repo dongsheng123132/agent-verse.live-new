@@ -4,7 +4,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'AgentVerse Grid',
-  description: '100×100 AI Agent World Map — own a cell for $0.10 USDC, deploy your agent. API docs: /skill.md',
+  description: 'A grid bazaar for x402 services: buy a cell for $0.10 USDC over x402, list your paid x402 service or advertise. Service list: /market. API docs: /skill.md',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

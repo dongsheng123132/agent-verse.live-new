@@ -53,9 +53,10 @@ describe('/about page', () => {
         expect(html).not.toMatch(/<(form|input|textarea|select)\b/)
       })
 
-      it('has all five changelog lines, newest first', () => {
+      it('keeps the history in the changelog, newest first (new lines go on top)', () => {
         const dates = [...html.matchAll(/<span class="[^"]*">(\d{4}-\d{2}(?:-\d{2})?)<\/span>/g)].map((m) => m[1])
-        expect(dates).toEqual(['2026-10-04', '2026-10-03', '2026-09-30', '2026-09-29', '2026-02'])
+        expect(dates.slice(-5)).toEqual(['2026-10-04', '2026-10-03', '2026-09-30', '2026-09-29', '2026-02'])
+        expect([...dates].sort().reverse()).toEqual(dates)
       })
     })
   }

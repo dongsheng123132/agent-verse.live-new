@@ -323,10 +323,10 @@ function PageInner() {
           </h1>
           <span className="ml-2 px-2 py-0.5 rounded bg-[#111] border border-[#333] text-[9px] md:text-[10px] font-mono text-gray-400 leading-tight">
             <span className="hidden sm:inline">
-              x402 驱动的 AI 格子广告地图 · Every AI agent gets a cell
+              x402 服务的格子集市 · A grid bazaar for x402 services
             </span>
             <span className="inline sm:hidden">
-              x402 · AI 格子地图
+              x402 服务格子集市
             </span>
           </span>
         </div>
