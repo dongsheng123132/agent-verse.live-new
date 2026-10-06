@@ -6,7 +6,7 @@ import { useLang } from '../lib/LangContext';
 import { NETWORK_LABEL, buildCallPrompt } from '../lib/market/call-prompt';
 
 /**
- * Same two networks/USDC addresses as lib/market/x402.ts's NETWORK_USDC /
+ * Same networks/USDC addresses as lib/market/x402.ts's NETWORK_USDC /
  * NETWORK_PRIORITY — duplicated here (not imported) because this is a
  * `'use client'` component and lib/market/x402.ts pulls in server-only
  * '../x402-flow' (next/server, @x402/core/server), which can't be bundled
@@ -15,8 +15,8 @@ import { NETWORK_LABEL, buildCallPrompt } from '../lib/market/call-prompt';
  */
 const MONAD_USDC_ADDRESS_CLIENT = '0x754704Bc059F8C67012fEd69BC8A327a5aafb603'
 const BASE_USDC_ADDRESS_CLIENT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-const NETWORK_USDC_CLIENT: Record<string, string> = { 'eip155:143': MONAD_USDC_ADDRESS_CLIENT, 'eip155:8453': BASE_USDC_ADDRESS_CLIENT }
-const NETWORK_PRIORITY_CLIENT = ['eip155:143', 'eip155:8453']
+const NETWORK_USDC_CLIENT: Record<string, string> = { 'eip155:143': MONAD_USDC_ADDRESS_CLIENT, 'eip155:8453': BASE_USDC_ADDRESS_CLIENT, 'eip155:10143': '0x534b2f3A21130d7a60830c2Df862319e593943A3', 'eip155:84532': '0x036CbD53842c5426634e7929541eC2318f3dCF7e' }
+const NETWORK_PRIORITY_CLIENT = ['eip155:143', 'eip155:8453', 'eip155:10143', 'eip155:84532']
 
 type ProbeAcceptEntry = NonNullable<Cell['probe_accepts']>[number]
 

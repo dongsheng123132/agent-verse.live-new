@@ -4,7 +4,7 @@
  * (MoneySwitch, awal, @x402/fetch ...); the AI must use one that pays on the
  * service's network.
  */
-export const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
+export const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad', 'eip155:10143': 'Monad testnet', 'eip155:84532': 'Base Sepolia' }
 
 export interface CallPromptInput {
   url: string

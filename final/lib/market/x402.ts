@@ -14,7 +14,7 @@
  * （accepts 里同时有受支持的 Base 和 Monad USDC），主显示/主探测网络选 Monad，
  * 见 NETWORK_PRIORITY / findAllSupportedUsdcAccepts。
  */
-import { BASE_NETWORK, MONAD_NETWORK, MONAD_USDC_ADDRESS } from '../x402-flow'
+import { BASE_NETWORK, MONAD_NETWORK, MONAD_USDC_ADDRESS, MONAD_TESTNET_NETWORK, MONAD_TESTNET_USDC_ADDRESS, BASE_SEPOLIA_NETWORK, BASE_SEPOLIA_USDC_ADDRESS } from '../x402-flow'
 
 export { BASE_NETWORK, MONAD_NETWORK }
 export const BASE_USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
@@ -24,6 +24,9 @@ export { MONAD_USDC_ADDRESS }
 export const NETWORK_USDC: Record<string, string> = {
   [BASE_NETWORK]: BASE_USDC_ADDRESS,
   [MONAD_NETWORK]: MONAD_USDC_ADDRESS,
+  // Testnets (no real value): only so a cell's x402 test service probes as can_pay (2026-10-06).
+  [MONAD_TESTNET_NETWORK]: MONAD_TESTNET_USDC_ADDRESS,
+  [BASE_SEPOLIA_NETWORK]: BASE_SEPOLIA_USDC_ADDRESS,
 }
 
 /**
@@ -33,7 +36,7 @@ export const NETWORK_USDC: Record<string, string> = {
  * accepts both is shown/priced/probed-for-evidence primarily on Monad, even
  * if its 402 response happens to list Base earlier in `accepts`.
  */
-export const NETWORK_PRIORITY: string[] = [MONAD_NETWORK, BASE_NETWORK]
+export const NETWORK_PRIORITY: string[] = [MONAD_NETWORK, BASE_NETWORK, MONAD_TESTNET_NETWORK, BASE_SEPOLIA_NETWORK]
 
 export interface X402Accept {
   scheme: string
