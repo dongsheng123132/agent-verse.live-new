@@ -104,7 +104,7 @@ export async function probeGetTarget(url: string, opts: ProbeOptions = {}): Prom
   const matches = findAllSupportedUsdcAccepts(parsed.accepts)
   if (matches.length === 0) {
     const seenNetworks = parsed.accepts.map((a) => a.network).join(', ') || '(空)'
-    return failed(`402 accepts 里没有 eip155:143/8453（或测试网 eip155:10143/84532）+ 对应链 USDC 的组合（accepts 的 network 有：${seenNetworks}）`, probedAt)
+    return failed(`402 accepts 里没有 eip155:143/8453 + 对应链 USDC 的组合（accepts 的 network 有：${seenNetworks}）`, probedAt)
   }
 
   const networks: ProbeNetworkResult[] = matches.map((a) => ({

@@ -4,24 +4,7 @@
  * (MoneySwitch, awal, @x402/fetch ...); the AI must use one that pays on the
  * service's network.
  */
-export const NETWORK_LABEL: Record<string, string> = {
-  'eip155:8453': 'Base',
-  'eip155:143': 'Monad',
-  'eip155:10143': 'Monad testnet',
-  'eip155:84532': 'Base Sepolia',
-}
-
-/** The two networks whose USDC has no real value (Monad testnet, Base Sepolia). */
-const TESTNETS: ReadonlySet<string> = new Set(['eip155:10143', 'eip155:84532'])
-
-export function isTestnet(network: string): boolean {
-  return TESTNETS.has(network)
-}
-
-/** True when an entry offers at least one network and every one of them is a testnet: that is when the "no real value" badge shows. */
-export function offersOnlyTestnets(networks: readonly string[]): boolean {
-  return networks.length > 0 && networks.every(isTestnet)
-}
+export const NETWORK_LABEL: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:143': 'Monad' }
 
 export interface CallPromptInput {
   url: string
