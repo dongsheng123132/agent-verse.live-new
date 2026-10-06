@@ -5,7 +5,10 @@
  * 改写自 C:\1mineyswitch\repos\lantern-city\service\src\x402.ts（不跨仓库
  * import）。与原版的区别：原版只认 Monad 一条链；这里同时认 Base
  * （eip155:8453）和 Monad（eip155:143），因为本仓库（MONAD-MARKET-SPEC.md
- * P2）的格子服务允许接受任意一条链的 USDC。BASE_USDC_ADDRESS 取自
+ * P2）的格子服务允许接受任意一条链的 USDC。2026-10-06 起还认两条测试网：
+ * Monad 测试网（eip155:10143）和 Base Sepolia（eip155:84532）的 USDC（地址
+ * 与 lib/x402-flow.ts 的测试网常量同一个值）；测试网 USDC 没有真实价值，界面上
+ * 会标出（lib/market/call-prompt.ts 的 isTestnet）。BASE_USDC_ADDRESS 取自
  * @x402/evm 2.27.0 编译产物内置的默认资产表（node_modules/@x402/evm/dist/cjs/index.js
  * 里 `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`），MONAD_USDC_ADDRESS 与
  * lib/x402-flow.ts 的 MONAD_USDC_ADDRESS 保持同一个值。
@@ -14,26 +17,38 @@
  * （accepts 里同时有受支持的 Base 和 Monad USDC），主显示/主探测网络选 Monad，
  * 见 NETWORK_PRIORITY / findAllSupportedUsdcAccepts。
  */
-import { BASE_NETWORK, MONAD_NETWORK, MONAD_USDC_ADDRESS } from '../x402-flow'
+import {
+  BASE_NETWORK,
+  MONAD_NETWORK,
+  MONAD_USDC_ADDRESS,
+  MONAD_TESTNET_NETWORK,
+  MONAD_TESTNET_USDC_ADDRESS,
+  BASE_SEPOLIA_NETWORK,
+  BASE_SEPOLIA_USDC_ADDRESS,
+} from '../x402-flow'
 
-export { BASE_NETWORK, MONAD_NETWORK }
+export { BASE_NETWORK, MONAD_NETWORK, MONAD_TESTNET_NETWORK, BASE_SEPOLIA_NETWORK }
 export const BASE_USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-export { MONAD_USDC_ADDRESS }
+export { MONAD_USDC_ADDRESS, MONAD_TESTNET_USDC_ADDRESS, BASE_SEPOLIA_USDC_ADDRESS }
 
-/** network -> USDC contract address this market accepts evidence/probing for. */
+/** network -> USDC contract address this market accepts evidence/probing for (mainnets and the two testnets). */
 export const NETWORK_USDC: Record<string, string> = {
   [BASE_NETWORK]: BASE_USDC_ADDRESS,
   [MONAD_NETWORK]: MONAD_USDC_ADDRESS,
+  [MONAD_TESTNET_NETWORK]: MONAD_TESTNET_USDC_ADDRESS,
+  [BASE_SEPOLIA_NETWORK]: BASE_SEPOLIA_USDC_ADDRESS,
 }
 
 /**
  * Priority order for picking the "main display network" out of several
- * supported networks a service accepts payment on — Monad first, Base
- * second. This is a Monad-first market (2026-09-29 change): a service that
- * accepts both is shown/priced/probed-for-evidence primarily on Monad, even
- * if its 402 response happens to list Base earlier in `accepts`.
+ * supported networks a service accepts payment on — Monad mainnet, Base
+ * mainnet, Monad testnet, Base Sepolia. This is a Monad-first market
+ * (2026-09-29 change): a service that accepts both is shown/priced/probed
+ * primarily on Monad, even if its 402 response happens to list Base earlier
+ * in `accepts`. The testnets come last (2026-10-06): a service that also
+ * accepts real money is never displayed primarily on a testnet.
  */
-export const NETWORK_PRIORITY: string[] = [MONAD_NETWORK, BASE_NETWORK]
+export const NETWORK_PRIORITY: string[] = [MONAD_NETWORK, BASE_NETWORK, MONAD_TESTNET_NETWORK, BASE_SEPOLIA_NETWORK]
 
 export interface X402Accept {
   scheme: string
@@ -118,9 +133,10 @@ export function parseX402Response(headerValue: string | null, bodyText: string):
 
 /**
  * 在一个 accepts 数组里找「本市场支持的所有网络」各一条最先出现的匹配
- * （network 精确等于 eip155:143/eip155:8453 且 asset 精确等于对应链的 USDC
- * 合约，大小写不敏感），按 NETWORK_PRIORITY（Monad 优先）排序返回——最多 2
- * 条，每个支持网络最多一条。给「一个服务两条链都能付」的展示用
+ * （network 精确等于 NETWORK_USDC 里的某条链——eip155:143/8453，以及测试网
+ * eip155:10143/84532——且 asset 精确等于对应链的 USDC 合约，大小写不敏感），
+ * 按 NETWORK_PRIORITY（Monad 优先、主网在测试网之前）排序返回——最多 4 条，
+ * 每个支持网络最多一条。给「一个服务多条链都能付」的展示用
  * （networks 徽章/多网络证据分组）。
  */
 export function findAllSupportedUsdcAccepts(accepts: X402Accept[]): X402Accept[] {

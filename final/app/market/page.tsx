@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Search, Copy, Check, ExternalLink, Sparkles } from 'lucide-react'
 import { NETWORK_LABEL, buildCallPrompt } from '../../lib/market/call-prompt'
+import { TestnetBadge } from '../../components/TestnetBadge'
 
 interface MarketNetworkOffer {
   network: string
@@ -82,6 +83,7 @@ function CopyForAiButton({ entry }: { entry: MarketEntry }) {
 }
 
 function EntryCard({ e }: { e: MarketEntry }) {
+  const nets = e.networks && e.networks.length > 0 ? e.networks.map((n) => n.network) : e.network ? [e.network] : []
   return (
     <div className="rounded border border-[#222] bg-[#0a0a0a] p-3">
       <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -89,6 +91,7 @@ function EntryCard({ e }: { e: MarketEntry }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-sm font-bold text-white">{e.name}</span>
             {statusBadge(e.status)}
+            <TestnetBadge networks={nets} />
             <span className="text-[10px] font-mono text-gray-500 px-1.5 py-0.5 rounded border border-[#333]">
               cell ({e.cell?.x},{e.cell?.y})
             </span>
@@ -101,17 +104,12 @@ function EntryCard({ e }: { e: MarketEntry }) {
         <div className="text-right shrink-0">
           <div className="text-white font-mono text-sm font-bold">{e.price_usdc ? `$${e.price_usdc}` : '—'}</div>
           <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
-            {(e.networks && e.networks.length > 0
-              ? e.networks.map((n) => n.network)
-              : e.network
-                ? [e.network]
-                : []
-            ).map((n) => (
+            {nets.map((n) => (
               <span key={n} className="text-[10px] text-gray-500 font-mono px-1 py-0.5 rounded border border-[#333]">
                 {NETWORK_LABEL[n] || n}
               </span>
             ))}
-            {!e.network && (!e.networks || e.networks.length === 0) && (
+            {nets.length === 0 && (
               <span className="text-[10px] text-gray-500 font-mono">—</span>
             )}
           </div>
@@ -211,6 +209,8 @@ export default function MarketPage() {
             <option value="">all networks</option>
             <option value="eip155:8453">Base</option>
             <option value="eip155:143">Monad</option>
+            <option value="eip155:10143">Monad testnet</option>
+            <option value="eip155:84532">Base Sepolia</option>
           </select>
           <input
             value={maxPrice}

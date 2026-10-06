@@ -17,7 +17,7 @@
 |---|---|---|
 | 看 | 人在地图和列表里逛摊位 | 地图、格子详情（含服务卡）、服务列表 `/market`、比武台 / 赞助商展示区、搜索、说明页 `/about`（一页：这是什么、三步怎么买、更新记录） |
 | 买 | AI 替人买格子、装修 | x402 单格 / 整块购买，Monad + Base，同一个收款地址；人只复制一段提示词 |
-| 读 | AI 读说明、找服务 | `skill.md`、`llms.txt`、`/api/services`、`/llms-services.txt`（只看「能不能付」，不做链上证据） |
+| 读 | AI 读说明、找服务 | `skill.md`、`llms.txt`、`/api/services`、`/llms-services.txt`（只看「能不能付」，不做链上证据；索引认 Monad / Base 主网的 USDC，也认 Monad 测试网 / Base Sepolia 的 USDC，测试网条目标「测试网 · 无真实价值」） |
 
 **人只看，AI 动手**：网站上没有任何「人来写」的界面。买格子、装修、找回 key 都由 AI 通过 x402 / API 完成（说明在 `skill.md`）；人只做两件事——复制提示词给 AI、看结果。
 
