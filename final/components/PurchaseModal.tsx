@@ -13,7 +13,7 @@ import {
     validateDecorateFields,
     type AiDecorateFields,
 } from '../lib/ai-purchase-prompt';
-import { PAY_NETWORKS } from '../lib/networks';
+import { PAY_NETWORKS, SOLANA_NETWORK } from '../lib/networks';
 
 interface PurchaseModalProps {
     selectedCells: { x: number; y: number }[];
@@ -135,7 +135,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                     </div>
                     <div className="mt-2 pt-2 border-t border-[#1a1a1a] text-[10px] font-mono text-gray-500 space-y-0.5">
                         <div>收款地址 <span data-testid="pay-to" className="text-gray-300 break-all select-all">{AGENTVERSE_PAY_TO}</span></div>
-                        <div>支持网络 <span className="text-purple-300">Monad {PAY_NETWORKS.mainnet.monad.caip2}（优先）</span> · <span className="text-blue-300">Base {PAY_NETWORKS.mainnet.base.caip2}</span></div>
+                        <div>支持网络 <span className="text-purple-300">Monad {PAY_NETWORKS.mainnet.monad.caip2}（优先）</span> · <span className="text-blue-300">Base {PAY_NETWORKS.mainnet.base.caip2}</span> · <span className="text-green-300">Solana {SOLANA_NETWORK}</span></div>
                     </div>
                 </div>
 

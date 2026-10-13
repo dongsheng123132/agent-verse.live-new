@@ -1,3 +1,4 @@
+import { SOLANA_NETWORK, SOLANA_PAY_TO, SOLANA_USDC_ADDRESS } from '../lib/networks'
 import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import type { Network } from '@x402/core/types'
 import { createTestDb, type TestDb } from './helpers/pglite-db'
@@ -76,14 +77,15 @@ describe.each(['mainnet', 'testnet'] as const)('GET /api/cells/purchase info vs 
     const info = await (await GET()).json()
     const { base, monad } = flow.getActiveNetworks()
 
-    expect(accepts.map((a) => a.network).sort()).toEqual([base, monad].sort())
+    expect(accepts.map((a) => a.network).sort()).toEqual([base, monad, ...(mode === 'mainnet' ? [SOLANA_NETWORK] : [])].sort())
     expect(info.payTo.base).toBe(accepts.find((a) => a.network === base)!.payTo)
     expect(info.payTo.monad).toBe(accepts.find((a) => a.network === monad)!.payTo)
     expect(info.payTo.base).toBe(flow.PAY_TO_ADDRESS)
     expect(info.payTo.monad).toBe(flow.PAY_TO_ADDRESS)
     expect(info.payTo.monad).not.toBeNull()
     expect(JSON.stringify(info.payTo)).not.toContain(DECOY)
-    expect(info.networks).toEqual([`Base (${base})`, `Monad (${monad})`])
+    expect(info.networks).toEqual([`Base (${base})`, `Monad (${monad})`, ...(mode === 'mainnet' ? [`Solana (${SOLANA_NETWORK})`] : [])])
+    if (mode === 'mainnet') expect(info.payTo.solana).toBe(SOLANA_PAY_TO)
     expect(info.x402_unavailable_networks).toEqual([])
   })
 })

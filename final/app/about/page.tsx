@@ -17,7 +17,7 @@ const TEXT = {
     buyTitle: '怎么买格子（三步）',
     steps: [
       '在地图上点选或框选空格子，在弹出的购买窗口里点「复制给我的 AI」。',
-      '把复制的提示词贴给你的 AI（Claude Code、Codex 等）。AI 需要一个 x402 钱包，不限哪家：MoneySwitch（Monad / Base）、Coinbase 的 awal（邮箱登录，只支持 Base），或任何能发 POST 请求的 x402 客户端。每格 {price} USDC。',
+      '把复制的提示词贴给你的 AI（Claude Code、Codex 等）。AI 需要一个 x402 钱包，不限哪家：MoneySwitch（Monad / Base / Solana）、Coinbase 的 awal（邮箱登录，只支持 Base），或任何能发 POST 请求的 x402 客户端。每格 {price} USDC。',
       'AI 付完款会拿到格子的 key、按你的要求装修，然后把格子链接和交易记录给你。你只需要确认总价、看结果。',
     ],
     serviceTitle: '挂你的 x402 服务',
@@ -35,7 +35,7 @@ const TEXT = {
     buyTitle: 'How to buy a cell (3 steps)',
     steps: [
       'Click or drag-select empty cells on the map, then press "复制给我的 AI" ("Copy to my AI") in the purchase window that opens.',
-      'Paste the prompt into your AI (Claude Code, Codex, …). The AI needs an x402 wallet, any one works: MoneySwitch (Monad / Base), awal from Coinbase (email login, Base only), or any x402 client that can send a POST request. Each cell costs {price} USDC.',
+      'Paste the prompt into your AI (Claude Code, Codex, …). The AI needs an x402 wallet, any one works: MoneySwitch (Monad / Base / Solana), awal from Coinbase (email login, Base only), or any x402 client that can send a POST request. Each cell costs {price} USDC.',
       'After paying, the AI receives the cell key, decorates the cell as you asked, and gives you the cell link and the transaction. You only confirm the total and check the result.',
     ],
     serviceTitle: 'List your x402 service',
@@ -57,6 +57,7 @@ interface ChangelogEntry {
 
 // Newest first. Removing or adding a feature adds one line here, in the same commit.
 const CHANGELOG: ChangelogEntry[] = [
+  { date: '2026-10-13', zh: '增加 Solana 主网 USDC x402 收款；格子归真正支付 USDC 的钱包，找回 Key 保留 Solana 地址大小写。', en: 'Added Solana mainnet USDC x402 payments; cells belong to the token payer and key recovery preserves Solana address case.' },
   { date: '2026-10-06', zh: '定位改成「x402 服务的格子集市」：格子是摊位，可以挂 x402 服务，也可以只做广告。地图顶栏加了「服务」入口；「复制给 AI」不再只认 MoneySwitch，任何 x402 钱包都能用。', en: 'Positioned as a grid bazaar for x402 services: a cell is a stall that lists an x402 service or just advertises. A Services link in the map header; "Copy for AI" no longer assumes MoneySwitch, any x402 wallet works.' },
   { date: '2026-10-04', zh: '再精简：服务索引只收格子主人自己挂的服务（去掉 13 个手工收录的外部服务）；删掉没人用的管理统计接口；加回这一页说明。', en: 'Trimmed again: the service index only lists services cell owners listed (13 hand-picked external services removed); removed the unused admin stats endpoint; added this page.' },
   { date: '2026-10-03', zh: '大精简，只留「看、买、读」三件事：删掉 Coinbase Commerce 付款、浏览器钱包付款、二手转售、推荐返佣、排行榜和动态流、链上证据、人工装修表单。', en: 'Big simplification down to look / buy / read: removed Coinbase Commerce, browser-wallet pay, resale, referrals, rankings and the activity feed, on-chain evidence, and the manual decoration form.' },

@@ -1,3 +1,4 @@
+import { SOLANA_NETWORK, SOLANA_PAY_TO, SOLANA_USDC_ADDRESS } from '../lib/networks'
 import { beforeAll, beforeEach, afterAll, describe, expect, it, vi } from 'vitest'
 import { createTestDb, type TestDb } from './helpers/pglite-db'
 import { createMockFacilitator, buildPaymentHeaderValue } from './helpers/facilitator'
@@ -76,7 +77,7 @@ describe('GET /api/cells/purchase — 402 accepts both networks', () => {
     expect(headerVal).toBeTruthy()
     const decoded = JSON.parse(Buffer.from(headerVal as string, 'base64').toString())
     const networks = decoded.accepts.map((a: any) => a.network).sort()
-    expect(networks).toEqual([BASE_NETWORK, MONAD_NETWORK].sort())
+    expect(networks).toEqual([BASE_NETWORK, MONAD_NETWORK, SOLANA_NETWORK].sort())
     const base = decoded.accepts.find((a: any) => a.network === BASE_NETWORK)
     const monad = decoded.accepts.find((a: any) => a.network === MONAD_NETWORK)
     expect(base.payTo).toBe(BASE_TREASURY_ADDRESS)

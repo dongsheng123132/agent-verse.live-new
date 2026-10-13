@@ -3,6 +3,7 @@ import { dbQuery } from '../../../../lib/db'
 import { generateApiKey } from '../../../../lib/api-key'
 import { PRICE_PER_CELL } from '../../../../app/types'
 import { ensureSchema } from '../../../../lib/schema'
+import { sameWalletAddress } from '../../../../lib/solana-payment'
 import { isShowcaseReserved } from '../../../../lib/showcase/index'
 import {
   getSharedX402Server,
@@ -78,9 +79,8 @@ export async function regenHandler(req: NextRequest) {
 
   // ---- Step 3: payer must be the cell's owner. Compare BEFORE settling — a
   // stranger's payment must never be captured just to prove they aren't the owner. ----
-  const ownerAddr = String(cell.owner_address || '').toLowerCase()
-  const payerAddr = (outcome.payer || '').toLowerCase()
-  if (!outcome.payer || payerAddr !== ownerAddr) {
+  const ownerAddr = String(cell.owner_address || '')
+  if (!outcome.payer || !sameWalletAddress(outcome.payer, ownerAddr)) {
     await cancel(outcome, 'handler_failed', 403)
     return NextResponse.json(
       { error: 'not_owner', message: 'Payer address does not match this cell\'s owner' },

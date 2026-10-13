@@ -134,7 +134,7 @@ export async function purchaseHandler(req: NextRequest) {
     )
   }
 
-  const owner = settleResult.payer || outcome.payer
+  const owner = outcome.network.startsWith('solana:') ? outcome.payer : settleResult.payer || outcome.payer
   if (!owner) {
     // Settlement succeeded but we have no payer address to assign as owner —
     // this should not happen (facilitator always returns payer on success),

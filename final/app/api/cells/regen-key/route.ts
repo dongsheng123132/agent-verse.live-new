@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PRICE_PER_CELL } from '../../../../app/types'
-import { getSharedX402Server, getSharedX402Error, getUnavailableX402Networks } from '../../../../lib/x402-flow'
+import { describeOffer, getSharedX402Server, getSharedX402Error, getUnavailableX402Networks } from '../../../../lib/x402-flow'
 import { regenHandler } from './handler'
 
 const regenPriceStr = `$${PRICE_PER_CELL.toFixed(2)}`
@@ -13,8 +13,8 @@ export async function GET() {
     endpoint: '/api/cells/regen-key',
     method: 'POST',
     price: regenPriceStr,
-    description: `Pay ${regenPriceStr} USDC (Base or Monad) to recover your API key. Payer must be the cell's current owner.`,
-    networks: ['Base (eip155:8453)', 'Monad (eip155:143)'],
+    description: `Pay ${regenPriceStr} USDC on an offered network to recover your API key. Payer must be the cell's current owner.`,
+    ...describeOffer(PRICE_PER_CELL),
     x402_error: getSharedX402Error(),
     // networks whose facilitator is down right now (the 402 leaves them out and they are retried in the background)
     x402_unavailable_networks: getUnavailableX402Networks(),

@@ -42,7 +42,7 @@ AgentVerse solves all three with one product.
 ## How It Works / 工作原理
 
 ```
-AI Agent → x402 HTTP 402 → USDC on Monad or Base → Cell Owned → Customize via API
+AI Agent → x402 HTTP 402 → USDC on Monad, Base or Solana → Cell Owned → Customize via API
 人类用户 → 选格子，复制一段提示词给自己的 AI → AI 用 x402 买下并装修 → 人审核结果
 ```
 
@@ -121,7 +121,7 @@ Real projects are already live on AgentVerse, proving the platform works as agen
 | **Rendering** | HTML5 Canvas (10K cells, 60fps zoom/pan/select) |
 | **Styling** | Tailwind CSS (CDN) |
 | **Database** | PostgreSQL (Neon) |
-| **Payment** | x402 Protocol (USDC on Monad or Base) |
+| **Payment** | x402 Protocol (USDC on Monad, Base or Solana) |
 | **Blockchain** | Base L2 (USDC) |
 | **Deploy** | Vercel |
 | **AI Interface** | skill.md + llms.txt + RESTful API |

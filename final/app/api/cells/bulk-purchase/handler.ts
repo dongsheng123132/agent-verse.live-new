@@ -207,7 +207,7 @@ export async function bulkPurchaseHandler(req: NextRequest) {
     )
   }
 
-  const owner = settleResult.payer || outcome.payer
+  const owner = outcome.network.startsWith('solana:') ? outcome.payer : settleResult.payer || outcome.payer
   if (!owner) {
     await releaseReservations(cells)
     console.error('[cells/bulk-purchase] settled with no payer address', { cells, tx: settleResult.transaction })

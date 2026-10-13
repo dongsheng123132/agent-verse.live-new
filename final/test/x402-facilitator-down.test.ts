@@ -1,3 +1,4 @@
+import { SOLANA_NETWORK, SOLANA_PAY_TO, SOLANA_USDC_ADDRESS } from '../lib/networks'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Network } from '@x402/core/types'
 import { createTestDb, type TestDb } from './helpers/pglite-db'
@@ -89,7 +90,7 @@ describe('Monad facilitator down', () => {
     const monad = downFacilitator(MONAD_NETWORK)
     await freshServer(async () => ({ base, monad }))
 
-    expect(await offeredNetworks(await buy(70, 70))).toEqual([BASE_NETWORK])
+    expect(await offeredNetworks(await buy(70, 70))).toEqual([BASE_NETWORK, SOLANA_NETWORK].sort())
     expect(flow.getUnavailableX402Networks()).toEqual([MONAD_NETWORK])
 
     const header = buildPaymentHeaderValue({ network: BASE_NETWORK, from: '0xaaaa00000000000000000000000000000000b001', payTo: BASE_TREASURY_ADDRESS })
@@ -106,11 +107,11 @@ describe('Monad facilitator down', () => {
     await freshServer(async () => ({ base, monad }))
 
     const bulk = await bulkPurchaseHandler(post('http://localhost/api/cells/bulk-purchase', { cells: [{ x: 71, y: 70 }, { x: 72, y: 70 }] }))
-    expect(await offeredNetworks(bulk)).toEqual([BASE_NETWORK])
+    expect(await offeredNetworks(bulk)).toEqual([BASE_NETWORK, SOLANA_NETWORK].sort())
 
     await testDb.dbQuery(`INSERT INTO grid_cells (id, x, y, owner_address, block_id, block_origin_x, block_origin_y) VALUES (7373, 73, 70, '0xOwner', 'blk_73_70_1x1', 73, 70)`)
     const regen = await regenHandler(post('http://localhost/api/cells/regen-key', { x: 73, y: 70 }))
-    expect(await offeredNetworks(regen)).toEqual([BASE_NETWORK])
+    expect(await offeredNetworks(regen)).toEqual([BASE_NETWORK, SOLANA_NETWORK].sort())
   })
 })
 
@@ -121,7 +122,7 @@ describe('Base facilitator down', () => {
     await freshServer(async () => ({ base, monad }))
 
     expect(await offeredNetworks(await buy(74, 70))).toEqual([MONAD_NETWORK])
-    expect(flow.getUnavailableX402Networks()).toEqual([BASE_NETWORK])
+    expect(flow.getUnavailableX402Networks()).toEqual([BASE_NETWORK, SOLANA_NETWORK].sort())
 
     const header = buildPaymentHeaderValue({ network: MONAD_NETWORK, from: '0xaaaa00000000000000000000000000000000b002', payTo: MONAD_TREASURY_ADDRESS })
     const res = await buy(74, 70, { 'x-payment': header })
@@ -201,7 +202,7 @@ describe('the missing facilitator is retried on later requests, with a backoff',
     expect(flow.getUnavailableX402Networks()).toEqual([])
 
     // ...and the next 402 offers both networks
-    expect(await offeredNetworks(await buy(79, 70))).toEqual([BASE_NETWORK, MONAD_NETWORK].sort())
+    expect(await offeredNetworks(await buy(79, 70))).toEqual([BASE_NETWORK, MONAD_NETWORK, SOLANA_NETWORK].sort())
     // nothing left to retry
     vi.setSystemTime(new Date('2026-10-03T13:00:00Z'))
     await flow.getSharedX402Server(factory)
@@ -222,7 +223,7 @@ describe('the missing facilitator is retried on later requests, with a backoff',
     await flow.getSharedX402Server(factory)
     await flow.waitForX402Retry()
     expect(monad.calls()).toBe(2)
-    expect(await offeredNetworks(await buy(80, 70))).toEqual([BASE_NETWORK])
+    expect(await offeredNetworks(await buy(80, 70))).toEqual([BASE_NETWORK, SOLANA_NETWORK].sort())
 
     vi.setSystemTime(new Date('2026-10-03T12:00:05Z')) // 3s after the failed retry: backoff is 4s, not due
     await flow.getSharedX402Server(factory)
@@ -238,7 +239,7 @@ describe('the missing facilitator is retried on later requests, with a backoff',
     await flow.getSharedX402Server(factory)
     await flow.waitForX402Retry()
     expect(monad.calls()).toBe(3)
-    expect(await offeredNetworks(await buy(81, 70))).toEqual([BASE_NETWORK])
+    expect(await offeredNetworks(await buy(81, 70))).toEqual([BASE_NETWORK, SOLANA_NETWORK].sort())
   })
 
   it('a retry during which the working facilitator is down too does not replace the working server', async () => {
@@ -256,7 +257,7 @@ describe('the missing facilitator is retried on later requests, with a backoff',
     await flow.getSharedX402Server(factory)
     await flow.waitForX402Retry()
     base.getSupported.mockImplementation(workingBase)
-    expect(await offeredNetworks(await buy(82, 70))).toEqual([BASE_NETWORK])
+    expect(await offeredNetworks(await buy(82, 70))).toEqual([BASE_NETWORK, SOLANA_NETWORK].sort())
   })
 })
 
@@ -265,7 +266,7 @@ describe('both facilitators healthy: nothing changes', () => {
     const base = createMockFacilitator(BASE_NETWORK)
     const monad = createMockFacilitator(MONAD_NETWORK)
     await freshServer(async () => ({ base, monad }))
-    expect(await offeredNetworks(await buy(83, 70))).toEqual([BASE_NETWORK, MONAD_NETWORK].sort())
+    expect(await offeredNetworks(await buy(83, 70))).toEqual([BASE_NETWORK, MONAD_NETWORK, SOLANA_NETWORK].sort())
     expect(flow.getUnavailableX402Networks()).toEqual([])
     await flow.getSharedX402Server(async () => ({ base, monad }))
     await flow.waitForX402Retry()

@@ -7,6 +7,9 @@
  */
 
 export type NetworkMode = 'mainnet' | 'testnet'
+export const SOLANA_NETWORK = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'
+export const SOLANA_USDC_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+export const SOLANA_PAY_TO = '93njuzY326bQCNAZrDb3j42q7umDCkAYDXBd5bS2r39M'
 export type PayNetworkKey = 'monad' | 'base'
 
 export interface PayNetwork {

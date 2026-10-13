@@ -1,3 +1,4 @@
+import { SOLANA_NETWORK, SOLANA_PAY_TO, SOLANA_USDC_ADDRESS } from '../lib/networks'
 import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import type { Network } from '@x402/core/types'
 import { createTestDb, type TestDb } from './helpers/pglite-db'
@@ -86,6 +87,7 @@ describe('buildDualNetworkAccepts', () => {
       expect(accepts).toEqual([
         { scheme: 'exact', price: '$0.10', network: 'eip155:8453', payTo: PAY_TO },
         { scheme: 'exact', price: '$0.10', network: 'eip155:143', payTo: PAY_TO },
+        { scheme: 'exact', price: '$0.10', network: SOLANA_NETWORK, payTo: SOLANA_PAY_TO },
       ])
     }
   })
@@ -114,9 +116,11 @@ describe('402 PAYMENT-REQUIRED from POST /api/cells/purchase', () => {
     await buildSharedServer('eip155:8453', 'eip155:143')
     const decoded = await unpaid402(60, 60)
     const byNet = Object.fromEntries(decoded.accepts.map((a) => [a.network, a]))
-    expect(Object.keys(byNet).sort()).toEqual(['eip155:143', 'eip155:8453'])
+    expect(Object.keys(byNet).sort()).toEqual(['eip155:143', 'eip155:8453', SOLANA_NETWORK].sort())
     expect(byNet['eip155:8453'].asset.toLowerCase()).toBe('0x833589fcd6edb6e08f4c7c32d4f71b54bda02913')
     expect(byNet['eip155:143'].asset.toLowerCase()).toBe('0x754704bc059f8c67012fed69bc8a327a5aafb603')
+    expect(byNet[SOLANA_NETWORK].asset).toBe(SOLANA_USDC_ADDRESS)
+    expect(byNet[SOLANA_NETWORK].payTo).toBe(SOLANA_PAY_TO)
     expect(byNet['eip155:8453'].amount).toBe('100000')
     expect(byNet['eip155:143'].amount).toBe('100000')
     expect(byNet['eip155:8453'].payTo).toBe(PAY_TO)
@@ -152,6 +156,6 @@ describe('402 PAYMENT-REQUIRED from POST /api/cells/purchase', () => {
     delete process.env.X402_NETWORK_MODE
     await buildSharedServer('eip155:8453', 'eip155:143')
     const decoded = await unpaid402(62, 60)
-    expect(decoded.accepts.map((a) => a.network).sort()).toEqual(['eip155:143', 'eip155:8453'])
+    expect(decoded.accepts.map((a) => a.network).sort()).toEqual(['eip155:143', 'eip155:8453', SOLANA_NETWORK].sort())
   })
 })

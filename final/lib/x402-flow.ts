@@ -15,6 +15,9 @@ import type {
 } from '@x402/core/server'
 import type { Network, PaymentPayload, PaymentRequirements } from '@x402/core/types'
 import { ExactEvmScheme, registerExactEvmScheme } from '@x402/evm/exact/server'
+import { registerExactSvmScheme } from '@x402/svm/exact/server'
+import { isAddress } from '@solana/kit'
+import { SOLANA_NETWORK, SOLANA_PAY_TO, solanaTokenPayer } from './solana-payment'
 import { payerFromPaymentPayload } from './parse-payment'
 
 /**
@@ -183,11 +186,21 @@ async function buildResourceServer(clientFactory: FacilitatorClientFactory): Pro
     server.register(MONAD_TESTNET_CHAIN.network, createTestnetScheme(MONAD_TESTNET_CHAIN))
   } else {
     registerExactEvmScheme(server, { networks: [BASE_NETWORK, MONAD_NETWORK] })
+    registerExactSvmScheme(server, { networks: [SOLANA_NETWORK] })
   }
   await server.initialize()
-  const wanted = Object.values(getActiveNetworks())
+  const wanted: Network[] = Object.values(getActiveNetworks())
+  if (getNetworkMode() === 'mainnet') wanted.push(SOLANA_NETWORK)
   // buildPaymentRequirements() looks facilitator support up at protocol version 2.
-  const ready = wanted.filter((network) => !!server.getSupportedKind(2, network, 'exact'))
+  const ready = wanted.filter((network) => {
+    const kind = server.getSupportedKind(2, network, 'exact')
+    if (!kind) return false
+    if (network === SOLANA_NETWORK) {
+      const feePayer = kind.extra?.feePayer
+      return typeof feePayer === 'string' && isAddress(feePayer)
+    }
+    return true
+  })
   if (ready.length === 0) {
     throw new Error(`no facilitator supports exact on ${wanted.join(' or ')}`)
   }
@@ -298,10 +311,12 @@ export function resetSharedX402Server(): void {
 export function buildDualNetworkAccepts(priceUsd: number, mode: X402NetworkMode = getNetworkMode()) {
   const priceStr = `$${priceUsd.toFixed(2)}`
   const { base, monad } = getActiveNetworks(mode)
-  return [
+  const accepts = [
     { scheme: 'exact' as const, price: priceStr, network: base as `${string}:${string}`, payTo: BASE_TREASURY_ADDRESS },
     { scheme: 'exact' as const, price: priceStr, network: monad as `${string}:${string}`, payTo: MONAD_TREASURY_ADDRESS },
   ]
+  if (mode === 'mainnet') accepts.push({ scheme: 'exact', price: priceStr, network: SOLANA_NETWORK, payTo: SOLANA_PAY_TO })
+  return accepts
 }
 
 /**
@@ -326,8 +341,8 @@ export function describeOffer(priceUsd: number, mode: X402NetworkMode = getNetwo
   const accepts = buildDualNetworkAccepts(priceUsd, mode)
   const payToOn = (network: Network) => accepts.find((a) => a.network === network)?.payTo ?? null
   return {
-    networks: accepts.map((a) => `${a.network === base ? 'Base' : 'Monad'} (${a.network})`),
-    payTo: { base: payToOn(base), monad: payToOn(monad) },
+    networks: accepts.map((a) => `${a.network === base ? 'Base' : a.network === monad ? 'Monad' : 'Solana'} (${a.network})`),
+    payTo: { base: payToOn(base), monad: payToOn(monad), ...(mode === 'mainnet' ? { solana: payToOn(SOLANA_NETWORK) } : {}) },
   }
 }
 
@@ -454,7 +469,17 @@ export async function verifyPayment(opts: {
   }
 
   const { cancellationDispatcher, paymentPayload, paymentRequirements, declaredExtensions } = result
-  const payer = payerFromPaymentPayload(paymentPayload)
+  const payer = paymentRequirements.network === SOLANA_NETWORK
+    ? solanaTokenPayer(paymentPayload, paymentRequirements)
+    : payerFromPaymentPayload(paymentPayload)
+  if (paymentRequirements.network === SOLANA_NETWORK && !payer) {
+    await cancellationDispatcher.cancel({ reason: 'after_verify_aborted', responseStatus: 402 })
+    return {
+      kind: 'unpaid', status: 402,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ error: 'unsupported_solana_ownership', message: 'Use a standard Solana wallet with one direct USDC TransferChecked; no payment was settled.' }),
+    }
+  }
   return {
     kind: 'verified',
     httpServer,

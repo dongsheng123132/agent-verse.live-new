@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import type { Network, SupportedResponse } from '@x402/core/types'
+import { SOLANA_NETWORK, SOLANA_PAY_TO } from '../../lib/networks'
 
 /**
  * Minimal FacilitatorClient double (verify/settle/getSupported — the whole
@@ -30,6 +31,7 @@ export function createMockFacilitator(network: Network) {
     kinds: [
       { x402Version: 1, scheme: 'exact', network },
       { x402Version: 2, scheme: 'exact', network },
+      ...(network === 'eip155:8453' ? [{ x402Version: 2, scheme: 'exact', network: SOLANA_NETWORK as Network, extra: { feePayer: SOLANA_PAY_TO } }] : []),
     ],
     extensions: [],
     signers: {},

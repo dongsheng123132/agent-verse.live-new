@@ -16,7 +16,7 @@
 import { PRICE_PER_CELL } from '../app/types'
 import { fullRectangle, sortCells, type CellCoord } from './cell-block'
 import { formatAtomicUsdc, totalAtomicForCells, usdcToAtomic } from './usdc-amount'
-import { PAY_NETWORKS } from './networks'
+import { PAY_NETWORKS, SOLANA_NETWORK, SOLANA_PAY_TO } from './networks'
 
 /** Receiving address of every purchase (same value as PAY_TO_ADDRESS in lib/x402-flow.ts; a test fails if they drift). */
 export const AGENTVERSE_PAY_TO = '0x4eCf92bAb524039Fc4027994b9D88C2DB2Ee05E6'
@@ -133,7 +133,7 @@ export function buildAiPurchasePrompt(input: AiPromptInput): string {
     `请帮我在 AgentVerse（${origin}）买下 ${count} 个格子${hasFields ? '，并装修' : ''}。`,
     ``,
     `【目标】${cellLine}。总价 ${total} USDC 我已确认，直接付款；实际付款不得超过 ${total} USDC。`,
-    `收款地址 ${AGENTVERSE_PAY_TO}（402 响应里的 payTo 不一致就先停下来问我）；网络 Monad ${monad.caip2} 优先，Base ${base.caip2} 也行。`,
+    `Monad / Base 收款地址 ${AGENTVERSE_PAY_TO}；Solana ${SOLANA_NETWORK} 收款地址 ${SOLANA_PAY_TO}（按所选网络核对 402 的 payTo 不一致就先停下来问我）。Monad ${monad.caip2} 优先，Base ${base.caip2} 或 Solana 也行；我指定网络时不得切换。`,
     `【请求】POST ${origin}${purchasePath(count)}`,
     `body: ${body}`,
   ]
@@ -155,7 +155,7 @@ export function buildAiPurchasePrompt(input: AiPromptInput): string {
   }
   const keyCell = rect ? { x: rect.ox, y: rect.oy } : first
   lines.push(
-    `【回报】交易哈希 + 浏览器链接（Monad：https://monadvision.com/tx/<hash>；Base：https://basescan.org/tx/<hash>）、格子链接 ${origin}/?x=${keyCell.x}&y=${keyCell.y}、${hasFields ? '装修是否成功' : '买下了哪些格子'}。`,
+    `【回报】交易哈希 + 浏览器链接（Monad：https://monadvision.com/tx/<hash>；Base：https://basescan.org/tx/<hash>；Solana：https://solscan.io/tx/<signature>）、格子链接 ${origin}/?x=${keyCell.x}&y=${keyCell.y}、${hasFields ? '装修是否成功' : '买下了哪些格子'}。`,
     ``,
     `怎么用 x402 付款（MoneySwitch / 其他 x402 钱包）、出错怎么处理：先读 ${origin}/skill.md 的「${SKILL_SECTION_NAME}」一节。`
   )
